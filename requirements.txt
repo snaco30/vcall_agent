@@ -2,3 +2,8 @@ fastapi>=0.100.0
 uvicorn>=0.20.0
 pyodbc>=4.0.39
 pydantic>=2.0.0
+fastapi
+uvicorn
+PyJWT
+python-multipart
+pydantic-settings

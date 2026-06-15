@@ -33,7 +33,9 @@ echo "🌐 7000번 포트로 서비스를 구동합니다 (컨테이너명: vcal
 docker run -d \
   --name vcall-web-service \
   -p 7000:7000 \
+  --env-file "$PROJECT_DIR/.env" \
   -v "$PROJECT_DIR/data":/data \
+  -v "$PROJECT_DIR/app":/app \
   --restart always \
   vcall-manager-web
 

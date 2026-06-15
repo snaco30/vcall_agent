@@ -6,9 +6,8 @@
     <title>가맹점 마스터 및 이력 관리 시스템</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
         body { font-family: 'Inter', 'Noto Sans KR', sans-serif; }
-        /* 가로 스크롤바 미려하게 커스텀 */
         .custom-scrollbar::-webkit-scrollbar { height: 8px; width: 8px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -17,55 +16,282 @@
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
 
-<nav class="bg-slate-900 text-white shadow-md sticky top-0 z-40">
-    <div class="max-w-[1600px] mx-auto px-6 py-4 flex justify-between items-center">
-        <div class="flex items-center space-x-3">
-            <div class="bg-blue-600 p-2 rounded-lg text-white font-bold tracking-wider text-sm shadow-md shadow-blue-900/30">CRM</div>
-            <h1 class="text-xl font-bold tracking-tight">가맹점 마스터 정보 조회 콘솔</h1>
+<div id="loginSection" class="fixed inset-0 z-50 bg-slate-900 flex justify-center items-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 border border-slate-200">
+        <div class="text-center mb-8">
+            <div class="inline-block bg-blue-600 text-white font-bold px-3 py-1.5 rounded-lg text-xs tracking-wider mb-3">V-CALL SECURITY</div>
+            <h3 class="text-2xl font-bold text-slate-900">가맹점 관리 콘솔 로그인</h3>
+            <p class="text-xs text-slate-400 mt-1">인증된 관리자 계정만 접근할 수 있습니다.</p>
         </div>
-        <div class="text-xs text-slate-400 font-medium">MDB 통합 웹 인터페이스 v2.0</div>
-    </div>
-</nav>
-
-<div class="max-w-[1600px] mx-auto px-6 py-8">
-    <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm mb-6 transition-all duration-300 hover:shadow-md">
-        <div class="mb-4">
-            <h2 class="text-base font-bold text-slate-900 flex items-center">
-                <span class="w-1.5 h-4 bg-blue-600 rounded-full mr-2"></span>가맹점 데이터 스캔 및 매핑
-            </h2>
-            <p class="text-xs text-slate-500 mt-1">조회하고자 하는 가맹점의 상호명, 전화번호, 대표자명 또는 사업자등록번호 10자리를 입력하세요.</p>
-        </div>
-        <form id="searchForm" onsubmit="handleSearch(event)">
-            <div class="flex flex-col sm:flex-row gap-3">
-                <input type="text" id="searchInput" 
-                       class="form-control flex-1 px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400" 
-                       placeholder="상호, 전화번호, 대표자, 사업자번호 입력...">
-                <button type="submit" 
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-8 py-3.5 rounded-xl shadow-lg shadow-blue-600/10 hover:shadow-blue-600/20 active:scale-[0.99] transition-all duration-150">
-                    조회하기
-                </button>
+        <form onsubmit="handleLogin(event)" class="space-y-5">
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase mb-2">관리자 아이디</label>
+                <input type="text" id="username" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" placeholder="아이디 입력">
             </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase mb-2">비밀번호</label>
+                <input type="password" id="password" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" placeholder="비밀번호 입력">
+            </div>
+            <div id="loginError" class="text-xs text-rose-500 font-medium hidden"></div>
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm py-3.5 rounded-xl transition-all shadow-lg shadow-blue-600/10">
+                인증 및 시스템 접속
+            </button>
         </form>
     </div>
+</div>
 
-    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-        <div class="overflow-x-auto custom-scrollbar">
-            <table class="w-full text-center border-collapse">
-                <thead>
-                    <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs font-bold uppercase tracking-wider">
-                        <th class="py-4 px-4">사업자번호</th>
-                        <th class="py-4 px-4 text-left">가맹점명 (상호)</th>
-                        <th class="py-4 px-4">업체유형</th>
-                        <th class="py-4 px-4">핸드폰 (전화)</th>
-                        <th class="py-4 px-4 text-left">주소</th>
-                        <th class="py-4 px-4">대표자</th>
-                        <th class="py-4 px-4">등록일자</th>
-                        <th class="py-4 px-4">관리담당자</th>
-                        <th class="py-4 px-4">연체정보</th>
-                        <th class="py-4 px-4 text-left">비고</th>
-                    </tr>
-                </thead>
-                <tbody id="merchantTableBody" class="divide-y divide-slate-100 text-sm font-medium text-slate-700">
-                    <tr>
-                        <td colspan="10" class="text-slate-400 py-24 text-center font-normal">
-                            <svg class="w-1
+<div id="mainDashboard" class="hidden">
+    <nav class="bg-slate-900 text-white shadow-md sticky top-0 z-40">
+        <div class="max-w-[1600px] mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 p-2 rounded-lg text-white font-bold tracking-wider text-sm shadow-md">CRM</div>
+                <h1 class="text-xl font-bold tracking-tight">가맹점 마스터 정보 조회 콘솔</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span id="userInfo" class="text-xs text-slate-300 font-semibold bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700"></span>
+                <button onclick="handleLogout()" class="text-xs bg-rose-600/90 hover:bg-rose-700 text-white font-bold px-3 py-1.5 rounded-lg transition-all">로그아웃</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-[1600px] mx-auto px-6 py-8">
+        <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm mb-6">
+            <div class="mb-4">
+                <h2 class="text-base font-bold text-slate-900 flex items-center">
+                    <span class="w-1.5 h-4 bg-blue-600 rounded-full mr-2"></span>가맹점 데이터 스캔 및 매핑
+                </h2>
+                <p class="text-xs text-slate-500 mt-1">상호명, 전화번호, 대표자명 또는 사업자등록번호를 기반으로 마스터 레코드를 조회합니다.</p>
+            </div>
+            <form id="searchForm" onsubmit="handleSearch(event)">
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <input type="text" id="searchInput" class="flex-1 px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" placeholder="상호, 전화번호, 대표자, 사업자번호 입력...">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-8 py-3.5 rounded-xl shadow-lg transition-all">
+                        조회하기
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-center border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs font-bold uppercase tracking-wider">
+                            <th class="py-4 px-4">사업자번호</th>
+                            <th class="py-4 px-4 text-left">가맹점명 (상호)</th>
+                            <th class="py-4 px-4">업체유형</th>
+                            <th class="py-4 px-4">핸드폰 (전화)</th>
+                            <th class="py-4 px-4 text-left">주소</th>
+                            <th class="py-4 px-4">대표자</th>
+                            <th class="py-4 px-4">등록일자</th>
+                            <th class="py-4 px-4">관리담당자</th>
+                            <th class="py-4 px-4">연체정보</th>
+                            <th class="py-4 px-4 text-left">비고</th>
+                        </tr>
+                    </thead>
+                    <tbody id="merchantTableBody" class="divide-y divide-slate-100 text-sm font-medium text-slate-700">
+                        <tr>
+                            <td colspan="10" class="text-slate-400 py-24 text-center font-normal">상단 검색창에 키워드를 입력 후 [조회하기] 버튼을 눌러주세요.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="historyModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex justify-center items-center p-4 sm:p-6">
+    <div class="bg-white rounded-2xl shadow-2xl w-full h-full flex flex-col overflow-hidden max-w-[1800px] border border-slate-200">
+        <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center shadow-md">
+            <div>
+                <h3 class="text-base font-bold flex items-center" id="historyModalTitle">가맹점 최근 통화내역</h3>
+                <p class="text-xs text-slate-400 mt-0.5">실시간 수신 매핑 및 17개 핵심 히스토리 레코드입니다.</p>
+            </div>
+            <button onclick="closeModal()" class="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition-all">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div class="flex-1 overflow-auto p-6 bg-slate-50 custom-scrollbar">
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-center border-collapse text-xs font-semibold whitespace-nowrap">
+                        <thead class="bg-slate-800 text-slate-200 text-center uppercase tracking-wider sticky top-0">
+                            <tr class="divide-x divide-slate-700">
+                                <th class="py-3 px-4">전화번호</th>
+                                <th class="py-3 px-4">통화일시</th>
+                                <th class="py-3 px-4">상호</th>
+                                <th class="py-3 px-4 text-left min-w-[250px]">통화내용</th>
+                                <th class="py-3 px-4">업무유형</th>
+                                <th class="py-3 px-4">업무상세</th>
+                                <th class="py-3 px-4">처리상태</th>
+                                <th class="py-3 px-4">처리결과</th>
+                                <th class="py-3 px-4">처리자</th>
+                                <th class="py-3 px-4">확인여부</th>
+                                <th class="py-3 px-4">전화건사람</th>
+                                <th class="py-3 px-4">전처리자</th>
+                                <th class="py-3 px-4">인계자</th>
+                                <th class="py-3 px-4">처리일시</th>
+                                <th class="py-3 px-4">사후처리</th>
+                                <th class="py-3 px-4">사후처리상세</th>
+                                <th class="py-3 px-4">이전통화</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody" class="divide-y divide-slate-100 text-slate-700 font-medium"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const modalEl = document.getElementById('historyModal');
+
+    // 💡 화면 켜질 때 브라우저 토큰 검사하여 대시보드/로그인 전환 제어
+    window.onload = function() {
+        const token = localStorage.getItem("vcall_token");
+        const username = localStorage.getItem("vcall_username");
+        if (token) {
+            document.getElementById("loginSection").classList.add("hidden");
+            document.getElementById("mainDashboard").classList.remove("hidden");
+            document.getElementById("userInfo").innerText = `🔑 관리자: ${username}`;
+        }
+    };
+
+    // 💡 로그인 엔드포인트 연동 함수
+    function handleLogin(event) {
+        event.preventDefault();
+        const u = document.getElementById("username").value.trim();
+        const p = document.getElementById("password").value.trim();
+        const errEl = document.getElementById("loginError");
+
+        fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: u, password: p })
+        })
+        .then(res => {
+            if (!res.ok) throw new Error("아이디 혹은 비밀번호 오류");
+            return res.json();
+        })
+        .then(data => {
+            localStorage.setItem("vcall_token", data.access_token);
+            localStorage.setItem("vcall_username", data.username);
+            location.reload(); // 즉시 새로고침하여 대시보드 진입
+        })
+        .catch(err => {
+            errEl.innerText = err.message;
+            errEl.classList.remove("hidden");
+        });
+    }
+
+    function handleLogout() {
+        localStorage.clear();
+        location.reload();
+    }
+
+    // 💡 [핵심 변경] 모든 데이터 API 호출 시 헤더에 JWT 토큰을 실어 보내는 전용 fetch 유틸 함수
+    function secureFetch(url) {
+        const token = localStorage.getItem("vcall_token");
+        return fetch(url, {
+            headers: { "Authorization": `Bearer ${token}` }
+        }).then(res => {
+            if (res.status === 401) { // 토큰 만료 처리
+                alert("인증 세션이 만료되어 로그아웃됩니다.");
+                handleLogout();
+            }
+            return res.json();
+        });
+    }
+
+    function handleSearch(event) {
+        event.preventDefault();
+        const keyword = document.getElementById('searchInput').value.trim();
+        if (!keyword) { alert('검색어를 입력해 주세요.'); return; }
+        loadData(keyword);
+    }
+
+    function loadData(searchKeyword) {
+        const tableBody = document.getElementById('merchantTableBody');
+        tableBody.innerHTML = '<tr><td colspan="10" class="text-slate-400 py-24 text-center"><div class="inline-block animate-spin rounded-full h-5 w-5 border-2 border-blue-600 border-t-transparent mr-2.5"></div>마스터 데이터를 스캔 중입니다...</td></tr>';
+
+        secureFetch(`/api/merchants?search=${encodeURIComponent(searchKeyword)}`)
+            .then(data => {
+                tableBody.innerHTML = '';
+                if (!data || data.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="10" class="text-slate-400 py-24 text-center font-normal">일치하는 가맹점 마스터 데이터가 없습니다.</td></tr>';
+                    return;
+                }
+
+                data.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.className = "hover:bg-slate-50/80 border-b border-slate-100 transition-colors";
+                    const isDelay = item.delay_info && item.delay_info !== "정상" && item.delay_info !== "-";
+                    const delayClass = isDelay ? "bg-rose-50 text-rose-700 border-rose-100 px-2 py-1 rounded-md text-xs border" : "bg-emerald-50 text-emerald-700 border-emerald-100 px-2 py-1 rounded-md text-xs border";
+
+                    row.innerHTML = `
+                        <td class="py-4 px-4 font-mono text-slate-500 font-normal">${item.saup_no || '-'}</td>
+                        <td class="py-4 px-4 text-left font-bold text-blue-600 hover:text-blue-800 cursor-pointer underline decoration-dotted" onclick="openHistory('${item.saup_no}', '${item.tel_no}', '${item.name}')">${item.name || '-'}</td>
+                        <td class="py-4 px-4"><span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs">${item.mer_type || '-'}</span></td>
+                        <td class="py-4 px-4 text-slate-600 font-normal">${item.tel_no || '-'}</td>
+                        <td class="py-4 px-4 text-left max-w-xs truncate text-slate-600 font-normal" title="${item.addr}">${item.addr || '-'}</td>
+                        <td class="py-4 px-4 font-semibold text-slate-900">${item.presi_name || '-'}</td>
+                        <td class="py-4 px-4 text-slate-400 font-normal font-mono text-xs">${item.regi_date || '-'}</td>
+                        <td class="py-4 px-4 text-slate-500 text-xs">${item.damdang || '-'}</td>
+                        <td class="py-4 px-4"><span class="${delayClass}">${item.delay_info || '정상'}</span></td>
+                        <td class="py-4 px-4 text-left text-xs text-slate-400 font-normal max-w-[150px] truncate" title="${item.bigo}">${item.bigo || '-'}</td>
+                    `;
+                    tableBody.innerHTML += row.outerHTML;
+                });
+            }).catch(err => {
+                tableBody.innerHTML = '<tr><td colspan="10" class="text-rose-500 py-24 text-center">데이터 로드 실패</td></tr>';
+            });
+    }
+
+    function openHistory(saupNo, telNo, merName) {
+        const hBody = document.getElementById('historyTableBody');
+        document.getElementById('historyModalTitle').innerHTML = `<span class="text-blue-400 mr-2">[${merName}]</span> 가맹점 최근 통화내역 상세`;
+        hBody.innerHTML = '<tr><td colspan="17" class="py-24 text-slate-400 text-center"><div class="inline-block animate-spin rounded-full h-5 w-5 border-2 border-slate-400 border-t-transparent mr-2.5"></div> 통화 히스토리를 대조하는 중입니다...</td></tr>';
+        modalEl.classList.remove('hidden');
+
+        secureFetch(`/api/history?saup_no=${encodeURIComponent(saupNo)}&tel_no=${encodeURIComponent(telNo)}`)
+            .then(data => {
+                hBody.innerHTML = '';
+                if (!data || data.length === 0) {
+                    hBody.innerHTML = '<tr><td colspan="17" class="text-slate-400 py-24 text-center font-normal">해당 가맹점의 통합 통화 이력이 확인되지 않습니다.</td></tr>';
+                    return;
+                }
+                data.forEach(h => {
+                    const row = document.createElement('tr');
+                    row.className = "hover:bg-slate-50 divide-x divide-slate-100 transition-colors";
+                    row.innerHTML = `
+                        <td class="py-3 px-4 font-normal text-slate-500">${h.tel_no || '-'}</td>
+                        <td class="py-3 px-4 font-mono text-slate-400 text-[11px]">${h.regi_time || '-'}</td>
+                        <td class="py-3 px-4 font-bold text-slate-900">${h.mer_name || '-'}</td>
+                        <td class="py-3 px-4 text-left text-slate-600 font-normal whitespace-pre-wrap max-w-md">${h.content || '-'}</td>
+                        <td class="py-3 px-4 text-slate-500"><span class="bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">${h.upmu_type || '-'}</span></td>
+                        <td class="py-3 px-4 text-slate-500">${h.upmu_det || '-'}</td>
+                        <td class="py-3 px-4 text-slate-600">${h.proc_type || '-'}</td>
+                        <td class="py-3 px-4 text-slate-600 whitespace-pre-wrap max-w-xs">${h.res || '-'}</td>
+                        <td class="py-3 px-4 text-slate-900">${h.proc_name || '-'}</td>
+                        <td class="py-3 px-4">${h.ok_yn || '-'}</td>
+                        <td class="py-3 px-4 text-slate-400 font-normal">${h.snd_name || '-'}</td>
+                        <td class="py-3 px-4 text-slate-400 font-normal">${h.prev_name || '-'}</td>
+                        <td class="py-3 px-4 text-slate-400 font-normal">${h.takeover || '-'}</td>
+                        <td class="py-3 px-4 font-mono text-slate-400 text-[11px]">${h.churi_time || '-'}</td>
+                        <td class="py-3 px-4 text-slate-500">${h.after_type || '-'}</td>
+                        <td class="py-3 px-4 text-slate-500">${h.after_det || '-'}</td>
+                        <td class="py-3 px-4 text-slate-400 font-normal">${h.before_time || '-'}</td>
+                    `;
+                    hBody.innerHTML += row.outerHTML;
+                });
+            }).catch(err => {
+                hBody.innerHTML = '<tr><td colspan="17" class="text-rose-500 py-24 text-center">통화 이력 스트림 로드에 실패했습니다.</td></tr>';
+            });
+    }
+
+    function closeModal() { modalEl.classList.add('hidden'); }
+    window.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+</script>
+</body>
+</html>

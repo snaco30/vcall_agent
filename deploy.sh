@@ -26,7 +26,7 @@ fi
 
 # 3. 도커 이미지 빌드 (캐시 제거 모드로 클린 빌드)
 echo "📦 수정한 코드로 도ker 이미지를 새롭게 빌드합니다..."
-docker build --no-cache -t vcall-manager-web .
+docker build -t vcall-manager-web .
 
 # 4. 리눅스 환경 볼륨 마운트 기준 도커 컨테이너 실행
 echo "🌐 7000번 포트로 서비스를 구동합니다 (컨테이너명: vcall-web-service)..."

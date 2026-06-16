@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Query, Depends, HTTPException, status
+from fastapi import APIRouter, Query, Depends
 from pydantic import BaseModel
 import csv
 import io
@@ -22,12 +22,11 @@ def get_clean_table_data(table_name: str):
     if not os.path.exists(MDB_PATH):
         return None, "MDB 파일이 /data 경로에 존재하지 않습니다."
     try:
-        # mdb-export 엔진 가동 및 인코딩 처리
         result = subprocess.run(
             ["mdb-export", "-D", "%Y-%m-%d %H:%M:%S", MDB_PATH, table_name],
             capture_output=True,
-            text=True, 
-            encoding='utf-8', 
+            text=True,
+            encoding='utf-8',
             check=True
         )
         return result.stdout, None
@@ -38,13 +37,13 @@ def get_clean_table_data(table_name: str):
 
 def clean_text(val: str) -> str:
     """바이너리 널바이트(\x00) 및 유니코드 BOM 제어 문자 필터링"""
-    if not val: 
+    if not val:
         return ""
     return val.replace('\x00', '').replace('\ufeff', '').strip()
 
 def format_datetime(val: str) -> str:
     """텍스트 기반 날짜 포맷을 YYYY-MM-DD HH:MM:SS 표준 양식으로 교정"""
-    if not val: 
+    if not val:
         return "-"
     val = val.strip()
     if len(val) == 8 and val.isdigit():
@@ -56,11 +55,52 @@ def format_datetime(val: str) -> str:
 @router.get("")
 def get_merchants(
     search: str = Query("", description="검색 키워드 (상호, 번호, 대표자, 사업자번호)"),
-    current_user: str = Depends(get_current_user)  # 💡 비로그인 접근 차단 보안 장치
+    current_user: str = Depends(get_current_user)
 ):
-    search_keyword = search.strip()
+    search_keyword = search.strip().lower()
     if not search_keyword:
         return []
 
-    # 1. TMER2 (가맹점 마스터 테이블) 추출
     tmer2_csv, err = get_clean_table_data("TMER2")
+    if err or not tmer2_csv:
+        return []
+
+    f = io.StringIO(tmer2_csv)
+    reader = csv.DictReader(f)
+    merchants = []
+
+    for row in reader:
+        if not row:
+            continue
+
+        saup_no = clean_text(row.get("SAUPNO", "") or row.get("saupno", ""))
+        mer_name = clean_text(row.get("MERNAME", "") or row.get("mername", ""))
+        presi_name = clean_text(row.get("PRESINAME", "") or row.get("presiname", ""))
+        addr = clean_text(row.get("ADDR", "") or row.get("addr", ""))
+        zip_no = clean_text(row.get("ZIPNO", "") or row.get("zipno", ""))
+        tel_no = clean_text(row.get("TELNO", "") or row.get("telno", ""))
+        regi_date = format_datetime(clean_text(row.get("REGIYMD", "") or row.get("regiymd", "")))
+        presi_rate = clean_text(row.get("PRESIRATE", "") or row.get("presirate", ""))
+        damdang = clean_text(row.get("DAMDANG", "") or row.get("damdang", ""))
+        bigo = clean_text(row.get("BIGO", "") or row.get("bigo", ""))
+        delay_info = clean_text(row.get("DELAYINFO", "") or row.get("delayinfo", "")) or "정상"
+
+        match_text = " ".join([saup_no, mer_name, presi_name, tel_no, addr, damdang, bigo, delay_info]).lower()
+        if search_keyword not in match_text:
+            continue
+
+        merchants.append({
+            "saup_no": saup_no,
+            "name": mer_name,
+            "presi_name": presi_name,
+            "addr": addr,
+            "zip_no": zip_no,
+            "tel_no": tel_no,
+            "regi_date": regi_date,
+            "mer_type": presi_rate,
+            "damdang": damdang,
+            "bigo": bigo,
+            "delay_info": delay_info
+        })
+
+    return merchants

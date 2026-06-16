@@ -12,6 +12,143 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .table-header th {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            font-size: 0.78rem;
+            border-bottom: 1px solid #475569;
+            text-shadow: 0 1px 1px rgba(15, 23, 42, 0.16);
+        }
+        .table-header th:first-child { border-top-left-radius: 1rem; }
+        .table-header th:last-child { border-top-right-radius: 1rem; }
+        .interactive-table th,
+        .interactive-table td {
+            border: 1px solid #cbd5e1;
+        }
+        .interactive-table {
+            border-collapse: collapse;
+        }
+        .interactive-table tbody tr:hover td {
+            background-color: #eff6ff;
+        }
+        .highlight-col {
+            background-color: #dbeafe !important;
+            color: #0f172a !important;
+        }
+        .highlight-row td {
+            transition: background-color 0.18s ease, color 0.18s ease;
+        }
+        .table-cell {
+            color: #0f172a;
+            font-weight: 500;
+            transition: color 0.15s ease, background-color 0.15s ease;
+        }
+        .table-cell:hover {
+            color: #0c4a6e;
+        }
+        .detail-cell {
+            background-color: #f8fafc;
+            color: #0f172a;
+            border-radius: 0.75rem;
+            padding: 0.7rem 0.85rem;
+            display: inline-block;
+            width: 100%;
+        }
+        .full-remark {
+            white-space: normal;
+            word-break: break-word;
+            line-height: 1.45;
+        }
+        .high-contrast-header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            letter-spacing: 0.09em;
+        }
+        .table-responsive {
+            min-width: 100%;
+        }
+        .mobile-summary-cell {
+            display: none;
+        }
+        .desktop-only {
+            display: table-cell;
+        }
+        .merchant-mobile-card,
+        .history-mobile-card {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+        }
+        .merchant-mobile-title,
+        .history-mobile-title {
+            font-weight: 700;
+            font-size: 0.94rem;
+            color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .merchant-mobile-line,
+        .history-mobile-line {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            color: #475569;
+            font-size: 0.78rem;
+        }
+        .merchant-mobile-line span,
+        .history-mobile-line span {
+            flex: 1 1 auto;
+            min-width: 30%;
+        }
+        @media (max-width: 768px) {
+            .table-responsive {
+                min-width: 100%;
+            }
+            .table-cell {
+                font-size: 0.85rem;
+            }
+            .detail-cell {
+                padding: 0.55rem 0.7rem;
+            }
+            .high-contrast-header th {
+                font-size: 0.65rem;
+                padding: 0.8rem 0.75rem;
+            }
+            .interactive-table thead {
+                display: none;
+            }
+            .interactive-table tr {
+                display: block;
+                margin-bottom: 0.85rem;
+                border-radius: 1rem;
+                overflow: hidden;
+                box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+                background: #ffffff;
+            }
+            .interactive-table td {
+                display: none !important;
+                border: none !important;
+                padding: 0 !important;
+            }
+            .desktop-only {
+                display: none !important;
+            }
+            .mobile-summary-cell {
+                display: block !important;
+                padding: 1rem 1rem 1.1rem !important;
+                background: #f8fafc;
+                width: 100%;
+            }
+            .mobile-summary-cell .detail-label {
+                color: #64748b;
+                font-size: 0.75rem;
+            }
+            .interactive-table tbody tr:hover td {
+                background-color: transparent;
+            }
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
@@ -74,9 +211,9 @@
 
         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
             <div class="overflow-x-auto custom-scrollbar">
-                <table class="w-full text-center border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs font-bold uppercase tracking-wider">
+                <table class="w-full text-center border-collapse interactive-table table-responsive">
+                    <thead class="table-header high-contrast-header">
+                        <tr>
                             <th class="py-4 px-4">사업자번호</th>
                             <th class="py-4 px-4 text-left">가맹점명 (상호)</th>
                             <th class="py-4 px-4">업체유형</th>
@@ -113,27 +250,31 @@
         </div>
         <div class="flex-1 overflow-auto p-6 bg-slate-50 custom-scrollbar">
             <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-slate-500 text-xs">년도 필터:</span>
+                        <div id="historyYearFilters" class="flex flex-wrap gap-2"></div>
+                    </div>
+                    <div class="text-slate-500 text-xs" id="historyFilterSummary">전체 보기 0건</div>
+                </div>
                 <div class="overflow-x-auto custom-scrollbar">
-                    <table class="w-full text-center border-collapse text-xs font-semibold whitespace-nowrap">
-                        <thead class="bg-slate-800 text-slate-200 text-center uppercase tracking-wider sticky top-0">
-                            <tr class="divide-x divide-slate-700">
+                    <table class="w-full text-center border-collapse text-xs font-semibold whitespace-nowrap interactive-table table-responsive">
+                        <thead class="table-header high-contrast-header sticky top-0">
+                            <tr>
                                 <th class="py-3 px-4">전화번호</th>
                                 <th class="py-3 px-4">통화일시</th>
                                 <th class="py-3 px-4">상호</th>
                                 <th class="py-3 px-4 text-left min-w-[250px]">통화내용</th>
-                                <th class="py-3 px-4">업무유형</th>
-                                <th class="py-3 px-4">업무상세</th>
+                                <th class="py-3 px-4">업무요약</th>
                                 <th class="py-3 px-4">처리상태</th>
-                                <th class="py-3 px-4">처리결과</th>
+                                <th class="py-3 px-4 min-w-[260px]">처리결과</th>
                                 <th class="py-3 px-4">처리자</th>
-                                <th class="py-3 px-4">확인여부</th>
                                 <th class="py-3 px-4">전화건사람</th>
                                 <th class="py-3 px-4">전처리자</th>
                                 <th class="py-3 px-4">인계자</th>
                                 <th class="py-3 px-4">처리일시</th>
                                 <th class="py-3 px-4">사후처리</th>
-                                <th class="py-3 px-4">사후처리상세</th>
-                                <th class="py-3 px-4">이전통화</th>
+                                <th class="py-3 px-4">사후처리 상세</th>
                             </tr>
                         </thead>
                         <tbody id="historyTableBody" class="divide-y divide-slate-100 text-slate-700 font-medium"></tbody>
@@ -146,6 +287,122 @@
 
 <script>
     const modalEl = document.getElementById('historyModal');
+    let historyItemsForModal = [];
+    let activeHistoryYear = 'all';
+
+    function getYearFromRegiTime(regi_time) {
+        if (!regi_time) return '';
+        const yearMatch = regi_time.match(/^(\d{4})/);
+        if (yearMatch) return yearMatch[1];
+        const d = new Date(regi_time);
+        return Number.isFinite(d.getFullYear()) ? String(d.getFullYear()) : '';
+    }
+
+    function getYearFilterButtonClass(isActive) {
+        return isActive
+            ? 'bg-blue-600 text-white px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all'
+            : 'bg-slate-100 text-slate-700 px-3 py-1.5 rounded-full text-[11px] hover:bg-slate-200 transition-all';
+    }
+
+    function renderHistoryFilterButtons(items) {
+        const container = document.getElementById('historyYearFilters');
+        container.innerHTML = '';
+        const years = Array.from(new Set(items.map(h => getYearFromRegiTime(h.regi_time)).filter(Boolean))).sort((a, b) => b.localeCompare(a));
+
+        const createButton = (label, value) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.innerText = label;
+            btn.className = getYearFilterButtonClass(activeHistoryYear === value);
+            btn.onclick = () => filterHistoryByYear(value);
+            return btn;
+        };
+
+        container.appendChild(createButton('전체', 'all'));
+        years.forEach(year => container.appendChild(createButton(year, year)));
+    }
+
+    function renderHistoryRows(items) {
+        const hBody = document.getElementById('historyTableBody');
+        const summary = document.getElementById('historyFilterSummary');
+        hBody.innerHTML = '';
+        if (!items || items.length === 0) {
+            summary.innerText = '조회 결과가 없습니다.';
+            hBody.innerHTML = '<tr><td colspan="14" class="text-slate-400 py-24 text-center font-normal">해당 년도의 통화 이력이 없습니다.</td></tr>';
+            return;
+        }
+
+        summary.innerText = `전체 ${items.length.toLocaleString()}건`;
+
+        items.forEach(h => {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-slate-50 divide-x divide-slate-100 transition-colors';
+            row.innerHTML = `
+                        <td class="py-3 px-4 font-normal text-slate-500 table-cell desktop-only">${h.tel_no || '-'}</td>
+                        <td class="py-3 px-4 font-mono text-slate-400 text-[11px] table-cell desktop-only">${h.regi_time || '-'}</td>
+                        <td class="py-3 px-4 font-bold text-slate-900 table-cell">${h.mer_name || '-'}</td>
+                        <td class="py-3 px-4 text-left text-slate-600 font-normal whitespace-pre-wrap max-w-md table-cell">${h.content || '-'}</td>
+                        <td class="py-3 px-4 text-slate-500 table-cell desktop-only">${h.upmu_det || '-'}</td>
+                        <td class="py-3 px-4 text-slate-600 table-cell desktop-only">${h.proc_type || '-'}</td>
+                        <td class="py-3 px-4 text-slate-600 whitespace-pre-wrap min-w-[260px] table-cell detail-cell">${h.res || '-'}</td>
+                        <td class="py-3 px-4 text-slate-900 table-cell desktop-only">${h.proc_name || '-'}</td>
+                        <td class="py-3 px-4 text-slate-400 font-normal table-cell desktop-only">${h.snd_name || '-'}</td>
+                        <td class="py-3 px-4 text-slate-400 font-normal table-cell desktop-only">${h.prev_name || '-'}</td>
+                        <td class="py-3 px-4 text-slate-400 font-normal table-cell desktop-only">${h.takeover || '-'}</td>
+                        <td class="py-3 px-4 font-mono text-slate-400 text-[11px] table-cell desktop-only">${h.churi_time || '-'}</td>
+                        <td class="py-3 px-4 text-slate-500 table-cell desktop-only">${h.after_type || '-'}</td>
+                        <td class="py-3 px-4 text-slate-500 table-cell desktop-only">${h.after_det || '-'}</td>
+                        <td class="mobile-summary-cell">
+                            <div class="history-mobile-card">
+                                <div class="history-mobile-title">${h.mer_name || '-'}</div>
+                                <div class="history-mobile-line"><span>통화: ${h.tel_no || '-'}</span><span>일시: ${h.regi_time || '-'}</span></div>
+                                <div class="history-mobile-line"><span>상태: ${h.proc_type || '-'}</span><span>처리자: ${h.proc_name || '-'}</span></div>
+                            </div>
+                        </td>
+                    `;
+            hBody.innerHTML += row.outerHTML;
+        });
+    }
+
+    function filterHistoryByYear(year) {
+        activeHistoryYear = year;
+        const filteredHistory = year === 'all'
+            ? historyItemsForModal
+            : historyItemsForModal.filter(h => getYearFromRegiTime(h.regi_time) === year);
+        renderHistoryFilterButtons(historyItemsForModal);
+        renderHistoryRows(filteredHistory);
+    }
+
+    function setColumnHighlight(table, colIndex) {
+        const rows = table.querySelectorAll('tr');
+        rows.forEach(row => {
+            const cells = Array.from(row.children);
+            if (cells[colIndex]) cells[colIndex].classList.add('highlight-col');
+        });
+    }
+
+    function clearColumnHighlight(table) {
+        table.querySelectorAll('.highlight-col').forEach(el => el.classList.remove('highlight-col'));
+    }
+
+    function attachColumnHover(tableSelector) {
+        document.querySelectorAll(tableSelector).forEach(table => {
+            table.addEventListener('mouseover', event => {
+                const cell = event.target.closest('th, td');
+                if (!cell || !table.contains(cell)) return;
+                const row = cell.parentElement;
+                const colIndex = Array.from(row.children).indexOf(cell);
+                clearColumnHighlight(table);
+                setColumnHighlight(table, colIndex);
+            });
+            table.addEventListener('mouseout', event => {
+                const related = event.relatedTarget;
+                if (!related || !table.contains(related)) {
+                    clearColumnHighlight(table);
+                }
+            });
+        });
+    }
 
     // 💡 화면 켜질 때 브라우저 토큰 검사하여 대시보드/로그인 전환 제어
     window.onload = function() {
@@ -156,6 +413,7 @@
             document.getElementById("mainDashboard").classList.remove("hidden");
             document.getElementById("userInfo").innerText = `🔑 관리자: ${username}`;
         }
+        attachColumnHover('.interactive-table');
     };
 
     // 💡 로그인 엔드포인트 연동 함수
@@ -225,21 +483,28 @@
 
                 data.forEach(item => {
                     const row = document.createElement('tr');
-                    row.className = "hover:bg-slate-50/80 border-b border-slate-100 transition-colors";
+                    row.className = "highlight-row hover:bg-slate-50/80 border-b border-slate-100 transition-colors";
                     const isDelay = item.delay_info && item.delay_info !== "정상" && item.delay_info !== "-";
                     const delayClass = isDelay ? "bg-rose-50 text-rose-700 border-rose-100 px-2 py-1 rounded-md text-xs border" : "bg-emerald-50 text-emerald-700 border-emerald-100 px-2 py-1 rounded-md text-xs border";
 
                     row.innerHTML = `
-                        <td class="py-4 px-4 font-mono text-slate-500 font-normal">${item.saup_no || '-'}</td>
-                        <td class="py-4 px-4 text-left font-bold text-blue-600 hover:text-blue-800 cursor-pointer underline decoration-dotted" onclick="openHistory('${item.saup_no}', '${item.tel_no}', '${item.name}')">${item.name || '-'}</td>
-                        <td class="py-4 px-4"><span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs">${item.mer_type || '-'}</span></td>
-                        <td class="py-4 px-4 text-slate-600 font-normal">${item.tel_no || '-'}</td>
-                        <td class="py-4 px-4 text-left max-w-xs truncate text-slate-600 font-normal" title="${item.addr}">${item.addr || '-'}</td>
-                        <td class="py-4 px-4 font-semibold text-slate-900">${item.presi_name || '-'}</td>
-                        <td class="py-4 px-4 text-slate-400 font-normal font-mono text-xs">${item.regi_date || '-'}</td>
-                        <td class="py-4 px-4 text-slate-500 text-xs">${item.damdang || '-'}</td>
-                        <td class="py-4 px-4"><span class="${delayClass}">${item.delay_info || '정상'}</span></td>
-                        <td class="py-4 px-4 text-left text-xs text-slate-400 font-normal max-w-[150px] truncate" title="${item.bigo}">${item.bigo || '-'}</td>
+                        <td class="py-4 px-4 font-mono text-slate-500 font-normal desktop-only">${item.saup_no || '-'}</td>
+                        <td class="py-4 px-4 text-left font-bold text-blue-600 hover:text-blue-800 cursor-pointer underline decoration-dotted table-cell" onclick="openHistory('${item.saup_no}', '${item.tel_no}', '${item.name}')">${item.name || '-'}</td>
+                        <td class="py-4 px-4 table-cell desktop-only"><span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs">${item.mer_type || '-'}</span></td>
+                        <td class="py-4 px-4 text-slate-600 font-normal table-cell">${item.tel_no || '-'}</td>
+                        <td class="py-4 px-4 text-left max-w-[360px] break-words text-slate-600 font-normal table-cell desktop-only" title="${item.addr}">${item.addr || '-'}</td>
+                        <td class="py-4 px-4 font-semibold text-slate-900 table-cell desktop-only">${item.presi_name || '-'}</td>
+                        <td class="py-4 px-4 text-slate-400 font-normal font-mono text-xs table-cell desktop-only">${item.regi_date || '-'}</td>
+                        <td class="py-4 px-4 text-slate-500 text-xs table-cell desktop-only">${item.damdang || '-'}</td>
+                        <td class="py-4 px-4 table-cell"><span class="${delayClass}">${item.delay_info || '정상'}</span></td>
+                        <td class="py-4 px-4 text-left text-xs text-slate-400 font-normal max-w-[420px] break-words full-remark table-cell" title="${item.bigo}">${item.bigo || '-'}</td>
+                        <td class="mobile-summary-cell">
+                            <div class="merchant-mobile-card">
+                                <div class="merchant-mobile-title">${item.name || '-'}</div>
+                                <div class="merchant-mobile-line"><span>전화: ${item.tel_no || '-'}</span><span>${item.mer_type || '-'}</span></div>
+                                <div class="merchant-mobile-line"><span>대표: ${item.presi_name || '-'}</span><span>등록: ${item.regi_date || '-'}</span></div>
+                            </div>
+                        </td>
                     `;
                     tableBody.innerHTML += row.outerHTML;
                 });
@@ -256,37 +521,18 @@
 
         secureFetch(`/api/history?saup_no=${encodeURIComponent(saupNo)}&tel_no=${encodeURIComponent(telNo)}`)
             .then(data => {
-                hBody.innerHTML = '';
-                if (!data || data.length === 0) {
-                    hBody.innerHTML = '<tr><td colspan="17" class="text-slate-400 py-24 text-center font-normal">해당 가맹점의 통합 통화 이력이 확인되지 않습니다.</td></tr>';
+                historyItemsForModal = data || [];
+                activeHistoryYear = 'all';
+                if (!historyItemsForModal || historyItemsForModal.length === 0) {
+                    hBody.innerHTML = '<tr><td colspan="14" class="text-slate-400 py-24 text-center font-normal">해당 가맹점의 통합 통화 이력이 확인되지 않습니다.</td></tr>';
+                    document.getElementById('historyYearFilters').innerHTML = '';
                     return;
                 }
-                data.forEach(h => {
-                    const row = document.createElement('tr');
-                    row.className = "hover:bg-slate-50 divide-x divide-slate-100 transition-colors";
-                    row.innerHTML = `
-                        <td class="py-3 px-4 font-normal text-slate-500">${h.tel_no || '-'}</td>
-                        <td class="py-3 px-4 font-mono text-slate-400 text-[11px]">${h.regi_time || '-'}</td>
-                        <td class="py-3 px-4 font-bold text-slate-900">${h.mer_name || '-'}</td>
-                        <td class="py-3 px-4 text-left text-slate-600 font-normal whitespace-pre-wrap max-w-md">${h.content || '-'}</td>
-                        <td class="py-3 px-4 text-slate-500"><span class="bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">${h.upmu_type || '-'}</span></td>
-                        <td class="py-3 px-4 text-slate-500">${h.upmu_det || '-'}</td>
-                        <td class="py-3 px-4 text-slate-600">${h.proc_type || '-'}</td>
-                        <td class="py-3 px-4 text-slate-600 whitespace-pre-wrap max-w-xs">${h.res || '-'}</td>
-                        <td class="py-3 px-4 text-slate-900">${h.proc_name || '-'}</td>
-                        <td class="py-3 px-4">${h.ok_yn || '-'}</td>
-                        <td class="py-3 px-4 text-slate-400 font-normal">${h.snd_name || '-'}</td>
-                        <td class="py-3 px-4 text-slate-400 font-normal">${h.prev_name || '-'}</td>
-                        <td class="py-3 px-4 text-slate-400 font-normal">${h.takeover || '-'}</td>
-                        <td class="py-3 px-4 font-mono text-slate-400 text-[11px]">${h.churi_time || '-'}</td>
-                        <td class="py-3 px-4 text-slate-500">${h.after_type || '-'}</td>
-                        <td class="py-3 px-4 text-slate-500">${h.after_det || '-'}</td>
-                        <td class="py-3 px-4 text-slate-400 font-normal">${h.before_time || '-'}</td>
-                    `;
-                    hBody.innerHTML += row.outerHTML;
-                });
+                renderHistoryFilterButtons(historyItemsForModal);
+                renderHistoryRows(historyItemsForModal);
             }).catch(err => {
-                hBody.innerHTML = '<tr><td colspan="17" class="text-rose-500 py-24 text-center">통화 이력 스트림 로드에 실패했습니다.</td></tr>';
+                hBody.innerHTML = '<tr><td colspan="14" class="text-rose-500 py-24 text-center">통화 이력 스트림 로드에 실패했습니다.</td></tr>';
+                document.getElementById('historyYearFilters').innerHTML = '';
             });
     }
 

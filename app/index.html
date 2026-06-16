@@ -68,17 +68,49 @@
         .table-responsive {
             min-width: 100%;
         }
-        .mobile-summary-cell {
+        .mobile-card-list {
             display: none;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 1rem;
+            position: relative;
+            z-index: 1;
+            min-height: auto;
+            background: transparent;
         }
         .desktop-only {
             display: table-cell;
         }
-        .merchant-mobile-card,
-        .history-mobile-card {
+        .merchant-card,
+        .history-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 1.25rem;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: block !important;
+        }
+        .merchant-card-title,
+        .history-card-title {
+            font-weight: 700;
+            color: #0f172a;
+            font-size: 1rem;
+            line-height: 1.35;
+        }
+        .merchant-card-row,
+        .history-card-row {
             display: flex;
-            flex-direction: column;
-            gap: 0.45rem;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+            color: #475569;
+            font-size: 0.82rem;
+        }
+        .merchant-card-row span,
+        .history-card-row span {
+            flex: 1 1 45%;
+            min-width: 140px;
         }
         .merchant-mobile-title,
         .history-mobile-title {
@@ -117,15 +149,31 @@
                 padding: 0.8rem 0.75rem;
             }
             .interactive-table thead {
-                display: none;
+                display: none !important;
             }
-            .interactive-table tr {
-                display: block;
-                margin-bottom: 0.85rem;
-                border-radius: 1rem;
-                overflow: hidden;
-                box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
-                background: #ffffff;
+            .interactive-table {
+                display: none !important;
+            }
+            .mobile-card-list {
+                display: block !important;
+                padding: 1rem !important;
+                background: transparent !important;
+                width: 100% !important;
+            }
+            .merchant-card {
+                margin-bottom: 1rem;
+                display: block !important;
+            }
+            .merchant-card-title,
+            .merchant-card-row {
+                display: block !important;
+            }
+            .merchant-card-row span {
+                display: block !important;
+                flex: none !important;
+                min-width: auto !important;
+                width: 100% !important;
+                margin-bottom: 0.5rem;
             }
             .interactive-table td {
                 display: none !important;
@@ -136,10 +184,7 @@
                 display: none !important;
             }
             .mobile-summary-cell {
-                display: block !important;
-                padding: 1rem 1rem 1.1rem !important;
-                background: #f8fafc;
-                width: 100%;
+                display: none !important;
             }
             .mobile-summary-cell .detail-label {
                 color: #64748b;
@@ -215,10 +260,10 @@
                     <thead class="table-header high-contrast-header">
                         <tr>
                             <th class="py-4 px-4">사업자번호</th>
-                            <th class="py-4 px-4 text-left">가맹점명 (상호)</th>
+                            <th class="py-4 px-4 text-left min-w-[250px]">가맹점명 (상호)</th>
                             <th class="py-4 px-4">업체유형</th>
-                            <th class="py-4 px-4">핸드폰 (전화)</th>
-                            <th class="py-4 px-4 text-left">주소</th>
+                            <th class="py-4 px-4 min-w-[150px]">핸드폰 (전화)</th>
+                            <th class="py-4 px-4 text-left min-w-[400px]">주소</th>
                             <th class="py-4 px-4">대표자</th>
                             <th class="py-4 px-4">등록일자</th>
                             <th class="py-4 px-4">관리담당자</th>
@@ -233,6 +278,7 @@
                     </tbody>
                 </table>
             </div>
+            <div id="merchantCardList" class="mobile-card-list p-4 space-y-4"></div>
         </div>
     </div>
 </div>
@@ -471,16 +517,34 @@
 
     function loadData(searchKeyword) {
         const tableBody = document.getElementById('merchantTableBody');
-        tableBody.innerHTML = '<tr><td colspan="10" class="text-slate-400 py-24 text-center"><div class="inline-block animate-spin rounded-full h-5 w-5 border-2 border-blue-600 border-t-transparent mr-2.5"></div>마스터 데이터를 스캔 중입니다...</td></tr>';
+        const cardList = document.getElementById('merchantCardList');
+        const merchantContainer = document.querySelector('.bg-white.rounded-2xl.border.border-slate-200\\/80.shadow-sm.overflow-hidden');
+        const isMobile = window.innerWidth <= 768;
+
+        // 명시적으로 로딩 상태 표시
+        if (isMobile) {
+            cardList.innerHTML = '<div class="text-slate-400 py-10 text-center text-sm">마스터 데이터를 스캔 중입니다...</div>';
+            cardList.style.display = 'block';
+        } else {
+            tableBody.innerHTML = '<tr><td colspan="10" class="text-slate-400 py-24 text-center"><div class="inline-block animate-spin rounded-full h-5 w-5 border-2 border-blue-600 border-t-transparent mr-2.5"></div>마스터 데이터를 스캔 중입니다...</td></tr>';
+        }
 
         secureFetch(`/api/merchants?search=${encodeURIComponent(searchKeyword)}`)
             .then(data => {
-                tableBody.innerHTML = '';
                 if (!data || data.length === 0) {
-                    tableBody.innerHTML = '<tr><td colspan="10" class="text-slate-400 py-24 text-center font-normal">일치하는 가맹점 마스터 데이터가 없습니다.</td></tr>';
+                    const noDataMsg = '일치하는 가맹점 마스터 데이터가 없습니다.';
+                    if (isMobile) {
+                        cardList.innerHTML = `<div class="text-slate-400 py-10 text-center text-sm font-normal">${noDataMsg}</div>`;
+                    } else {
+                        tableBody.innerHTML = `<tr><td colspan="10" class="text-slate-400 py-24 text-center font-normal">${noDataMsg}</td></tr>`;
+                    }
                     return;
                 }
 
+                // 테이블 렌더링 (데스크톱)
+                tableBody.innerHTML = '';
+                let cardHtml = '';
+                
                 data.forEach(item => {
                     const row = document.createElement('tr');
                     row.className = "highlight-row hover:bg-slate-50/80 border-b border-slate-100 transition-colors";
@@ -489,10 +553,10 @@
 
                     row.innerHTML = `
                         <td class="py-4 px-4 font-mono text-slate-500 font-normal desktop-only">${item.saup_no || '-'}</td>
-                        <td class="py-4 px-4 text-left font-bold text-blue-600 hover:text-blue-800 cursor-pointer underline decoration-dotted table-cell" onclick="openHistory('${item.saup_no}', '${item.tel_no}', '${item.name}')">${item.name || '-'}</td>
+                        <td class="py-4 px-4 text-left font-bold text-blue-600 hover:text-blue-800 cursor-pointer underline decoration-dotted table-cell whitespace-nowrap min-w-[250px]"><span class="merchant-link">${item.name || '-'}</span></td>
                         <td class="py-4 px-4 table-cell desktop-only"><span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs">${item.mer_type || '-'}</span></td>
-                        <td class="py-4 px-4 text-slate-600 font-normal table-cell">${item.tel_no || '-'}</td>
-                        <td class="py-4 px-4 text-left max-w-[360px] break-words text-slate-600 font-normal table-cell desktop-only" title="${item.addr}">${item.addr || '-'}</td>
+                        <td class="py-4 px-4 text-slate-600 font-normal table-cell whitespace-nowrap min-w-[150px]">${item.tel_no || '-'}</td>
+                        <td class="py-4 px-4 text-left min-w-[400px] text-slate-600 font-normal table-cell desktop-only" title="${item.addr}">${item.addr || '-'}</td>
                         <td class="py-4 px-4 font-semibold text-slate-900 table-cell desktop-only">${item.presi_name || '-'}</td>
                         <td class="py-4 px-4 text-slate-400 font-normal font-mono text-xs table-cell desktop-only">${item.regi_date || '-'}</td>
                         <td class="py-4 px-4 text-slate-500 text-xs table-cell desktop-only">${item.damdang || '-'}</td>
@@ -506,10 +570,40 @@
                             </div>
                         </td>
                     `;
-                    tableBody.innerHTML += row.outerHTML;
+                    const link = row.querySelector('.merchant-link');
+                    if (link) {
+                        link.addEventListener('click', () => openHistory(item.saup_no || '', item.tel_no || '', item.name || ''));
+                    }
+                    tableBody.appendChild(row);
+                    
+                    // 모바일 카드 생성
+                    cardHtml += `
+                        <div class="merchant-card">
+                            <div class="merchant-card-title">${item.name || '-'} <span class="text-sm font-normal text-slate-500">${item.saup_no || '-'}</span></div>
+                            <div class="merchant-card-row"><span>전화: ${item.tel_no || '-'}</span><span>유형: ${item.mer_type || '-'}</span></div>
+                            <div class="merchant-card-row"><span>대표: ${item.presi_name || '-'}</span><span>등록: ${item.regi_date || '-'}</span></div>
+                            <div class="merchant-card-row"><span>관리담당: ${item.damdang || '-'}</span><span>연체: ${item.delay_info || '정상'}</span></div>
+                            <div class="merchant-card-row"><span class="text-slate-500 break-words">주소: ${item.addr || '-'}</span></div>
+                            <div class="merchant-card-row"><span class="text-slate-500 break-words">비고: ${item.bigo || '-'}</span></div>
+                        </div>
+                    `;
                 });
+                
+                // 최종 렌더링
+                if (isMobile) {
+                    cardList.innerHTML = cardHtml;
+                    cardList.style.display = 'block';
+                } else {
+                    cardList.style.display = 'none';
+                }
             }).catch(err => {
-                tableBody.innerHTML = '<tr><td colspan="10" class="text-rose-500 py-24 text-center">데이터 로드 실패</td></tr>';
+                const errorMsg = '데이터 로드 실패';
+                if (isMobile) {
+                    cardList.innerHTML = `<div class="text-rose-500 py-10 text-center text-sm">${errorMsg}</div>`;
+                    cardList.style.display = 'block';
+                } else {
+                    tableBody.innerHTML = `<tr><td colspan="10" class="text-rose-500 py-24 text-center">${errorMsg}</td></tr>`;
+                }
             });
     }
 

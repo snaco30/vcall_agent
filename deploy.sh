@@ -24,15 +24,20 @@ if [ ! -d "$PROJECT_DIR/data" ] || [ ! -f "$PROJECT_DIR/data/vanpro97_call.mdb" 
     exit 1
 fi
 
+# 2-1. MDB 파일 권한 최소화 (읽기 전용, 실행 권한 제거)
+echo "🔒 MDB 파일 권한을 최소화합니다 (640)..."
+chmod 750 "$PROJECT_DIR/data"
+chmod 640 "$PROJECT_DIR/data/vanpro97_call.mdb"
+
 # 3. 도커 이미지 빌드 (캐시 제거 모드로 클린 빌드)
 echo "📦 수정한 코드로 도ker 이미지를 새롭게 빌드합니다..."
 docker build -t vcall-manager-web .
 
 # 4. 리눅스 환경 볼륨 마운트 기준 도커 컨테이너 실행
-echo "🌐 7000번 포트로 서비스를 구동합니다 (컨테이너명: vcall-web-service)..."
+echo "🌐 7001번 포트로 서비스를 구동합니다 (컨테이너명: vcall-web-service)..."
 docker run -d \
   --name vcall-web-service \
-  -p 7000:7000 \
+  -p 7001:7001 \
   --env-file "$PROJECT_DIR/.env" \
   -v "$PROJECT_DIR/data":/data \
   -v "$PROJECT_DIR/app":/app \
@@ -41,5 +46,5 @@ docker run -d \
 
 echo "=========================================="
 echo "✅ 배포가 성공적으로 완료되었습니다!"
-echo "👉 접속 주소: http://localhost:7000"
+echo "👉 접속 주소: http://localhost:7001"
 echo "=========================================="

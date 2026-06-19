@@ -120,11 +120,6 @@
     </div>
 
     <div class="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <!-- Welcome Hero -->
-        <div id="welcomeHero" class="hero-grid-bg bg-gradient-to-br from-indigo-600 via-indigo-600 to-indigo-700 rounded-2xl shadow-lg shadow-indigo-600/20 ring-1 ring-indigo-500/20 mb-6 overflow-hidden fade-in-up">
-            <div id="welcomeHeroContent" class="relative px-5 sm:px-8 py-6 sm:py-8"></div>
-        </div>
-
         <!-- Search Panel -->
         <div class="bg-white rounded-xl ring-1 ring-zinc-200/60 shadow-sm p-5 sm:p-6 mb-6 fade-in-up">
             <div class="mb-5 flex items-start gap-3">
@@ -177,6 +172,14 @@
                 </button>
             </div>
             <div id="merchantCardList" class="merchant-card-grid p-4 sm:p-6 space-y-4 max-w-3xl mx-auto w-full"></div>
+        </div>
+
+        <!-- Incoming Calls Action -->
+        <div id="incomingCallsAction" class="mt-6 mb-4 fade-in-up"></div>
+
+        <!-- Welcome Hero -->
+        <div id="welcomeHero" class="hero-grid-bg bg-gradient-to-br from-indigo-600 via-indigo-600 to-indigo-700 rounded-2xl shadow-lg shadow-indigo-600/20 ring-1 ring-indigo-500/20 overflow-hidden fade-in-up">
+            <div id="welcomeHeroContent" class="relative px-5 sm:px-8 py-6 sm:py-8"></div>
         </div>
     </div>
 </div>
@@ -327,13 +330,18 @@
                         <p class="text-indigo-100 text-xs mt-1">연체 상태 및 관리 메모 확인</p>
                     </div>
                 </div>
-                <div class="mt-5">
-                    <button type="button" onclick="openIncomingCalls()" class="inline-flex items-center gap-2 bg-white text-indigo-700 hover:bg-indigo-50 font-semibold text-sm px-5 py-3 rounded-xl shadow-md shadow-indigo-900/10 ring-1 ring-white/30 transition-all active:scale-[0.98]">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-                        수신 통화 목록
-                    </button>
-                </div>
             </div>
+        `;
+    }
+
+    function renderIncomingCallsAction() {
+        const el = document.getElementById('incomingCallsAction');
+        if (!el) return;
+        el.innerHTML = `
+            <button type="button" onclick="openIncomingCalls()" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white text-indigo-700 hover:bg-indigo-50 font-semibold text-sm px-5 py-3 rounded-xl shadow-md shadow-indigo-900/10 ring-1 ring-indigo-200/80 transition-all active:scale-[0.98]">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                수신 통화 목록
+            </button>
         `;
     }
 
@@ -722,6 +730,7 @@
             document.getElementById('mainDashboard').classList.remove('hidden');
             renderUserInfo(username || '관리자');
             renderWelcomeHero(username || '관리자');
+            renderIncomingCallsAction();
             loadSyncStatus();
             setInterval(loadSyncStatus, 5 * 60 * 1000);
         }

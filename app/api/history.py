@@ -11,11 +11,11 @@ from app.api.auth import get_current_user  # JWT 보안 주입
 router = APIRouter(prefix="/api/history", tags=["History"])
 
 KST = ZoneInfo("Asia/Seoul")
-INCOMING_PROC_KEYWORDS = [
-    k.strip().lower()
-    for k in os.getenv("INCOMING_PROC_KEYWORDS", "수신,인입,IN").split(",")
-    if k.strip()
-]
+
+
+def _incoming_keywords() -> list[str]:
+    raw = os.getenv("INCOMING_TYPE_KEYWORDS") or os.getenv("INCOMING_PROC_KEYWORDS", "수신전화,수신")
+    return [k.strip().lower() for k in raw.split(",") if k.strip()]
 
 
 def _today_kst() -> date:
@@ -44,11 +44,19 @@ def _is_on_date(regi_time_formatted: str, target: date) -> bool:
     return regi_date == target.isoformat() if regi_date else False
 
 
-def _is_incoming_call(proc_type: str) -> bool:
-    if not proc_type:
+def _matches_incoming_keyword(value: str) -> bool:
+    if not value:
         return False
-    proc_lower = proc_type.lower()
-    return any(keyword in proc_lower for keyword in INCOMING_PROC_KEYWORDS)
+    value_lower = value.lower()
+    return any(keyword in value_lower for keyword in _incoming_keywords())
+
+
+def _is_incoming_call_row(row: list[str]) -> bool:
+    if len(row) < 19:
+        return False
+    after_det = clean_text(row[18])
+    upmu_type = clean_text(row[4])
+    return _matches_incoming_keyword(after_det) or _matches_incoming_keyword(upmu_type)
 
 
 @router.get("/incoming")
@@ -75,8 +83,7 @@ def get_incoming_calls(
             if len(row) < 21:
                 continue
 
-            proc_type = clean_text(row[5])
-            if not _is_incoming_call(proc_type):
+            if not _is_incoming_call_row(row):
                 continue
 
             regi_time = format_datetime(clean_text(row[11]))

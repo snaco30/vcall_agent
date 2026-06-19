@@ -67,7 +67,9 @@ docker run -d \
   --name vcall-web-service \
   -p 7002:7002 \
   --env-file "$PROJECT_DIR/.env" \
-  -v "$PROJECT_DIR/data":/data:ro \
+  -e MDB_MOUNT_DIR=/mnt/vcallmanager1 \
+  -v "$PROJECT_DIR/data":/data \
+  -v "$PROJECT_DIR/mnt/vcallmanager1":/mnt/vcallmanager1:ro \
   -v "$PROJECT_DIR/app":/app \
   --restart always \
   vcall-manager-web

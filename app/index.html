@@ -112,6 +112,10 @@
             <span class="font-medium text-zinc-600">데이터 기준 시각</span>
             <span id="syncStatusTime" class="font-semibold text-zinc-800">-</span>
             <span id="syncStatusWarning" class="hidden text-amber-700 font-medium"></span>
+            <button type="button" id="syncTriggerBtn" onclick="triggerMdbSync()" class="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                데이터 동기화
+            </button>
         </div>
     </div>
 
@@ -590,42 +594,103 @@
         const bar = document.getElementById('syncStatusBar');
         const timeEl = document.getElementById('syncStatusTime');
         const warnEl = document.getElementById('syncStatusWarning');
+        const syncBtn = document.getElementById('syncTriggerBtn');
         if (!bar || !timeEl || !warnEl) return;
 
-        bar.classList.remove('hidden', 'bg-amber-50', 'border-amber-200/80', 'bg-zinc-50', 'border-zinc-200/80');
+        bar.classList.remove('hidden', 'bg-amber-50', 'border-amber-200/80', 'bg-zinc-50', 'border-zinc-200/80', 'bg-emerald-50', 'border-emerald-200/80');
+        warnEl.classList.remove('text-amber-700', 'text-emerald-700');
 
         if (!data || !data.mdb_available) {
             bar.classList.add('bg-amber-50', 'border-amber-200/80');
             timeEl.textContent = 'MDB 없음';
-            warnEl.textContent = '데이터 파일 없음 — SMB 동기화 또는 수동 복사 필요';
+            warnEl.textContent = '데이터 파일 없음 — SMB 마운트 후 동기화 버튼을 눌러 주세요';
+            warnEl.classList.add('text-amber-700');
             warnEl.classList.remove('hidden');
+            if (syncBtn) syncBtn.disabled = false;
             return;
         }
 
         if (!data.synced_at) {
             bar.classList.add('bg-amber-50', 'border-amber-200/80');
             timeEl.textContent = '동기화 이력 없음';
-            warnEl.textContent = '자동 동기화 미완료 — 로컬 복사본 사용 중';
+            warnEl.textContent = data.mount_available
+                ? '동기화 버튼으로 최신 데이터를 가져올 수 있습니다'
+                : 'SMB 마운트 없음 — 마운트 후 동기화 버튼을 눌러 주세요';
+            warnEl.classList.add('text-amber-700');
             warnEl.classList.remove('hidden');
+            if (syncBtn) syncBtn.disabled = false;
             return;
         }
 
         timeEl.textContent = formatSyncTime(data.synced_at);
         if (!data.has_sync_history) {
             bar.classList.add('bg-amber-50', 'border-amber-200/80');
-            warnEl.textContent = '자동 동기화 미완료 — 로컬 복사본 사용 중';
+            warnEl.textContent = data.mount_available
+                ? '로컬 복사본 사용 중 — 동기화 버튼으로 갱신 가능'
+                : 'SMB 마운트 없음 — 마운트 후 동기화 버튼을 눌러 주세요';
+            warnEl.classList.add('text-amber-700');
             warnEl.classList.remove('hidden');
+            if (syncBtn) syncBtn.disabled = false;
             return;
         }
 
         if (data.is_stale) {
             bar.classList.add('bg-amber-50', 'border-amber-200/80');
-            warnEl.textContent = '원본 서버 연결 불가 — 최종 복사본 사용 중';
+            warnEl.textContent = data.mount_available
+                ? '최종 복사본이 오래됨 — 동기화 버튼으로 갱신하세요'
+                : '원본 서버 연결 불가 — 최종 복사본 사용 중';
+            warnEl.classList.add('text-amber-700');
             warnEl.classList.remove('hidden');
         } else {
             bar.classList.add('bg-zinc-50', 'border-zinc-200/80');
             warnEl.classList.add('hidden');
         }
+        if (syncBtn) syncBtn.disabled = false;
+    }
+
+    function triggerMdbSync() {
+        const syncBtn = document.getElementById('syncTriggerBtn');
+        const warnEl = document.getElementById('syncStatusWarning');
+        if (syncBtn) {
+            syncBtn.disabled = true;
+            syncBtn.textContent = '동기화 중...';
+        }
+        if (warnEl) {
+            warnEl.textContent = '마운트 폴더에서 MDB를 복사하는 중입니다...';
+            warnEl.classList.remove('hidden');
+            warnEl.classList.remove('text-emerald-700');
+            warnEl.classList.add('text-amber-700');
+        }
+
+        secureFetch('/api/sync/trigger', { method: 'POST' })
+            .then(data => {
+                updateSyncStatusBar(data);
+                if (warnEl) {
+                    warnEl.textContent = data.message || (data.ok ? '동기화 완료' : '동기화 실패');
+                    warnEl.classList.remove('hidden');
+                    warnEl.classList.toggle('text-emerald-700', !!data.ok);
+                    warnEl.classList.toggle('text-amber-700', !data.ok);
+                }
+                if (data.ok && !incomingModalEl.classList.contains('hidden') && activeIncomingDate) {
+                    loadIncomingCalls(activeIncomingDate);
+                }
+            })
+            .catch(() => {
+                if (warnEl) {
+                    warnEl.textContent = '동기화 요청에 실패했습니다';
+                    warnEl.classList.remove('hidden');
+                    warnEl.classList.add('text-amber-700');
+                }
+            })
+            .finally(() => {
+                if (syncBtn) {
+                    syncBtn.disabled = false;
+                    syncBtn.innerHTML = `
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        데이터 동기화
+                    `;
+                }
+            });
     }
 
     function loadSyncStatus() {
@@ -696,10 +761,14 @@
         location.reload();
     }
 
-    function secureFetch(url) {
+    function secureFetch(url, options = {}) {
         const token = localStorage.getItem('vcall_token');
         return fetch(url, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            ...options,
+            headers: {
+                ...(options.headers || {}),
+                'Authorization': `Bearer ${token}`
+            }
         }).then(res => {
             if (res.status === 401) {
                 alert('인증 세션이 만료되어 로그아웃됩니다.');

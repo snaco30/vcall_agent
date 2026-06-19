@@ -6,6 +6,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+# shellcheck source=lib/is-mounted.sh
+source "$SCRIPT_DIR/lib/is-mounted.sh"
 
 MOUNT_DIR="${MDB_MOUNT_DIR:-$PROJECT_DIR/mnt/vcallmanager1}"
 DATA_DIR="${MDB_DATA_DIR:-$PROJECT_DIR/data}"
@@ -24,6 +26,30 @@ log() {
     echo "[sync-mdb] $(date -Iseconds) $*"
 }
 
+file_mtime_iso() {
+    local file="$1"
+    if date -r "$file" -Iseconds >/dev/null 2>&1; then
+        date -r "$file" -Iseconds
+    elif stat -c '%Y' "$file" >/dev/null 2>&1; then
+        date -d "@$(stat -c '%Y' "$file")" -Iseconds
+    else
+        date -Iseconds
+    fi
+}
+
+# SMB 미연결 등으로 동기화 못 했을 때, 기존 복사본 mtime으로 meta 부트스트랩
+ensure_local_copy_meta() {
+    if [ ! -f "$DST" ] || [ -f "$META" ]; then
+        return 0
+    fi
+    local synced_at
+    synced_at="$(file_mtime_iso "$DST")"
+    printf '{"synced_at":"%s","source":"local_copy"}\n' "$synced_at" > "$META_TMP"
+    chmod 640 "$META_TMP"
+    mv -f "$META_TMP" "$META"
+    log "로컬 복사본 meta 생성 ($synced_at)"
+}
+
 resolve_src() {
     local name path
     for name in "${CANDIDATES[@]}"; do
@@ -37,14 +63,16 @@ resolve_src() {
 }
 
 # 마운트·소스 없음 → 기존 복사본 유지
-if ! mountpoint -q "$MOUNT_DIR" 2>/dev/null; then
+if ! is_mounted "$MOUNT_DIR"; then
     log "SMB 마운트 없음 ($MOUNT_DIR) — 기존 복사본 유지"
+    ensure_local_copy_meta
     exit 0
 fi
 
 SRC="$(resolve_src)"
 if [ -z "$SRC" ] || [ ! -f "$SRC" ]; then
     log "소스 MDB 없음 — 기존 복사본 유지"
+    ensure_local_copy_meta
     exit 0
 fi
 

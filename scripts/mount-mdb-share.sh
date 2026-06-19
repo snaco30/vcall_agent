@@ -8,6 +8,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+# shellcheck source=lib/is-mounted.sh
+source "$SCRIPT_DIR/lib/is-mounted.sh"
 
 SMB_SERVER="${MDB_SMB_SERVER:-posbankserver}"
 SMB_SHARE="${MDB_SMB_SHARE:-vcallmanager1}"
@@ -45,7 +47,7 @@ if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
 fi
 
 if [ "${1:-}" = "--check" ]; then
-    if mountpoint -q "$MOUNT_DIR" 2>/dev/null; then
+    if is_mounted "$MOUNT_DIR"; then
         echo "✅ 마운트됨: $MOUNT_DIR"
         ls -la "$MOUNT_DIR" 2>/dev/null | head -20
         exit 0
@@ -66,7 +68,7 @@ RUN_GID="$(id -g)"
 
 mkdir -p "$MOUNT_DIR"
 
-if mountpoint -q "$MOUNT_DIR" 2>/dev/null; then
+if is_mounted "$MOUNT_DIR"; then
     echo "✅ 이미 마운트됨: $MOUNT_DIR"
     exit 0
 fi
@@ -77,7 +79,7 @@ OPTS="username=${SMB_USER},password=${SMB_PASS},uid=${RUN_USER},gid=${RUN_GID},i
 echo "📂 마운트: $REMOTE → $MOUNT_DIR"
 sudo mount -t cifs "$REMOTE" "$MOUNT_DIR" -o "$OPTS"
 
-if mountpoint -q "$MOUNT_DIR"; then
+if is_mounted "$MOUNT_DIR"; then
     echo "✅ 마운트 완료"
     ls -la "$MOUNT_DIR" | head -20
 else

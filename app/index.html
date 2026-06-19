@@ -111,7 +111,7 @@
         <div class="max-w-5xl mx-auto px-4 sm:px-6 py-2 flex flex-wrap items-center gap-x-3 gap-y-1">
             <span class="font-medium text-zinc-600">데이터 기준 시각</span>
             <span id="syncStatusTime" class="font-semibold text-zinc-800">-</span>
-            <span id="syncStatusWarning" class="hidden text-amber-700 font-medium">원본 서버 연결 불가 — 최종 복사본 사용 중</span>
+            <span id="syncStatusWarning" class="hidden text-amber-700 font-medium"></span>
         </div>
     </div>
 
@@ -594,16 +594,33 @@
 
         bar.classList.remove('hidden', 'bg-amber-50', 'border-amber-200/80', 'bg-zinc-50', 'border-zinc-200/80');
 
-        if (!data || !data.synced_at) {
+        if (!data || !data.mdb_available) {
+            bar.classList.add('bg-amber-50', 'border-amber-200/80');
+            timeEl.textContent = 'MDB 없음';
+            warnEl.textContent = '데이터 파일 없음 — SMB 동기화 또는 수동 복사 필요';
+            warnEl.classList.remove('hidden');
+            return;
+        }
+
+        if (!data.synced_at) {
             bar.classList.add('bg-amber-50', 'border-amber-200/80');
             timeEl.textContent = '동기화 이력 없음';
+            warnEl.textContent = '자동 동기화 미완료 — 로컬 복사본 사용 중';
             warnEl.classList.remove('hidden');
             return;
         }
 
         timeEl.textContent = formatSyncTime(data.synced_at);
+        if (!data.has_sync_history) {
+            bar.classList.add('bg-amber-50', 'border-amber-200/80');
+            warnEl.textContent = '자동 동기화 미완료 — 로컬 복사본 사용 중';
+            warnEl.classList.remove('hidden');
+            return;
+        }
+
         if (data.is_stale) {
             bar.classList.add('bg-amber-50', 'border-amber-200/80');
+            warnEl.textContent = '원본 서버 연결 불가 — 최종 복사본 사용 중';
             warnEl.classList.remove('hidden');
         } else {
             bar.classList.add('bg-zinc-50', 'border-zinc-200/80');

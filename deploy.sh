@@ -43,6 +43,11 @@ echo "🔒 data 디렉토리 및 MDB 파일 권한을 최소화합니다..."
 chmod 750 "$PROJECT_DIR/data"
 [ -f "$PROJECT_DIR/data/vanpro97_call.mdb" ] && chmod 640 "$PROJECT_DIR/data/vanpro97_call.mdb"
 [ -f "$PROJECT_DIR/data/mdb_sync.meta" ] && chmod 640 "$PROJECT_DIR/data/mdb_sync.meta"
+if [ -f "$PROJECT_DIR/data/vanpro97_call.mdb" ] && [ ! -f "$PROJECT_DIR/data/mdb_sync.meta" ]; then
+    # 마운트 없어도 로컬 복사본 mtime으로 meta 생성 (웹 UI 표시용)
+    "$PROJECT_DIR/scripts/sync-mdb.sh" >/dev/null 2>&1 || true
+    [ -f "$PROJECT_DIR/data/mdb_sync.meta" ] && chmod 640 "$PROJECT_DIR/data/mdb_sync.meta"
+fi
 
 # 2-2. 동기화·마운트·timer 설치 스크립트 실행 권한
 chmod +x "$PROJECT_DIR/scripts/sync-mdb.sh" \

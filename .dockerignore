@@ -1,0 +1,18 @@
+# Runtime data & SMB mounts (stale mounts cause "host is down" during build)
+data/
+mnt/
+
+# Secrets & local config
+.env
+.env.*
+
+# Not needed in image
+.git/
+scripts/
+deploy.sh
+README.md
+
+# Python artifacts
+__pycache__/
+*.pyc
+.pytest_cache/

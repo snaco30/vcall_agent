@@ -65,6 +65,7 @@ resolve_src() {
 
 has_mdb_in_dir() {
     local dir="$1"
+    is_accessible "$dir" || return 1
     [ -f "$dir/VANPRO97_call.mdb" ] || [ -f "$dir/vanpro97_call.mdb" ] || \
         find "$dir" -maxdepth 1 -iname 'vanpro97_call.mdb' -print -quit 2>/dev/null | grep -q .
 }
@@ -76,8 +77,12 @@ if [ -z "${MDB_MOUNT_DIR:-}" ] && ! has_mdb_in_dir "$MOUNT_DIR" && has_mdb_in_di
 fi
 
 # 마운트·소스 없음 → 기존 복사본 유지
-if ! is_mounted "$MOUNT_DIR"; then
-    log "SMB 마운트 없음 ($MOUNT_DIR) — 기존 복사본 유지"
+if ! is_mounted "$MOUNT_DIR" || ! is_accessible "$MOUNT_DIR"; then
+    if is_mounted "$MOUNT_DIR" && ! is_accessible "$MOUNT_DIR"; then
+        log "SMB 마운트 끊김 ($MOUNT_DIR) — 기존 복사본 유지"
+    else
+        log "SMB 마운트 없음 ($MOUNT_DIR) — 기존 복사본 유지"
+    fi
     ensure_local_copy_meta
     exit 0
 fi

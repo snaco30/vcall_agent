@@ -56,11 +56,15 @@ chmod 750 "$PROJECT_DIR/data"
 # 2-4. SMB 마운트 지점 (Synology: 공유 폴더 하위 경로 권장)
 # 기본: $PROJECT_DIR/mnt/vcallmanager1
 # DSM에서 data/mnt 아래에 마운트한 경우 자동 인식
+# shellcheck source=scripts/lib/is-mounted.sh
+source "$PROJECT_DIR/scripts/lib/is-mounted.sh"
+
 MOUNT_HOST="$PROJECT_DIR/mnt/vcallmanager1"
 ALT_MOUNT_HOST="$PROJECT_DIR/data/mnt/vcallmanager1"
 mkdir -p "$MOUNT_HOST"
 has_mdb() {
     local dir="$1"
+    is_accessible "$dir" || return 1
     [ -f "$dir/VANPRO97_call.mdb" ] || [ -f "$dir/vanpro97_call.mdb" ] || \
         find "$dir" -maxdepth 1 -iname 'vanpro97_call.mdb' -print -quit 2>/dev/null | grep -q .
 }
@@ -68,6 +72,8 @@ if ! has_mdb "$MOUNT_HOST" && has_mdb "$ALT_MOUNT_HOST"; then
     echo "⚠️  MDB가 data/mnt/vcallmanager1 에 있습니다. Docker 볼륨을 해당 경로로 연결합니다."
     echo "   (권장: DSM 마운트 위치를 $MOUNT_HOST 로 옮기면 구조가 단순해집니다.)"
     MOUNT_HOST="$ALT_MOUNT_HOST"
+elif ! is_accessible "$MOUNT_HOST" && ! is_accessible "$ALT_MOUNT_HOST"; then
+    echo "⚠️  SMB 마운트 경로에 접근할 수 없습니다 (서버 다운 또는 끊김). 로컬 MDB 복사본으로 서비스합니다."
 fi
 
 # 3. 도커 이미지 빌드 (캐시 제거 모드로 클린 빌드)
@@ -76,14 +82,22 @@ docker build -t vcall-manager-web .
 
 # 4. 리눅스 환경 볼륨 마운트 기준 도커 컨테이너 실행 (MDB 읽기 전용)
 echo "🌐 7002번 포트로 서비스를 구동합니다 (컨테이너명: vcall-web-service)..."
+DOCKER_VOLUMES=(
+  -v "$PROJECT_DIR/data":/data
+  -v "$PROJECT_DIR/app":/app
+)
+if is_accessible "$MOUNT_HOST"; then
+    DOCKER_VOLUMES+=(-v "$MOUNT_HOST":/mnt/vcallmanager1:ro)
+else
+    echo "⚠️  SMB 볼륨 마운트 생략 ($MOUNT_HOST 접근 불가)"
+fi
+
 docker run -d \
   --name vcall-web-service \
   -p 7002:7002 \
   --env-file "$PROJECT_DIR/.env" \
   -e MDB_MOUNT_DIR=/mnt/vcallmanager1 \
-  -v "$PROJECT_DIR/data":/data \
-  -v "$MOUNT_HOST":/mnt/vcallmanager1:ro \
-  -v "$PROJECT_DIR/app":/app \
+  "${DOCKER_VOLUMES[@]}" \
   --restart always \
   vcall-manager-web
 

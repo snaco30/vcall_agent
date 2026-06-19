@@ -7,7 +7,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-MOUNT_DIR="${MDB_MOUNT_DIR:-/mnt/vcallmanager1}"
+MOUNT_DIR="${MDB_MOUNT_DIR:-$PROJECT_DIR/mnt/vcallmanager1}"
 DATA_DIR="${MDB_DATA_DIR:-$PROJECT_DIR/data}"
 DST="${MDB_DST:-$DATA_DIR/vanpro97_call.mdb}"
 META="${MDB_META:-$DATA_DIR/mdb_sync.meta}"
@@ -57,10 +57,14 @@ if ! cp -f "$SRC" "$TMP"; then
     exit 0
 fi
 
-if ! mdb-tables "$TMP" >/dev/null 2>&1; then
-    log "mdb 무결성 검증 실패 — 기존 복사본 유지"
-    rm -f "$TMP"
-    exit 0
+if command -v mdb-tables >/dev/null 2>&1; then
+    if ! mdb-tables "$TMP" >/dev/null 2>&1; then
+        log "mdb 무결성 검증 실패 — 기존 복사본 유지"
+        rm -f "$TMP"
+        exit 0
+    fi
+else
+    log "mdb-tables 없음 — 무결성 검증 생략 (Entware: opkg install mdbtools)"
 fi
 
 chmod 640 "$TMP"

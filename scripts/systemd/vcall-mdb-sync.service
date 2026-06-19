@@ -3,7 +3,13 @@ Description=V-CALL MDB sync from SMB share
 After=network-online.target remote-fs.target
 Wants=network-online.target
 
+# 이 파일은 참고용 템플릿입니다.
+# 실제 설치: sudo ./scripts/install-mdb-sync-timer.sh
+# (PROJECT_DIR·사용자·마운트 경로를 자동 반영)
+
 [Service]
 Type=oneshot
-User=snaco30
-ExecStart=/home/snaco30/services/vcall_agent/scripts/sync-mdb.sh
+User=REPLACE_USER
+Environment=MDB_MOUNT_DIR=REPLACE_MOUNT_DIR
+Environment=MDB_DATA_DIR=REPLACE_DATA_DIR
+ExecStart=REPLACE_SYNC_SCRIPT

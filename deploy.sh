@@ -44,8 +44,13 @@ chmod 750 "$PROJECT_DIR/data"
 [ -f "$PROJECT_DIR/data/vanpro97_call.mdb" ] && chmod 640 "$PROJECT_DIR/data/vanpro97_call.mdb"
 [ -f "$PROJECT_DIR/data/mdb_sync.meta" ] && chmod 640 "$PROJECT_DIR/data/mdb_sync.meta"
 
-# 2-2. 동기화 스크립트 실행 권한
-chmod +x "$PROJECT_DIR/scripts/sync-mdb.sh" 2>/dev/null || true
+# 2-2. 동기화·마운트·timer 설치 스크립트 실행 권한
+chmod +x "$PROJECT_DIR/scripts/sync-mdb.sh" \
+         "$PROJECT_DIR/scripts/mount-mdb-share.sh" \
+         "$PROJECT_DIR/scripts/install-mdb-sync-timer.sh" 2>/dev/null || true
+
+# 2-3. SMB 마운트 지점 (Synology: 공유 폴더 하위 경로 권장)
+mkdir -p "$PROJECT_DIR/mnt/vcallmanager1"
 
 # 3. 도커 이미지 빌드 (캐시 제거 모드로 클린 빌드)
 echo "📦 수정한 코드로 도커 이미지를 새롭게 빌드합니다..."
@@ -67,9 +72,19 @@ echo "✅ 배포가 성공적으로 완료되었습니다!"
 echo "👉 접속 주소: http://localhost:7002"
 echo ""
 echo "📋 MDB 10분 주기 동기화 (호스트에서 1회 설정):"
-echo "   sudo cp $PROJECT_DIR/scripts/systemd/vcall-mdb-sync.* /etc/systemd/system/"
-echo "   sudo systemctl daemon-reload"
-echo "   sudo systemctl enable --now vcall-mdb-sync.timer"
 echo ""
-echo "   SMB 마운트 예: //posbankserver/vcallmanager1 → /mnt/vcallmanager1"
+echo "   1) SMB 마운트 (DSM File Station 권장, 또는 SSH):"
+echo "      mkdir -p $PROJECT_DIR/mnt/vcallmanager1"
+echo "      # File Station → 도구 → 원격 폴더 마운트 → CIFS"
+echo "      #   \\\\posbankserver\\vcallmanager1 → $PROJECT_DIR/mnt/vcallmanager1"
+echo "      # 또는:"
+echo "      MDB_SMB_USER=계정 MDB_SMB_PASS=비밀번호 $PROJECT_DIR/scripts/mount-mdb-share.sh"
+echo "      $PROJECT_DIR/scripts/mount-mdb-share.sh --check"
+echo ""
+echo "   2) systemd timer 설치 (구형 DSM: enable --now 미지원):"
+echo "      sudo $PROJECT_DIR/scripts/install-mdb-sync-timer.sh"
+echo ""
+echo "   3) 동기화 테스트:"
+echo "      sudo systemctl start vcall-mdb-sync.service"
+echo "      ls -la $PROJECT_DIR/data/vanpro97_call.mdb"
 echo "=========================================="

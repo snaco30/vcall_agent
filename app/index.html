@@ -631,24 +631,20 @@
             return;
         }
 
-        if (!data.synced_at) {
+        timeEl.textContent = data.synced_at ? formatSyncTime(data.synced_at) : '동기화 이력 없음';
+
+        if (!data.mount_available) {
             bar.classList.add('bg-amber-50', 'border-amber-200/80');
-            timeEl.textContent = '동기화 이력 없음';
-            warnEl.textContent = data.mount_available
-                ? '동기화 버튼으로 최신 데이터를 가져올 수 있습니다'
-                : 'SMB 마운트 없음 — 마운트 후 동기화 버튼을 눌러 주세요';
+            warnEl.textContent = '원본 서버 연결 불가 — 최종 복사본 사용 중';
             warnEl.classList.add('text-amber-700');
             warnEl.classList.remove('hidden');
             if (syncBtn) syncBtn.disabled = false;
             return;
         }
 
-        timeEl.textContent = formatSyncTime(data.synced_at);
-        if (!data.has_sync_history) {
+        if (!data.synced_at) {
             bar.classList.add('bg-amber-50', 'border-amber-200/80');
-            warnEl.textContent = data.mount_available
-                ? '로컬 복사본 사용 중 — 동기화 버튼으로 갱신 가능'
-                : 'SMB 마운트 없음 — 마운트 후 동기화 버튼을 눌러 주세요';
+            warnEl.textContent = '동기화 버튼으로 최신 데이터를 가져올 수 있습니다';
             warnEl.classList.add('text-amber-700');
             warnEl.classList.remove('hidden');
             if (syncBtn) syncBtn.disabled = false;
@@ -657,9 +653,7 @@
 
         if (data.is_stale) {
             bar.classList.add('bg-amber-50', 'border-amber-200/80');
-            warnEl.textContent = data.mount_available
-                ? '최종 복사본이 오래됨 — 동기화 버튼으로 갱신하세요'
-                : '원본 서버 연결 불가 — 최종 복사본 사용 중';
+            warnEl.textContent = '최종 복사본이 오래됨 — 동기화 버튼으로 갱신하세요';
             warnEl.classList.add('text-amber-700');
             warnEl.classList.remove('hidden');
         } else {

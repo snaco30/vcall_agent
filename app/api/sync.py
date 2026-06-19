@@ -89,6 +89,27 @@ def _write_meta(synced_at: str, source: str) -> None:
     os.replace(tmp, META_PATH)
 
 
+def _ensure_local_copy_meta() -> None:
+    if not os.path.isfile(MDB_PATH) or os.path.isfile(META_PATH):
+        return
+    synced_at = _mdb_mtime_iso()
+    if synced_at:
+        _write_meta(synced_at, "local_copy")
+
+
+LOCAL_FALLBACK_MSG = "원본 서버 연결 불가 — 최종 복사본 사용 중"
+
+
+def _sync_failure_response(message: str) -> dict:
+    _ensure_local_copy_meta()
+    payload = _build_status_payload()
+    if payload["using_local_fallback"]:
+        message = LOCAL_FALLBACK_MSG
+    else:
+        message = f"{message} — 기존 복사본 유지"
+    return {"ok": False, "message": message, **payload}
+
+
 def _build_status_payload() -> dict:
     synced_at = None
     source = None
@@ -118,6 +139,7 @@ def _build_status_payload() -> dict:
 
     mount_available = _is_mounted(MOUNT_DIR)
     src_available = bool(_resolve_src_mdb()) if mount_available else False
+    using_local_fallback = mdb_exists and not mount_available
 
     return {
         "synced_at": synced_at,
@@ -128,16 +150,13 @@ def _build_status_payload() -> dict:
         "stale_threshold_minutes": STALE_MINUTES,
         "mount_available": mount_available,
         "src_available": src_available,
+        "using_local_fallback": using_local_fallback,
     }
 
 
 def run_mdb_sync() -> dict:
     if not _is_mounted(MOUNT_DIR):
-        return {
-            "ok": False,
-            "message": f"SMB 마운트 없음 ({MOUNT_DIR}) — 기존 복사본 유지",
-            **_build_status_payload(),
-        }
+        return _sync_failure_response(f"SMB 마운트 없음 ({MOUNT_DIR})")
 
     src = _resolve_src_mdb()
     if not src:
@@ -150,11 +169,7 @@ def run_mdb_sync() -> dict:
             hint += f" — 폴더 내용: {', '.join(listing)}"
         else:
             hint += " — 폴더가 비어 있음 (호스트 마운트 경로 확인)"
-        return {
-            "ok": False,
-            "message": f"마운트 폴더에 MDB 파일 없음{hint} — 기존 복사본 유지",
-            **_build_status_payload(),
-        }
+        return _sync_failure_response(f"마운트 폴더에 MDB 파일 없음{hint}")
 
     dst_dir = os.path.dirname(MDB_PATH)
     if dst_dir:
@@ -166,19 +181,11 @@ def run_mdb_sync() -> dict:
     except OSError as e:
         if os.path.exists(tmp):
             os.remove(tmp)
-        return {
-            "ok": False,
-            "message": f"복사 실패 — 기존 복사본 유지 ({e})",
-            **_build_status_payload(),
-        }
+        return _sync_failure_response(f"복사 실패 ({e})")
 
     if not _verify_mdb(tmp):
         os.remove(tmp)
-        return {
-            "ok": False,
-            "message": "MDB 무결성 검증 실패 — 기존 복사본 유지",
-            **_build_status_payload(),
-        }
+        return _sync_failure_response("MDB 무결성 검증 실패")
 
     os.chmod(tmp, 0o640)
     os.replace(tmp, MDB_PATH)

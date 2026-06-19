@@ -27,6 +27,15 @@ fi
 # 2. 데이터 디렉토리 준비
 mkdir -p "$PROJECT_DIR/data"
 
+# 2-1. 동기화·마운트·timer 설치 스크립트 실행 권한
+chmod +x "$PROJECT_DIR/scripts/sync-mdb.sh" \
+         "$PROJECT_DIR/scripts/mount-mdb-share.sh" \
+         "$PROJECT_DIR/scripts/install-mdb-sync-timer.sh" 2>/dev/null || true
+
+# 2-2. MDB 동기화 (마운트 없으면 기존 복사본 유지)
+echo "🔄 MDB 동기화 시도 (마운트 없으면 기존 복사본 유지)..."
+"$PROJECT_DIR/scripts/sync-mdb.sh" || true
+
 if [ ! -f "$PROJECT_DIR/data/vanpro97_call.mdb" ]; then
     if [ "$REQUIRE_MDB" = true ]; then
         echo "❌ [경고] $PROJECT_DIR/data/vanpro97_call.mdb 파일이 존재하지 않습니다."
@@ -38,23 +47,13 @@ else
     echo "✅ 로컬 MDB 복사본 확인됨."
 fi
 
-# 2-1. MDB·data 디렉토리 권한 최소화
+# 2-3. MDB·data 디렉토리 권한 최소화
 echo "🔒 data 디렉토리 및 MDB 파일 권한을 최소화합니다..."
 chmod 750 "$PROJECT_DIR/data"
 [ -f "$PROJECT_DIR/data/vanpro97_call.mdb" ] && chmod 640 "$PROJECT_DIR/data/vanpro97_call.mdb"
 [ -f "$PROJECT_DIR/data/mdb_sync.meta" ] && chmod 640 "$PROJECT_DIR/data/mdb_sync.meta"
-if [ -f "$PROJECT_DIR/data/vanpro97_call.mdb" ] && [ ! -f "$PROJECT_DIR/data/mdb_sync.meta" ]; then
-    # 마운트 없어도 로컬 복사본 mtime으로 meta 생성 (웹 UI 표시용)
-    "$PROJECT_DIR/scripts/sync-mdb.sh" >/dev/null 2>&1 || true
-    [ -f "$PROJECT_DIR/data/mdb_sync.meta" ] && chmod 640 "$PROJECT_DIR/data/mdb_sync.meta"
-fi
 
-# 2-2. 동기화·마운트·timer 설치 스크립트 실행 권한
-chmod +x "$PROJECT_DIR/scripts/sync-mdb.sh" \
-         "$PROJECT_DIR/scripts/mount-mdb-share.sh" \
-         "$PROJECT_DIR/scripts/install-mdb-sync-timer.sh" 2>/dev/null || true
-
-# 2-3. SMB 마운트 지점 (Synology: 공유 폴더 하위 경로 권장)
+# 2-4. SMB 마운트 지점 (Synology: 공유 폴더 하위 경로 권장)
 # 기본: $PROJECT_DIR/mnt/vcallmanager1
 # DSM에서 data/mnt 아래에 마운트한 경우 자동 인식
 MOUNT_HOST="$PROJECT_DIR/mnt/vcallmanager1"

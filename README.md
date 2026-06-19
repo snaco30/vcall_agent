@@ -128,27 +128,6 @@ SECRET_KEY=your-random-secret-key
 - `data/` → `/data`, SMB 마운트 → `/mnt/vcallmanager1` (읽기 전용) 볼륨 연결
 - `app/` 소스를 볼륨으로 마운트해 UI 수정 시 재빌드 없이 반영
 
-## MDB 동기화 설정
-
-원본 MDB는 `\\posbankserver\vcallmanager1` 등 SMB 공유에 있으며, 주기적으로 `data/vanpro97_call.mdb`로 복사합니다.
-
-### SMB 마운트
-
-**DSM File Station (권장)**
-
-1. 도구 → 원격 폴더 마운트 → CIFS
-2. `\\posbankserver\vcallmanager1` → `mnt/vcallmanager1`
-3. 「시작 시 자동으로 마운트」 체크
-
-**SSH 스크립트**
-
-```bash
-MDB_SMB_USER=계정 MDB_SMB_PASS=비밀번호 ./scripts/mount-mdb-share.sh
-./scripts/mount-mdb-share.sh --check
-```
-
-`data/mnt/vcallmanager1`에 마운트한 경우 `deploy.sh`가 자동 인식합니다.
-
 ### 10분 주기 자동 동기화 (systemd)
 
 ```bash

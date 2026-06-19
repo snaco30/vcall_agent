@@ -55,7 +55,21 @@ chmod +x "$PROJECT_DIR/scripts/sync-mdb.sh" \
          "$PROJECT_DIR/scripts/install-mdb-sync-timer.sh" 2>/dev/null || true
 
 # 2-3. SMB 마운트 지점 (Synology: 공유 폴더 하위 경로 권장)
-mkdir -p "$PROJECT_DIR/mnt/vcallmanager1"
+# 기본: $PROJECT_DIR/mnt/vcallmanager1
+# DSM에서 data/mnt 아래에 마운트한 경우 자동 인식
+MOUNT_HOST="$PROJECT_DIR/mnt/vcallmanager1"
+ALT_MOUNT_HOST="$PROJECT_DIR/data/mnt/vcallmanager1"
+mkdir -p "$MOUNT_HOST"
+has_mdb() {
+    local dir="$1"
+    [ -f "$dir/VANPRO97_call.mdb" ] || [ -f "$dir/vanpro97_call.mdb" ] || \
+        find "$dir" -maxdepth 1 -iname 'vanpro97_call.mdb' -print -quit 2>/dev/null | grep -q .
+}
+if ! has_mdb "$MOUNT_HOST" && has_mdb "$ALT_MOUNT_HOST"; then
+    echo "⚠️  MDB가 data/mnt/vcallmanager1 에 있습니다. Docker 볼륨을 해당 경로로 연결합니다."
+    echo "   (권장: DSM 마운트 위치를 $MOUNT_HOST 로 옮기면 구조가 단순해집니다.)"
+    MOUNT_HOST="$ALT_MOUNT_HOST"
+fi
 
 # 3. 도커 이미지 빌드 (캐시 제거 모드로 클린 빌드)
 echo "📦 수정한 코드로 도커 이미지를 새롭게 빌드합니다..."
@@ -69,7 +83,7 @@ docker run -d \
   --env-file "$PROJECT_DIR/.env" \
   -e MDB_MOUNT_DIR=/mnt/vcallmanager1 \
   -v "$PROJECT_DIR/data":/data \
-  -v "$PROJECT_DIR/mnt/vcallmanager1":/mnt/vcallmanager1:ro \
+  -v "$MOUNT_HOST":/mnt/vcallmanager1:ro \
   -v "$PROJECT_DIR/app":/app \
   --restart always \
   vcall-manager-web
@@ -84,6 +98,7 @@ echo "   1) SMB 마운트 (DSM File Station 권장, 또는 SSH):"
 echo "      mkdir -p $PROJECT_DIR/mnt/vcallmanager1"
 echo "      # File Station → 도구 → 원격 폴더 마운트 → CIFS"
 echo "      #   \\\\posbankserver\\vcallmanager1 → $PROJECT_DIR/mnt/vcallmanager1"
+echo "      # (data/mnt/vcallmanager1 에 마운트한 경우 deploy.sh 가 자동 인식)"
 echo "      # 또는:"
 echo "      MDB_SMB_USER=계정 MDB_SMB_PASS=비밀번호 $PROJECT_DIR/scripts/mount-mdb-share.sh"
 echo "      $PROJECT_DIR/scripts/mount-mdb-share.sh --check"

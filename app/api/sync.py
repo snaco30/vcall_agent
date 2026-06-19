@@ -141,9 +141,18 @@ def run_mdb_sync() -> dict:
 
     src = _resolve_src_mdb()
     if not src:
+        try:
+            listing = sorted(os.listdir(MOUNT_DIR))[:8]
+        except OSError:
+            listing = []
+        hint = f" ({MOUNT_DIR})"
+        if listing:
+            hint += f" — 폴더 내용: {', '.join(listing)}"
+        else:
+            hint += " — 폴더가 비어 있음 (호스트 마운트 경로 확인)"
         return {
             "ok": False,
-            "message": "마운트 폴더에 MDB 파일 없음 — 기존 복사본 유지",
+            "message": f"마운트 폴더에 MDB 파일 없음{hint} — 기존 복사본 유지",
             **_build_status_payload(),
         }
 

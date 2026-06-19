@@ -10,6 +10,7 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$SCRIPT_DIR/lib/is-mounted.sh"
 
 MOUNT_DIR="${MDB_MOUNT_DIR:-$PROJECT_DIR/mnt/vcallmanager1}"
+ALT_MOUNT_DIR="$PROJECT_DIR/data/mnt/vcallmanager1"
 DATA_DIR="${MDB_DATA_DIR:-$PROJECT_DIR/data}"
 DST="${MDB_DST:-$DATA_DIR/vanpro97_call.mdb}"
 META="${MDB_META:-$DATA_DIR/mdb_sync.meta}"
@@ -61,6 +62,18 @@ resolve_src() {
     done
     find "$MOUNT_DIR" -maxdepth 1 -iname 'vanpro97_call.mdb' -print -quit 2>/dev/null || true
 }
+
+has_mdb_in_dir() {
+    local dir="$1"
+    [ -f "$dir/VANPRO97_call.mdb" ] || [ -f "$dir/vanpro97_call.mdb" ] || \
+        find "$dir" -maxdepth 1 -iname 'vanpro97_call.mdb' -print -quit 2>/dev/null | grep -q .
+}
+
+# DSM에서 data/mnt 아래에 마운트한 경우 자동 인식
+if [ -z "${MDB_MOUNT_DIR:-}" ] && ! has_mdb_in_dir "$MOUNT_DIR" && has_mdb_in_dir "$ALT_MOUNT_DIR"; then
+    log "MDB가 data/mnt/vcallmanager1 에 있음 — 해당 경로 사용"
+    MOUNT_DIR="$ALT_MOUNT_DIR"
+fi
 
 # 마운트·소스 없음 → 기존 복사본 유지
 if ! is_mounted "$MOUNT_DIR"; then

@@ -93,6 +93,7 @@ def get_incoming_calls(
             regi_date = _regi_date_str(regi_time) or target.isoformat()
             items.append({
                 "mer_name": clean_text(row[2]),
+                "saup_no": clean_text(row[1]),
                 "content": clean_text(row[14]),
                 "regi_time": regi_time,
                 "regi_date": regi_date,

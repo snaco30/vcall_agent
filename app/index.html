@@ -227,6 +227,7 @@
             <input type="date" id="incomingDateInput" onchange="onIncomingDateInputChange()" class="text-xs font-medium bg-white ring-1 ring-zinc-200 rounded-lg px-3 py-1.5 text-zinc-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
             <button type="button" id="incomingNextDayBtn" onclick="shiftIncomingDate(1)" class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-zinc-700 ring-1 ring-zinc-200 hover:bg-indigo-50 hover:text-indigo-700 transition-all">다음 &gt;</button>
             <button type="button" onclick="goIncomingToday()" class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-all">오늘</button>
+            <button type="button" id="showOnlyIncomingContentBtn" onclick="toggleShowOnlyIncomingContent()" class="bg-white text-zinc-600 ring-1 ring-zinc-200 px-3 py-1.5 rounded-full text-[11px] hover:bg-zinc-50 transition-all">통화내용이 있는 카드만 보기</button>
             <span id="incomingCallsCount" class="ml-auto text-xs font-medium text-zinc-600 bg-zinc-100 px-2.5 py-1 rounded-full">0건</span>
         </div>
         <div class="flex-1 overflow-auto p-4 sm:p-6 bg-zinc-50/50 custom-scrollbar">
@@ -243,6 +244,8 @@
     let skipEmptyHistory = false;
     let currentSearchKeyword = '';
     let activeIncomingDate = '';
+    let incomingCallsItems = [];
+    let showOnlyIncomingWithContent = false;
 
     function hasHistoryText(value) {
         const v = (value ?? '').toString().trim();
@@ -251,6 +254,16 @@
 
     function isEmptyHistoryCard(h) {
         return !hasHistoryText(h.content) && !hasHistoryText(h.res);
+    }
+
+    function isEmptyIncomingCard(item) {
+        return !hasHistoryText(item.content);
+    }
+
+    function compareRegiTimeDesc(a, b) {
+        const ta = (a.regi_time || a.regi_date || '').toString();
+        const tb = (b.regi_time || b.regi_date || '').toString();
+        return tb.localeCompare(ta);
     }
 
     function getYearFromRegiTime(regi_time) {
@@ -916,9 +929,21 @@
     }
 
     function buildIncomingCallCard(item) {
+        const canOpenHistory = hasHistoryText(item.saup_no) || hasHistoryText(item.tel_no);
+        const interactiveClass = canOpenHistory
+            ? 'incoming-call-card cursor-pointer hover:ring-indigo-300 hover:shadow-md transition-all active:scale-[0.99]'
+            : '';
         return `
-            <div class="bg-white rounded-xl ring-1 ring-zinc-200/60 shadow-sm p-4 sm:p-5">
-                <p class="text-[11px] font-medium text-indigo-600 font-mono mb-2">${item.regi_time || item.regi_date || '-'}</p>
+            <div class="bg-white rounded-xl ring-1 ring-zinc-200/60 shadow-sm p-4 sm:p-5 ${interactiveClass}" data-saup="${item.saup_no || ''}" data-tel="${item.tel_no || ''}" data-name="${item.mer_name || ''}">
+                <div class="flex items-start justify-between gap-3 mb-2">
+                    <p class="text-[11px] font-medium text-indigo-600 font-mono">${item.regi_time || item.regi_date || '-'}</p>
+                    ${canOpenHistory ? `
+                        <div class="flex items-center gap-1 text-xs font-medium text-indigo-500 flex-shrink-0">
+                            <span>통화 이력</span>
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </div>
+                    ` : ''}
+                </div>
                 <h4 class="text-base font-bold text-zinc-900 mb-2 break-words">${item.mer_name || '-'}</h4>
                 <p class="text-sm text-zinc-700 whitespace-pre-wrap break-words">${item.content || '-'}</p>
                 ${item.tel_no ? `<p class="text-xs text-zinc-400 mt-2 font-mono">${item.tel_no}</p>` : ''}
@@ -926,26 +951,83 @@
         `;
     }
 
-    function renderIncomingCalls(data) {
-        const titleEl = document.getElementById('incomingCallsModalTitle');
+    function attachIncomingCallCardListeners(container) {
+        container.querySelectorAll('.incoming-call-card').forEach(card => {
+            card.addEventListener('click', () => {
+                closeIncomingModal();
+                openHistory(card.dataset.saup, card.dataset.tel, card.dataset.name);
+            });
+        });
+    }
+
+    function updateShowOnlyIncomingContentButton() {
+        const btn = document.getElementById('showOnlyIncomingContentBtn');
+        if (!btn) return;
+        btn.className = showOnlyIncomingWithContent
+            ? 'bg-indigo-600 text-white px-3 py-1.5 rounded-full text-[11px] font-semibold shadow-sm transition-all'
+            : 'bg-white text-zinc-600 ring-1 ring-zinc-200 px-3 py-1.5 rounded-full text-[11px] hover:bg-zinc-50 transition-all';
+    }
+
+    function renderIncomingCallsCount(displayCount, hiddenCount) {
         const countEl = document.getElementById('incomingCallsCount');
+        if (!countEl) return;
+        if (hiddenCount > 0) {
+            countEl.innerHTML = `<span>${displayCount.toLocaleString()}건</span><span class="text-zinc-400 mx-1">·</span><span class="text-indigo-600">${hiddenCount.toLocaleString()}건 숨김</span>`;
+            return;
+        }
+        countEl.textContent = `${displayCount.toLocaleString()}건`;
+    }
+
+    function getFilteredIncomingCalls() {
+        const sorted = [...incomingCallsItems].sort(compareRegiTimeDesc);
+        if (!showOnlyIncomingWithContent) return sorted;
+        return sorted.filter(item => !isEmptyIncomingCard(item));
+    }
+
+    function renderIncomingCallRows() {
+        const titleEl = document.getElementById('incomingCallsModalTitle');
         const cardList = document.getElementById('incomingCallsCardList');
-        const dateLabel = data?.date || activeIncomingDate;
-        const count = data?.count ?? 0;
-        const items = data?.items || [];
+        const dateLabel = activeIncomingDate;
+        const allItems = [...incomingCallsItems].sort(compareRegiTimeDesc);
+        const items = getFilteredIncomingCalls();
+        const hiddenCount = showOnlyIncomingWithContent ? allItems.filter(isEmptyIncomingCard).length : 0;
 
         if (titleEl) titleEl.textContent = `${dateLabel} 수신 통화`;
-        if (countEl) countEl.textContent = `${count.toLocaleString()}건`;
         updateIncomingDateControls();
+        updateShowOnlyIncomingContentButton();
 
-        if (!items.length) {
+        if (!allItems.length) {
+            renderIncomingCallsCount(0, 0);
             cardList.innerHTML = emptyStateHtml(
                 '수신 통화가 없습니다',
                 `${dateLabel} 날짜의 수신(인입) 통화가 확인되지 않습니다.`
             );
             return;
         }
+
+        if (!items.length) {
+            renderIncomingCallsCount(0, hiddenCount);
+            cardList.innerHTML = emptyStateHtml(
+                '표시할 수신 통화가 없습니다',
+                '통화내용이 있는 카드만 보기를 해제해 보세요.'
+            );
+            return;
+        }
+
+        renderIncomingCallsCount(items.length, hiddenCount);
         cardList.innerHTML = items.map(buildIncomingCallCard).join('');
+        attachIncomingCallCardListeners(cardList);
+    }
+
+    function renderIncomingCalls(data) {
+        incomingCallsItems = data?.items || [];
+        activeIncomingDate = data?.date || activeIncomingDate;
+        renderIncomingCallRows();
+    }
+
+    function toggleShowOnlyIncomingContent() {
+        showOnlyIncomingWithContent = !showOnlyIncomingWithContent;
+        renderIncomingCallRows();
     }
 
     function loadIncomingCalls(date) {

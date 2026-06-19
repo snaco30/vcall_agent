@@ -1,11 +1,102 @@
-from fastapi import APIRouter, Query, Depends
+from fastapi import APIRouter, Query, Depends, HTTPException
 import csv
 import io
+import os
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 # merchants.py 모듈에 구성된 고정 유틸리티 함수들을 참조 연동하여 중복 코드 최소화
 from app.api.merchants import get_clean_table_data, clean_text, format_datetime
 from app.api.auth import get_current_user  # JWT 보안 주입
 
 router = APIRouter(prefix="/api/history", tags=["History"])
+
+KST = ZoneInfo("Asia/Seoul")
+INCOMING_PROC_KEYWORDS = [
+    k.strip().lower()
+    for k in os.getenv("INCOMING_PROC_KEYWORDS", "수신,인입,IN").split(",")
+    if k.strip()
+]
+
+
+def _today_kst() -> date:
+    return datetime.now(KST).date()
+
+
+def _parse_target_date(date_param: str | None) -> date:
+    if not date_param or not date_param.strip():
+        return _today_kst()
+    try:
+        return date.fromisoformat(date_param.strip())
+    except ValueError:
+        raise HTTPException(status_code=400, detail="date는 YYYY-MM-DD 형식이어야 합니다.")
+
+
+def _regi_date_str(regi_time_formatted: str) -> str | None:
+    if not regi_time_formatted or regi_time_formatted == "-":
+        return None
+    if len(regi_time_formatted) >= 10 and regi_time_formatted[4] == "-" and regi_time_formatted[7] == "-":
+        return regi_time_formatted[:10]
+    return None
+
+
+def _is_on_date(regi_time_formatted: str, target: date) -> bool:
+    regi_date = _regi_date_str(regi_time_formatted)
+    return regi_date == target.isoformat() if regi_date else False
+
+
+def _is_incoming_call(proc_type: str) -> bool:
+    if not proc_type:
+        return False
+    proc_lower = proc_type.lower()
+    return any(keyword in proc_lower for keyword in INCOMING_PROC_KEYWORDS)
+
+
+@router.get("/incoming")
+def get_incoming_calls(
+    date_param: str = Query("", alias="date", description="조회일 YYYY-MM-DD (KST, 생략 시 오늘)"),
+    current_user: str = Depends(get_current_user),
+):
+    target = _parse_target_date(date_param)
+    today = _today_kst()
+    if target > today:
+        raise HTTPException(status_code=400, detail="미래 날짜는 조회할 수 없습니다.")
+
+    tcall_csv, err = get_clean_table_data("TCALLCONTENT2")
+    if err or not tcall_csv:
+        return {"date": target.isoformat(), "count": 0, "items": []}
+
+    f = io.StringIO(tcall_csv.strip())
+    reader = csv.reader(f)
+    next(reader, None)
+
+    items = []
+    for row in reader:
+        try:
+            if len(row) < 21:
+                continue
+
+            proc_type = clean_text(row[5])
+            if not _is_incoming_call(proc_type):
+                continue
+
+            regi_time = format_datetime(clean_text(row[11]))
+            if not _is_on_date(regi_time, target):
+                continue
+
+            regi_date = _regi_date_str(regi_time) or target.isoformat()
+            items.append({
+                "mer_name": clean_text(row[2]),
+                "content": clean_text(row[14]),
+                "regi_time": regi_time,
+                "regi_date": regi_date,
+                "tel_no": clean_text(row[3]),
+            })
+        except Exception:
+            continue
+
+    items.reverse()
+    return {"date": target.isoformat(), "count": len(items), "items": items}
+
 
 @router.get("")
 def get_history(

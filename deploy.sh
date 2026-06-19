@@ -7,6 +7,13 @@ set -e
 PROJECT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$PROJECT_DIR"
 
+REQUIRE_MDB=false
+for arg in "$@"; do
+    if [ "$arg" = "--require-mdb" ]; then
+        REQUIRE_MDB=true
+    fi
+done
+
 echo "=========================================="
 echo "🚀 가맹점 관리 시스템 자동 배포를 시작합니다."
 echo "=========================================="
@@ -17,29 +24,40 @@ if [ "$(docker ps -a -q -f name=vcall-web-service)" ]; then
     docker rm -f vcall-web-service
 fi
 
-# 2. 데이터 디렉토리 및 파일 유무 점검
-if [ ! -d "$PROJECT_DIR/data" ] || [ ! -f "$PROJECT_DIR/data/vanpro97_call.mdb" ]; then
-    echo "❌ [경고] $PROJECT_DIR/data/vanpro97_call.mdb 파일이 존재하지 않습니다."
-    echo "👉 반드시 data 폴더를 만들고 mdb 파일을 넣은 후 다시 실행하세요."
-    exit 1
+# 2. 데이터 디렉토리 준비
+mkdir -p "$PROJECT_DIR/data"
+
+if [ ! -f "$PROJECT_DIR/data/vanpro97_call.mdb" ]; then
+    if [ "$REQUIRE_MDB" = true ]; then
+        echo "❌ [경고] $PROJECT_DIR/data/vanpro97_call.mdb 파일이 존재하지 않습니다."
+        echo "👉 data 폴더에 mdb 파일을 넣거나 scripts/sync-mdb.sh 로 동기화한 후 다시 실행하세요."
+        exit 1
+    fi
+    echo "⚠️  로컬 MDB 복사본이 없습니다. SMB 동기화 또는 수동 복사 후 서비스가 가능합니다."
+else
+    echo "✅ 로컬 MDB 복사본 확인됨."
 fi
 
-# 2-1. MDB 파일 권한 최소화 (읽기 전용, 실행 권한 제거)
-echo "🔒 MDB 파일 권한을 최소화합니다 (640)..."
+# 2-1. MDB·data 디렉토리 권한 최소화
+echo "🔒 data 디렉토리 및 MDB 파일 권한을 최소화합니다..."
 chmod 750 "$PROJECT_DIR/data"
-chmod 640 "$PROJECT_DIR/data/vanpro97_call.mdb"
+[ -f "$PROJECT_DIR/data/vanpro97_call.mdb" ] && chmod 640 "$PROJECT_DIR/data/vanpro97_call.mdb"
+[ -f "$PROJECT_DIR/data/mdb_sync.meta" ] && chmod 640 "$PROJECT_DIR/data/mdb_sync.meta"
+
+# 2-2. 동기화 스크립트 실행 권한
+chmod +x "$PROJECT_DIR/scripts/sync-mdb.sh" 2>/dev/null || true
 
 # 3. 도커 이미지 빌드 (캐시 제거 모드로 클린 빌드)
-echo "📦 수정한 코드로 도ker 이미지를 새롭게 빌드합니다..."
+echo "📦 수정한 코드로 도커 이미지를 새롭게 빌드합니다..."
 docker build -t vcall-manager-web .
 
-# 4. 리눅스 환경 볼륨 마운트 기준 도커 컨테이너 실행
+# 4. 리눅스 환경 볼륨 마운트 기준 도커 컨테이너 실행 (MDB 읽기 전용)
 echo "🌐 7002번 포트로 서비스를 구동합니다 (컨테이너명: vcall-web-service)..."
 docker run -d \
   --name vcall-web-service \
   -p 7002:7002 \
   --env-file "$PROJECT_DIR/.env" \
-  -v "$PROJECT_DIR/data":/data \
+  -v "$PROJECT_DIR/data":/data:ro \
   -v "$PROJECT_DIR/app":/app \
   --restart always \
   vcall-manager-web
@@ -47,4 +65,11 @@ docker run -d \
 echo "=========================================="
 echo "✅ 배포가 성공적으로 완료되었습니다!"
 echo "👉 접속 주소: http://localhost:7002"
+echo ""
+echo "📋 MDB 10분 주기 동기화 (호스트에서 1회 설정):"
+echo "   sudo cp $PROJECT_DIR/scripts/systemd/vcall-mdb-sync.* /etc/systemd/system/"
+echo "   sudo systemctl daemon-reload"
+echo "   sudo systemctl enable --now vcall-mdb-sync.timer"
+echo ""
+echo "   SMB 마운트 예: //posbankserver/vcallmanager1 → /mnt/vcallmanager1"
 echo "=========================================="

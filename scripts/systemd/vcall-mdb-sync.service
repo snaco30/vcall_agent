@@ -1,0 +1,9 @@
+[Unit]
+Description=V-CALL MDB sync from SMB share
+After=network-online.target remote-fs.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=snaco30
+ExecStart=/home/snaco30/services/vcall_agent/scripts/sync-mdb.sh

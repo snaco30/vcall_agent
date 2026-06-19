@@ -8,7 +8,7 @@ from app.api.auth import get_current_user  # JWT 보안 주입
 
 router = APIRouter(prefix="/api/merchants", tags=["Merchants"])
 
-MDB_PATH = "/data/vanpro97_call.mdb"
+MDB_PATH = os.getenv("MDB_PATH", "/data/vanpro97_call.mdb")
 
 class MerchantUpdate(BaseModel):
     name: str

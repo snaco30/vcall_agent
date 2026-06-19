@@ -2,3 +2,7 @@
 .env.local
 .env.production
 
+data/vanpro97_call.mdb
+data/mdb_sync.meta
+data/*.tmp
+

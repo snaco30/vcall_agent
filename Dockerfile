@@ -29,6 +29,6 @@ COPY ./app /code/app
 # DB 파일이 매핑될 볼륨 디렉토리 생성
 RUN mkdir /data
 
-# 7001번 포트 개방 및 uvicorn 서버 실행
-EXPOSE 7001
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7001"]
+# 7002번 포트 개방 및 uvicorn 서버 실행
+EXPOSE 7002
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7002"]

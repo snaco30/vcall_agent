@@ -34,10 +34,10 @@ echo "📦 수정한 코드로 도ker 이미지를 새롭게 빌드합니다..."
 docker build -t vcall-manager-web .
 
 # 4. 리눅스 환경 볼륨 마운트 기준 도커 컨테이너 실행
-echo "🌐 7001번 포트로 서비스를 구동합니다 (컨테이너명: vcall-web-service)..."
+echo "🌐 7002번 포트로 서비스를 구동합니다 (컨테이너명: vcall-web-service)..."
 docker run -d \
   --name vcall-web-service \
-  -p 7001:7001 \
+  -p 7002:7002 \
   --env-file "$PROJECT_DIR/.env" \
   -v "$PROJECT_DIR/data":/data \
   -v "$PROJECT_DIR/app":/app \
@@ -46,5 +46,5 @@ docker run -d \
 
 echo "=========================================="
 echo "✅ 배포가 성공적으로 완료되었습니다!"
-echo "👉 접속 주소: http://localhost:7001"
+echo "👉 접속 주소: http://localhost:7002"
 echo "=========================================="

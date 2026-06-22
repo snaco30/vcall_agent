@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/sync", tags=["Sync"])
 META_PATH = os.getenv("MDB_META_PATH", "/data/mdb_sync.meta")
 MDB_PATH = os.getenv("MDB_PATH", "/data/vanpro97_call.mdb")
 MOUNT_DIR = os.getenv("MDB_MOUNT_DIR", "/data/mnt/vcallmanager1")
-STALE_MINUTES = int(os.getenv("MDB_SYNC_STALE_MINUTES", "10"))
+STALE_MINUTES = int(os.getenv("MDB_SYNC_STALE_MINUTES", "60"))
 
 MDB_CANDIDATES = (
     "VANPRO97_call.mdb",

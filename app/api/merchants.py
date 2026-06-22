@@ -52,6 +52,30 @@ def format_datetime(val: str) -> str:
         return f"{val[0:4]}-{val[4:6]}-{val[6:8]} {val[8:10]}:{val[10:12]}:{val[12:14]}"
     return val
 
+def normalize_phone_digits(val: str) -> str:
+    return "".join(c for c in (val or "") if c.isdigit())
+
+def merchant_matches_search(
+    search_keyword: str,
+    saup_no: str,
+    mer_name: str,
+    presi_name: str,
+    tel_no: str,
+    addr: str,
+    damdang: str,
+    bigo: str,
+    delay_info: str,
+) -> bool:
+    match_text = " ".join([saup_no, mer_name, presi_name, tel_no, addr, damdang, bigo, delay_info]).lower()
+    if search_keyword in match_text:
+        return True
+    search_digits = normalize_phone_digits(search_keyword)
+    if len(search_digits) >= 4:
+        tel_digits = normalize_phone_digits(tel_no)
+        if search_digits in tel_digits or tel_digits in search_digits:
+            return True
+    return False
+
 @router.get("")
 def get_merchants(
     search: str = Query("", description="검색 키워드 (상호, 번호, 대표자, 사업자번호)"),
@@ -85,8 +109,9 @@ def get_merchants(
         bigo = clean_text(row.get("BIGO", "") or row.get("bigo", ""))
         delay_info = clean_text(row.get("DELAYINFO", "") or row.get("delayinfo", "")) or "정상"
 
-        match_text = " ".join([saup_no, mer_name, presi_name, tel_no, addr, damdang, bigo, delay_info]).lower()
-        if search_keyword not in match_text:
+        if not merchant_matches_search(
+            search_keyword, saup_no, mer_name, presi_name, tel_no, addr, damdang, bigo, delay_info
+        ):
             continue
 
         merchants.append({

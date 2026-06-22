@@ -28,12 +28,19 @@
             to { opacity: 1; transform: translateY(0); }
         }
         .fade-in-up { animation: fadeInUp 0.45s ease-out both; }
-        @keyframes cuteAnimalSlideIn {
-            from { opacity: 0; transform: translateX(110%); }
+        @keyframes cuteAnimalSlideInNext {
+            from { opacity: 0; transform: translateX(72px); }
             to { opacity: 1; transform: translateX(0); }
         }
-        .cute-animal-animate {
-            animation: cuteAnimalSlideIn 1.1s cubic-bezier(0.55, 0.055, 0.675, 0.19) both;
+        @keyframes cuteAnimalSlideInPrev {
+            from { opacity: 0; transform: translateX(-72px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .cute-animal-animate-next {
+            animation: cuteAnimalSlideInNext 0.75s cubic-bezier(0.55, 0.055, 0.675, 0.19) both;
+        }
+        .cute-animal-animate-prev {
+            animation: cuteAnimalSlideInPrev 0.75s cubic-bezier(0.55, 0.055, 0.675, 0.19) both;
         }
         .search-chip {
             transition: all 0.15s ease;
@@ -172,12 +179,22 @@
             <div id="merchantCardList" class="merchant-card-grid p-4 sm:p-6 space-y-4 max-w-3xl mx-auto w-full"></div>
         </div>
 
-        <!-- Cute animal (refreshed hourly) -->
-        <div id="cuteAnimalPanel" class="mt-6 fade-in-up">
+        <!-- Cute animal slideshow (20 images / hour, 8s auto) -->
+        <div id="cuteAnimalPanel" class="mt-4 fade-in-up max-w-sm mx-auto w-full">
             <div class="bg-white rounded-xl ring-1 ring-zinc-200/60 shadow-sm overflow-hidden">
-                <div class="relative h-44 sm:h-56 bg-gradient-to-br from-zinc-50 to-indigo-50/40 overflow-hidden">
-                    <img id="cuteAnimalImage" class="hidden absolute inset-0 w-full h-full object-cover object-center" alt="귀여운 동물">
-                    <div id="cuteAnimalPlaceholder" class="absolute inset-0 flex items-center justify-center text-sm text-zinc-400">불러오는 중...</div>
+                <div class="relative h-28 sm:h-32 bg-gradient-to-br from-zinc-50 to-indigo-50/40 flex items-center justify-center px-10 overflow-hidden">
+                    <button type="button" id="cuteAnimalPrevBtn" onclick="prevCuteAnimal()" class="hidden absolute left-1.5 z-10 w-7 h-7 rounded-full bg-white/90 ring-1 ring-zinc-200 text-zinc-600 hover:bg-indigo-50 hover:text-indigo-700 shadow-sm transition-all" aria-label="이전 사진">
+                        <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                    </button>
+                    <img id="cuteAnimalImage" class="hidden max-h-[6.5rem] sm:max-h-[7.5rem] max-w-full w-auto object-contain" alt="귀여운 동물">
+                    <div id="cuteAnimalPlaceholder" class="text-xs text-zinc-400">불러오는 중...</div>
+                    <button type="button" id="cuteAnimalNextBtn" onclick="nextCuteAnimal(true)" class="hidden absolute right-1.5 z-10 w-7 h-7 rounded-full bg-white/90 ring-1 ring-zinc-200 text-zinc-600 hover:bg-indigo-50 hover:text-indigo-700 shadow-sm transition-all" aria-label="다음 사진">
+                        <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </button>
+                </div>
+                <div id="cuteAnimalMeta" class="hidden px-3 py-1.5 border-t border-zinc-100 bg-zinc-50/80 flex items-center justify-between text-[10px] text-zinc-500">
+                    <span id="cuteAnimalCounter">1 / 20</span>
+                    <span id="cuteAnimalLabel" class="text-zinc-400">8초마다 자동 전환</span>
                 </div>
             </div>
         </div>
@@ -250,6 +267,10 @@
     let incomingCallsItems = [];
     let showOnlyIncomingWithContent = false;
     let cuteAnimalRefreshTimer = null;
+    let cuteAnimalSlideTimer = null;
+    let cuteAnimalItems = [];
+    let cuteAnimalIndex = 0;
+    const CUTE_ANIMAL_SLIDE_MS = 8000;
 
     function hasHistoryText(value) {
         const v = (value ?? '').toString().trim();
@@ -297,13 +318,33 @@
         `;
     }
 
+    function setCuteAnimalControlsVisible(visible) {
+        ['cuteAnimalPrevBtn', 'cuteAnimalNextBtn', 'cuteAnimalMeta'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.toggle('hidden', !visible);
+        });
+    }
+
+    function updateCuteAnimalCounter() {
+        const counter = document.getElementById('cuteAnimalCounter');
+        if (counter) {
+            counter.textContent = cuteAnimalItems.length
+                ? `${cuteAnimalIndex + 1} / ${cuteAnimalItems.length}`
+                : '0 / 0';
+        }
+    }
+
     function showCuteAnimalEmpty(message = '이미지 없음') {
         const img = document.getElementById('cuteAnimalImage');
         const placeholder = document.getElementById('cuteAnimalPlaceholder');
+        stopCuteAnimalSlideshow();
+        setCuteAnimalControlsVisible(false);
+        cuteAnimalItems = [];
+        cuteAnimalIndex = 0;
         if (img) {
             img.classList.add('hidden');
             img.removeAttribute('src');
-            img.classList.remove('cute-animal-animate');
+            img.classList.remove('cute-animal-animate-next', 'cute-animal-animate-prev');
         }
         if (placeholder) {
             placeholder.textContent = message;
@@ -311,45 +352,109 @@
         }
     }
 
-    function playCuteAnimalAnimation() {
+    function playCuteAnimalAnimation(direction = 'next') {
         const img = document.getElementById('cuteAnimalImage');
         if (!img) return;
-        img.classList.remove('cute-animal-animate');
+        img.classList.remove('cute-animal-animate-next', 'cute-animal-animate-prev');
         void img.offsetWidth;
-        img.classList.add('cute-animal-animate');
+        img.classList.add(direction === 'prev' ? 'cute-animal-animate-prev' : 'cute-animal-animate-next');
     }
 
-    function loadCuteAnimal(animate = true) {
+    function displayCuteAnimalAt(index, direction = 'next', animate = true) {
+        if (!cuteAnimalItems.length) {
+            showCuteAnimalEmpty();
+            return;
+        }
+
         const img = document.getElementById('cuteAnimalImage');
         const placeholder = document.getElementById('cuteAnimalPlaceholder');
         if (!img || !placeholder) return;
 
+        cuteAnimalIndex = ((index % cuteAnimalItems.length) + cuteAnimalItems.length) % cuteAnimalItems.length;
+        const item = cuteAnimalItems[cuteAnimalIndex];
+        const url = item.image_url || item.url;
+
         placeholder.textContent = '불러오는 중...';
         placeholder.classList.remove('hidden');
+        img.classList.add('hidden');
+
+        const loader = new Image();
+        loader.onload = () => {
+            img.src = url;
+            placeholder.classList.add('hidden');
+            img.classList.remove('hidden');
+            setCuteAnimalControlsVisible(true);
+            updateCuteAnimalCounter();
+            if (animate) playCuteAnimalAnimation(direction);
+        };
+        loader.onerror = () => {
+            if (cuteAnimalItems.length > 1) {
+                displayCuteAnimalAt(cuteAnimalIndex + 1, direction, animate);
+                return;
+            }
+            showCuteAnimalEmpty('이미지 없음');
+        };
+        loader.src = url;
+    }
+
+    function stopCuteAnimalSlideshow() {
+        if (cuteAnimalSlideTimer) {
+            clearInterval(cuteAnimalSlideTimer);
+            cuteAnimalSlideTimer = null;
+        }
+    }
+
+    function startCuteAnimalSlideshow() {
+        stopCuteAnimalSlideshow();
+        if (cuteAnimalItems.length < 2) return;
+        cuteAnimalSlideTimer = setInterval(() => {
+            displayCuteAnimalAt(cuteAnimalIndex + 1, 'next', true);
+        }, CUTE_ANIMAL_SLIDE_MS);
+    }
+
+    function resetCuteAnimalSlideshowTimer() {
+        if (cuteAnimalItems.length < 2) return;
+        startCuteAnimalSlideshow();
+    }
+
+    function prevCuteAnimal() {
+        if (!cuteAnimalItems.length) return;
+        displayCuteAnimalAt(cuteAnimalIndex - 1, 'prev', true);
+        resetCuteAnimalSlideshowTimer();
+    }
+
+    function nextCuteAnimal(manual = true) {
+        if (!cuteAnimalItems.length) return;
+        displayCuteAnimalAt(cuteAnimalIndex + 1, 'next', true);
+        if (manual) resetCuteAnimalSlideshowTimer();
+    }
+
+    function loadCuteAnimal() {
+        const placeholder = document.getElementById('cuteAnimalPlaceholder');
+        if (placeholder) {
+            placeholder.textContent = '불러오는 중...';
+            placeholder.classList.remove('hidden');
+        }
+        setCuteAnimalControlsVisible(false);
 
         secureFetch('/api/cute-animal')
             .then(data => {
-                if (!data?.ok || !data.image_url) {
+                if (!data?.ok || !Array.isArray(data.items) || !data.items.length) {
                     showCuteAnimalEmpty(data?.message || '이미지 없음');
                     return;
                 }
-
-                img.onload = () => {
-                    placeholder.classList.add('hidden');
-                    img.classList.remove('hidden');
-                    if (animate) playCuteAnimalAnimation();
-                };
-                img.onerror = () => showCuteAnimalEmpty('이미지 없음');
-                img.classList.add('hidden');
-                img.src = `${data.image_url}${data.image_url.includes('?') ? '&' : '?'}t=${Date.now()}`;
+                cuteAnimalItems = data.items;
+                cuteAnimalIndex = 0;
+                displayCuteAnimalAt(0, 'next', true);
+                startCuteAnimalSlideshow();
             })
             .catch(() => showCuteAnimalEmpty('이미지 없음'));
     }
 
     function initCuteAnimal() {
-        loadCuteAnimal(true);
+        loadCuteAnimal();
         if (cuteAnimalRefreshTimer) clearInterval(cuteAnimalRefreshTimer);
-        cuteAnimalRefreshTimer = setInterval(() => loadCuteAnimal(true), 60 * 60 * 1000);
+        cuteAnimalRefreshTimer = setInterval(() => loadCuteAnimal(), 60 * 60 * 1000);
     }
 
     function renderIncomingCallsAction() {

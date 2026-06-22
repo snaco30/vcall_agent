@@ -635,7 +635,11 @@
 
         if (!data.mount_available) {
             bar.classList.add('bg-amber-50', 'border-amber-200/80');
-            warnEl.textContent = '원본 서버 연결 불가 — 최종 복사본 사용 중';
+            if (data.mount_stale) {
+                warnEl.textContent = '원본 서버 마운트 끊김 — 호스트에서 자동 복구 중(최대 10분), 잠시 후 다시 동기화하세요';
+            } else {
+                warnEl.textContent = '원본 서버 연결 불가 — 최종 복사본 사용 중';
+            }
             warnEl.classList.add('text-amber-700');
             warnEl.classList.remove('hidden');
             if (syncBtn) syncBtn.disabled = false;

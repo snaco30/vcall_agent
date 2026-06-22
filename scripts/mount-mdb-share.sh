@@ -47,10 +47,18 @@ if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
 fi
 
 if [ "${1:-}" = "--check" ]; then
-    if is_mounted "$MOUNT_DIR"; then
-        echo "✅ 마운트됨: $MOUNT_DIR"
+    if is_stale_mount "$MOUNT_DIR"; then
+        echo "❌ stale 마운트 (끊김 또는 MDB 없음): $MOUNT_DIR"
+        exit 1
+    fi
+    if has_mdb_in_mount "$MOUNT_DIR"; then
+        echo "✅ 마운트 정상: $MOUNT_DIR"
         ls -la "$MOUNT_DIR" 2>/dev/null | head -20
         exit 0
+    fi
+    if is_mounted "$MOUNT_DIR"; then
+        echo "❌ 마운트됐으나 MDB 없음: $MOUNT_DIR"
+        exit 1
     fi
     echo "❌ 마운트 안 됨: $MOUNT_DIR"
     exit 1
@@ -68,9 +76,14 @@ RUN_GID="$(id -g)"
 
 mkdir -p "$MOUNT_DIR"
 
-if is_mounted "$MOUNT_DIR"; then
+if has_mdb_in_mount "$MOUNT_DIR"; then
     echo "✅ 이미 마운트됨: $MOUNT_DIR"
     exit 0
+fi
+
+if is_mounted "$MOUNT_DIR"; then
+    echo "⚠️  stale 또는 불완전한 마운트 — 해제 후 재마운트: $MOUNT_DIR"
+    unmount_stale "$MOUNT_DIR"
 fi
 
 REMOTE="//${SMB_SERVER}/${SMB_SHARE}"

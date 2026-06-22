@@ -32,8 +32,14 @@ chmod +x "$PROJECT_DIR/scripts/sync-mdb.sh" \
          "$PROJECT_DIR/scripts/mount-mdb-share.sh" \
          "$PROJECT_DIR/scripts/install-mdb-sync-timer.sh" 2>/dev/null || true
 
-# 2-2. MDB 동기화 (마운트 없으면 기존 복사본 유지)
-echo "🔄 MDB 동기화 시도 (마운트 없으면 기존 복사본 유지)..."
+# 2-2. stale SMB 마운트 복구 후 MDB 동기화
+echo "🔄 MDB 동기화 시도 (stale 마운트 복구 포함)..."
+if [ -f "$PROJECT_DIR/.mdb-smb.env" ]; then
+    set -a
+    # shellcheck disable=SC1091
+    source "$PROJECT_DIR/.mdb-smb.env"
+    set +a
+fi
 "$PROJECT_DIR/scripts/sync-mdb.sh" || true
 
 if [ ! -f "$PROJECT_DIR/data/vanpro97_call.mdb" ]; then
@@ -63,10 +69,7 @@ MOUNT_HOST="$PROJECT_DIR/mnt/vcallmanager1"
 ALT_MOUNT_HOST="$PROJECT_DIR/data/mnt/vcallmanager1"
 mkdir -p "$MOUNT_HOST"
 has_mdb() {
-    local dir="$1"
-    is_accessible "$dir" || return 1
-    [ -f "$dir/VANPRO97_call.mdb" ] || [ -f "$dir/vanpro97_call.mdb" ] || \
-        find "$dir" -maxdepth 1 -iname 'vanpro97_call.mdb' -print -quit 2>/dev/null | grep -q .
+    has_mdb_in_mount "$1"
 }
 if ! has_mdb "$MOUNT_HOST" && has_mdb "$ALT_MOUNT_HOST"; then
     echo "⚠️  MDB가 data/mnt/vcallmanager1 에 있습니다. Docker 볼륨을 해당 경로로 연결합니다."

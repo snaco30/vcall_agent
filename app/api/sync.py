@@ -55,6 +55,22 @@ def _is_mounted(path: str) -> bool:
     return False
 
 
+def _is_accessible(path: str) -> bool:
+    try:
+        os.listdir(path)
+        return True
+    except OSError:
+        return False
+
+
+def _mount_is_stale() -> bool:
+    if not _is_mounted(MOUNT_DIR):
+        return False
+    if not _is_accessible(MOUNT_DIR):
+        return True
+    return _resolve_src_mdb() is None
+
+
 def _resolve_src_mdb() -> str | None:
     for name in MDB_CANDIDATES:
         path = os.path.join(MOUNT_DIR, name)
@@ -103,7 +119,10 @@ LOCAL_FALLBACK_MSG = "원본 서버 연결 불가 — 최종 복사본 사용 �
 def _sync_failure_response(message: str) -> dict:
     _ensure_local_copy_meta()
     payload = _build_status_payload()
-    if payload["using_local_fallback"]:
+    if payload.get("mount_stale"):
+        if not message.endswith("유지"):
+            message = f"{message} — 기존 복사본 유지"
+    elif payload["using_local_fallback"]:
         message = LOCAL_FALLBACK_MSG
     else:
         message = f"{message} — 기존 복사본 유지"
@@ -137,8 +156,11 @@ def _build_status_payload() -> dict:
         age = datetime.now(timezone.utc) - parsed.astimezone(timezone.utc)
         is_stale = age.total_seconds() > STALE_MINUTES * 60
 
-    mount_available = _is_mounted(MOUNT_DIR)
-    src_available = bool(_resolve_src_mdb()) if mount_available else False
+    mount_listed = _is_mounted(MOUNT_DIR)
+    mount_accessible = mount_listed and _is_accessible(MOUNT_DIR)
+    src_available = bool(_resolve_src_mdb()) if mount_accessible else False
+    mount_stale = mount_listed and (not mount_accessible or not src_available)
+    mount_available = mount_accessible and src_available
     using_local_fallback = mdb_exists and not mount_available
 
     return {
@@ -149,6 +171,7 @@ def _build_status_payload() -> dict:
         "mdb_available": mdb_exists,
         "stale_threshold_minutes": STALE_MINUTES,
         "mount_available": mount_available,
+        "mount_stale": mount_stale,
         "src_available": src_available,
         "using_local_fallback": using_local_fallback,
     }
@@ -158,18 +181,17 @@ def run_mdb_sync() -> dict:
     if not _is_mounted(MOUNT_DIR):
         return _sync_failure_response(f"SMB 마운트 없음 ({MOUNT_DIR})")
 
+    if not _is_accessible(MOUNT_DIR):
+        return _sync_failure_response(
+            f"SMB 마운트 끊김 ({MOUNT_DIR}) — 호스트에서 sync-mdb.sh 가 자동 복구 시도"
+        )
+
     src = _resolve_src_mdb()
     if not src:
-        try:
-            listing = sorted(os.listdir(MOUNT_DIR))[:8]
-        except OSError:
-            listing = []
-        hint = f" ({MOUNT_DIR})"
-        if listing:
-            hint += f" — 폴더 내용: {', '.join(listing)}"
-        else:
-            hint += " — 폴더가 비어 있음 (호스트 마운트 경로 확인)"
-        return _sync_failure_response(f"마운트 폴더에 MDB 파일 없음{hint}")
+        return _sync_failure_response(
+            f"SMB 마운트 비정상 ({MOUNT_DIR}) — 원격 서버 재부팅 후 stale 마운트. "
+            "호스트에서 sudo systemctl start vcall-mdb-sync.service 실행 또는 DSM 재마운트"
+        )
 
     dst_dir = os.path.dirname(MDB_PATH)
     if dst_dir:

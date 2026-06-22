@@ -1,6 +1,7 @@
 .env
 .env.local
 .env.production
+.mdb-smb.env
 
 data/vanpro97_call.mdb
 data/mdb_sync.meta

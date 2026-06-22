@@ -9,6 +9,14 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 # shellcheck source=lib/is-mounted.sh
 source "$SCRIPT_DIR/lib/is-mounted.sh"
 
+# 선택: 자동 재마운트용 SMB 계정 (.mdb-smb.env, git 제외)
+if [ -f "$PROJECT_DIR/.mdb-smb.env" ]; then
+    # shellcheck disable=SC1091
+    set -a
+    source "$PROJECT_DIR/.mdb-smb.env"
+    set +a
+fi
+
 MOUNT_DIR="${MDB_MOUNT_DIR:-$PROJECT_DIR/mnt/vcallmanager1}"
 ALT_MOUNT_DIR="$PROJECT_DIR/data/mnt/vcallmanager1"
 DATA_DIR="${MDB_DATA_DIR:-$PROJECT_DIR/data}"
@@ -64,16 +72,32 @@ resolve_src() {
 }
 
 has_mdb_in_dir() {
+    has_mdb_in_mount "$1"
+}
+
+recover_mount_if_stale() {
     local dir="$1"
-    is_accessible "$dir" || return 1
-    [ -f "$dir/VANPRO97_call.mdb" ] || [ -f "$dir/vanpro97_call.mdb" ] || \
-        find "$dir" -maxdepth 1 -iname 'vanpro97_call.mdb' -print -quit 2>/dev/null | grep -q .
+    if ! is_stale_mount "$dir"; then
+        return 0
+    fi
+    log "stale SMB 마운트 감지 ($dir) — 해제 후 재마운트 시도"
+    unmount_stale "$dir"
+    if [ -n "${MDB_SMB_USER:-}" ] && [ -n "${MDB_SMB_PASS:-}" ]; then
+        MDB_MOUNT_DIR="$dir" "$SCRIPT_DIR/mount-mdb-share.sh" || true
+    else
+        log "SMB 계정 없음 — DSM/File Station에서 재마운트하거나 .mdb-smb.env 설정"
+    fi
 }
 
 # DSM에서 data/mnt 아래에 마운트한 경우 자동 인식
 if [ -z "${MDB_MOUNT_DIR:-}" ] && ! has_mdb_in_dir "$MOUNT_DIR" && has_mdb_in_dir "$ALT_MOUNT_DIR"; then
     log "MDB가 data/mnt/vcallmanager1 에 있음 — 해당 경로 사용"
     MOUNT_DIR="$ALT_MOUNT_DIR"
+fi
+
+recover_mount_if_stale "$MOUNT_DIR"
+if [ "$MOUNT_DIR" != "$ALT_MOUNT_DIR" ]; then
+    recover_mount_if_stale "$ALT_MOUNT_DIR"
 fi
 
 # 마운트·소스 없음 → 기존 복사본 유지

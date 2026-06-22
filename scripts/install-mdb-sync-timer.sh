@@ -25,6 +25,11 @@ fi
 
 mkdir -p "$MOUNT_DIR"
 
+ENV_FILE_LINE=""
+if [ -f "$PROJECT_DIR/.mdb-smb.env" ]; then
+    ENV_FILE_LINE="EnvironmentFile=-${PROJECT_DIR}/.mdb-smb.env"
+fi
+
 cat > "$SYSTEMD_DIR/vcall-mdb-sync.service" <<EOF
 [Unit]
 Description=V-CALL MDB sync from SMB share
@@ -34,6 +39,7 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 User=${SVC_USER}
+${ENV_FILE_LINE}
 Environment=MDB_MOUNT_DIR=${MOUNT_DIR}
 Environment=MDB_DATA_DIR=${DATA_DIR}
 ExecStart=${SYNC_SCRIPT}

@@ -14,12 +14,12 @@ class Settings(BaseSettings):
     ADMIN_USERNAME: str = "admin"
     ADMIN_PASSWORD: str = "admin1234!"
     SECRET_KEY: str = "vcall_default_secret_fallback_key"
+    ACCESS_TOKEN_EXPIRE_HOURS: int = 8
 
 # 환경 변수 가동
 settings = Settings()
 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_HOURS = 8
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
@@ -57,7 +57,7 @@ def login(data: LoginRequest):
             detail="아이디 또는 비밀번호가 일치하지 않습니다."
         )
     
-    expire = datetime.datetime.utcnow() + datetime.timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
+    expire = datetime.datetime.utcnow() + datetime.timedelta(hours=settings.ACCESS_TOKEN_EXPIRE_HOURS)
     to_encode = {"sub": data.username, "exp": expire}
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     

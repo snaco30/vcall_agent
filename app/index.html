@@ -42,6 +42,9 @@
         .cute-animal-animate-prev {
             animation: cuteAnimalSlideInPrev 0.75s cubic-bezier(0.55, 0.055, 0.675, 0.19) both;
         }
+        #cuteAnimalStage {
+            touch-action: pan-y;
+        }
         .search-chip {
             transition: all 0.15s ease;
         }
@@ -179,22 +182,31 @@
             <div id="merchantCardList" class="merchant-card-grid p-4 sm:p-6 space-y-4 max-w-3xl mx-auto w-full"></div>
         </div>
 
-        <!-- Cute animal slideshow (20 images / hour, 8s auto) -->
-        <div id="cuteAnimalPanel" class="mt-4 fade-in-up max-w-sm mx-auto w-full">
+        <!-- Cute dog slideshow (20 images / hour, 8s auto) -->
+        <div id="cuteAnimalPanel" class="mt-4 fade-in-up max-w-md sm:max-w-lg mx-auto w-full">
             <div class="bg-white rounded-xl ring-1 ring-zinc-200/60 shadow-sm overflow-hidden">
-                <div class="relative h-28 sm:h-32 bg-gradient-to-br from-zinc-50 to-indigo-50/40 flex items-center justify-center px-10 overflow-hidden">
-                    <button type="button" id="cuteAnimalPrevBtn" onclick="prevCuteAnimal()" class="hidden absolute left-1.5 z-10 w-7 h-7 rounded-full bg-white/90 ring-1 ring-zinc-200 text-zinc-600 hover:bg-indigo-50 hover:text-indigo-700 shadow-sm transition-all" aria-label="이전 사진">
-                        <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                <div id="cuteAnimalStage" class="group relative h-52 sm:h-60 md:h-64 bg-gradient-to-br from-amber-50/80 to-zinc-100 overflow-hidden select-none">
+                    <img id="cuteAnimalImage" class="hidden absolute inset-0 z-0 w-full h-full object-contain p-1" alt="귀여운 강아지">
+                    <div id="cuteAnimalPlaceholder" class="absolute inset-0 z-0 flex items-center justify-center text-sm text-zinc-400">불러오는 중...</div>
+                    <button type="button" id="cuteAnimalPrevBtn" onclick="prevCuteAnimal()" class="hidden absolute inset-y-0 left-0 z-20 w-[30%] items-center justify-start pl-2 bg-gradient-to-r from-black/35 via-black/10 to-transparent text-white opacity-90 hover:opacity-100 transition-opacity" aria-label="이전 사진">
+                        <span class="w-9 h-9 rounded-full bg-black/45 backdrop-blur-sm flex items-center justify-center shadow-md">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+                        </span>
                     </button>
-                    <img id="cuteAnimalImage" class="hidden max-h-[6.5rem] sm:max-h-[7.5rem] max-w-full w-auto object-contain" alt="귀여운 동물">
-                    <div id="cuteAnimalPlaceholder" class="text-xs text-zinc-400">불러오는 중...</div>
-                    <button type="button" id="cuteAnimalNextBtn" onclick="nextCuteAnimal(true)" class="hidden absolute right-1.5 z-10 w-7 h-7 rounded-full bg-white/90 ring-1 ring-zinc-200 text-zinc-600 hover:bg-indigo-50 hover:text-indigo-700 shadow-sm transition-all" aria-label="다음 사진">
-                        <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <button type="button" id="cuteAnimalNextBtn" onclick="nextCuteAnimal(true)" class="hidden absolute inset-y-0 right-0 z-20 w-[30%] items-center justify-end pr-2 bg-gradient-to-l from-black/35 via-black/10 to-transparent text-white opacity-90 hover:opacity-100 transition-opacity" aria-label="다음 사진">
+                        <span class="w-9 h-9 rounded-full bg-black/45 backdrop-blur-sm flex items-center justify-center shadow-md">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                        </span>
                     </button>
+                    <div id="cuteAnimalMeta" class="hidden absolute bottom-2.5 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-full bg-black/50 backdrop-blur-sm text-[10px] text-white/95 whitespace-nowrap pointer-events-none">
+                        <span id="cuteAnimalCounter">1 / 20</span>
+                        <span class="mx-1.5 text-white/50">·</span>
+                        <span id="cuteAnimalLabel">8초마다 자동 전환</span>
+                    </div>
                 </div>
-                <div id="cuteAnimalMeta" class="hidden px-3 py-1.5 border-t border-zinc-100 bg-zinc-50/80 flex items-center justify-between text-[10px] text-zinc-500">
-                    <span id="cuteAnimalCounter">1 / 20</span>
-                    <span id="cuteAnimalLabel" class="text-zinc-400">8초마다 자동 전환</span>
+                <div id="cuteAnimalUrlRow" class="hidden px-3 py-2 border-t border-zinc-100 bg-zinc-50/90">
+                    <p class="text-[10px] font-medium text-zinc-400 mb-1">이미지 경로</p>
+                    <a id="cuteAnimalUrlLink" href="#" target="_blank" rel="noopener noreferrer" class="block text-[11px] leading-relaxed text-indigo-600 hover:text-indigo-800 hover:underline break-all"></a>
                 </div>
             </div>
         </div>
@@ -270,7 +282,10 @@
     let cuteAnimalSlideTimer = null;
     let cuteAnimalItems = [];
     let cuteAnimalIndex = 0;
+    let cuteAnimalTouchStartX = 0;
+    let cuteAnimalTouchStartY = 0;
     const CUTE_ANIMAL_SLIDE_MS = 8000;
+    const CUTE_ANIMAL_SWIPE_MIN_PX = 48;
 
     function hasHistoryText(value) {
         const v = (value ?? '').toString().trim();
@@ -319,10 +334,47 @@
     }
 
     function setCuteAnimalControlsVisible(visible) {
-        ['cuteAnimalPrevBtn', 'cuteAnimalNextBtn', 'cuteAnimalMeta'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.classList.toggle('hidden', !visible);
+        const meta = document.getElementById('cuteAnimalMeta');
+        const prev = document.getElementById('cuteAnimalPrevBtn');
+        const next = document.getElementById('cuteAnimalNextBtn');
+        if (meta) meta.classList.toggle('hidden', !visible);
+        [prev, next].forEach(btn => {
+            if (!btn) return;
+            btn.classList.add('hidden');
+            btn.classList.toggle('md:flex', visible);
         });
+        if (visible) updateCuteAnimalHint();
+    }
+
+    function updateCuteAnimalHint() {
+        const label = document.getElementById('cuteAnimalLabel');
+        if (!label) return;
+        const isDesktop = window.matchMedia('(min-width: 768px)').matches;
+        label.textContent = isDesktop
+            ? '8초마다 자동 전환 · 클릭'
+            : '8초마다 자동 전환 · 좌우로 밀기';
+    }
+
+    function initCuteAnimalSwipe() {
+        const stage = document.getElementById('cuteAnimalStage');
+        if (!stage || stage.dataset.swipeBound === '1') return;
+        stage.dataset.swipeBound = '1';
+
+        stage.addEventListener('touchstart', (e) => {
+            if (!e.changedTouches.length) return;
+            cuteAnimalTouchStartX = e.changedTouches[0].clientX;
+            cuteAnimalTouchStartY = e.changedTouches[0].clientY;
+        }, { passive: true });
+
+        stage.addEventListener('touchend', (e) => {
+            if (!cuteAnimalItems.length || !e.changedTouches.length) return;
+            const dx = e.changedTouches[0].clientX - cuteAnimalTouchStartX;
+            const dy = e.changedTouches[0].clientY - cuteAnimalTouchStartY;
+            if (Math.abs(dx) < CUTE_ANIMAL_SWIPE_MIN_PX) return;
+            if (Math.abs(dx) < Math.abs(dy)) return;
+            if (dx < 0) nextCuteAnimal(true);
+            else prevCuteAnimal();
+        }, { passive: true });
     }
 
     function updateCuteAnimalCounter() {
@@ -334,11 +386,27 @@
         }
     }
 
+    function updateCuteAnimalUrl(url) {
+        const row = document.getElementById('cuteAnimalUrlRow');
+        const link = document.getElementById('cuteAnimalUrlLink');
+        if (!row || !link) return;
+        if (!url) {
+            row.classList.add('hidden');
+            link.removeAttribute('href');
+            link.textContent = '';
+            return;
+        }
+        link.href = url;
+        link.textContent = url;
+        row.classList.remove('hidden');
+    }
+
     function showCuteAnimalEmpty(message = '이미지 없음') {
         const img = document.getElementById('cuteAnimalImage');
         const placeholder = document.getElementById('cuteAnimalPlaceholder');
         stopCuteAnimalSlideshow();
         setCuteAnimalControlsVisible(false);
+        updateCuteAnimalUrl('');
         cuteAnimalItems = [];
         cuteAnimalIndex = 0;
         if (img) {
@@ -385,6 +453,7 @@
             img.classList.remove('hidden');
             setCuteAnimalControlsVisible(true);
             updateCuteAnimalCounter();
+            updateCuteAnimalUrl(url);
             if (animate) playCuteAnimalAnimation(direction);
         };
         loader.onerror = () => {
@@ -436,6 +505,7 @@
             placeholder.classList.remove('hidden');
         }
         setCuteAnimalControlsVisible(false);
+        updateCuteAnimalUrl('');
 
         secureFetch('/api/cute-animal')
             .then(data => {
@@ -452,6 +522,9 @@
     }
 
     function initCuteAnimal() {
+        initCuteAnimalSwipe();
+        updateCuteAnimalHint();
+        window.addEventListener('resize', updateCuteAnimalHint);
         loadCuteAnimal();
         if (cuteAnimalRefreshTimer) clearInterval(cuteAnimalRefreshTimer);
         cuteAnimalRefreshTimer = setInterval(() => loadCuteAnimal(), 60 * 60 * 1000);

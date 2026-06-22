@@ -7,3 +7,4 @@ uvicorn
 PyJWT
 python-multipart
 pydantic-settings
+Pillow>=10.0.0

@@ -45,6 +45,9 @@
         #cuteAnimalStage {
             touch-action: pan-y;
         }
+        #cuteAnimalImage {
+            cursor: zoom-in;
+        }
         .search-chip {
             transition: all 0.15s ease;
         }
@@ -205,11 +208,22 @@
                     </div>
                 </div>
                 <div id="cuteAnimalUrlRow" class="hidden px-3 py-2 border-t border-zinc-100 bg-zinc-50/90">
-                    <p class="text-[10px] font-medium text-zinc-400 mb-1">이미지 경로</p>
+                    <p class="text-[10px] font-medium text-zinc-400 mb-1">원본 이미지 경로</p>
                     <a id="cuteAnimalUrlLink" href="#" target="_blank" rel="noopener noreferrer" class="block text-[11px] leading-relaxed text-indigo-600 hover:text-indigo-800 hover:underline break-all"></a>
+                    <p id="cuteAnimalPerfNote" class="hidden text-[10px] text-zinc-400 mt-1.5 leading-relaxed"></p>
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Cute animal lightbox -->
+<div id="cuteAnimalLightbox" class="fixed inset-0 z-[60] hidden bg-black/90 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="강아지 사진 확대">
+    <button type="button" onclick="closeCuteAnimalLightbox()" class="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors" aria-label="닫기">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+    <div class="absolute inset-0 flex items-center justify-center p-4 sm:p-8" onclick="closeCuteAnimalLightbox()">
+        <img id="cuteAnimalLightboxImg" src="" alt="강아지 사진 확대" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl" onclick="event.stopPropagation()">
     </div>
 </div>
 
@@ -333,6 +347,14 @@
         `;
     }
 
+    function withAuthUrl(path) {
+        if (!path) return '';
+        if (path.startsWith('http://') || path.startsWith('https://')) return path;
+        const token = localStorage.getItem('vcall_token');
+        const sep = path.includes('?') ? '&' : '?';
+        return path + sep + 'token=' + encodeURIComponent(token || '');
+    }
+
     function setCuteAnimalControlsVisible(visible) {
         const meta = document.getElementById('cuteAnimalMeta');
         const prev = document.getElementById('cuteAnimalPrevBtn');
@@ -351,8 +373,61 @@
         if (!label) return;
         const isDesktop = window.matchMedia('(min-width: 768px)').matches;
         label.textContent = isDesktop
-            ? '8초마다 자동 전환 · 클릭'
-            : '8초마다 자동 전환 · 좌우로 밀기';
+            ? '8초마다 자동 전환 · 클릭 확대'
+            : '8초마다 자동 전환 · 밀기/탭 확대';
+    }
+
+    function initCuteAnimalImageClick() {
+        const img = document.getElementById('cuteAnimalImage');
+        if (!img || img.dataset.lightboxBound === '1') return;
+        img.dataset.lightboxBound = '1';
+        img.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openCuteAnimalLightbox();
+        });
+    }
+
+    function openCuteAnimalLightbox() {
+        const item = cuteAnimalItems[cuteAnimalIndex];
+        if (!item) return;
+        const url = withAuthUrl(item.full_url || item.image_url || item.url);
+        const box = document.getElementById('cuteAnimalLightbox');
+        const lightImg = document.getElementById('cuteAnimalLightboxImg');
+        if (!box || !lightImg || !url) return;
+        lightImg.src = url;
+        box.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+    }
+
+    function closeCuteAnimalLightbox() {
+        const box = document.getElementById('cuteAnimalLightbox');
+        const lightImg = document.getElementById('cuteAnimalLightboxImg');
+        if (!box) return;
+        box.classList.add('hidden');
+        if (lightImg) lightImg.removeAttribute('src');
+        document.body.classList.remove('overflow-hidden');
+    }
+
+    function prefetchCuteAnimalAt(index) {
+        if (!cuteAnimalItems.length) return;
+        const normalized = ((index % cuteAnimalItems.length) + cuteAnimalItems.length) % cuteAnimalItems.length;
+        const item = cuteAnimalItems[normalized];
+        const url = withAuthUrl(item?.image_url || item?.url);
+        if (!url) return;
+        const pre = new Image();
+        pre.src = url;
+    }
+
+    function updateCuteAnimalPerfNote(text) {
+        const note = document.getElementById('cuteAnimalPerfNote');
+        if (!note) return;
+        if (!text) {
+            note.textContent = '';
+            note.classList.add('hidden');
+            return;
+        }
+        note.textContent = text;
+        note.classList.remove('hidden');
     }
 
     function initCuteAnimalSwipe() {
@@ -407,6 +482,7 @@
         stopCuteAnimalSlideshow();
         setCuteAnimalControlsVisible(false);
         updateCuteAnimalUrl('');
+        updateCuteAnimalPerfNote('');
         cuteAnimalItems = [];
         cuteAnimalIndex = 0;
         if (img) {
@@ -440,7 +516,8 @@
 
         cuteAnimalIndex = ((index % cuteAnimalItems.length) + cuteAnimalItems.length) % cuteAnimalItems.length;
         const item = cuteAnimalItems[cuteAnimalIndex];
-        const url = item.image_url || item.url;
+        const url = withAuthUrl(item.image_url || item.url);
+        const sourceUrl = item.source_url || url;
 
         placeholder.textContent = '불러오는 중...';
         placeholder.classList.remove('hidden');
@@ -453,7 +530,8 @@
             img.classList.remove('hidden');
             setCuteAnimalControlsVisible(true);
             updateCuteAnimalCounter();
-            updateCuteAnimalUrl(url);
+            updateCuteAnimalUrl(sourceUrl);
+            prefetchCuteAnimalAt(cuteAnimalIndex + 1);
             if (animate) playCuteAnimalAnimation(direction);
         };
         loader.onerror = () => {
@@ -501,11 +579,12 @@
     function loadCuteAnimal() {
         const placeholder = document.getElementById('cuteAnimalPlaceholder');
         if (placeholder) {
-            placeholder.textContent = '불러오는 중...';
+            placeholder.textContent = '이미지 준비 중... (서버에서 다운로드·리사이즈)';
             placeholder.classList.remove('hidden');
         }
         setCuteAnimalControlsVisible(false);
         updateCuteAnimalUrl('');
+        updateCuteAnimalPerfNote('');
 
         secureFetch('/api/cute-animal')
             .then(data => {
@@ -515,6 +594,13 @@
                 }
                 cuteAnimalItems = data.items;
                 cuteAnimalIndex = 0;
+                if (data.slow_reason) {
+                    updateCuteAnimalPerfNote(data.slow_reason);
+                }
+                if (data.prepare_seconds > 3) {
+                    const extra = `첫 준비에 ${data.prepare_seconds}초 소요됐습니다. 이후는 캐시된 작은 파일을 사용합니다.`;
+                    updateCuteAnimalPerfNote(data.slow_reason ? `${data.slow_reason} ${extra}` : extra);
+                }
                 displayCuteAnimalAt(0, 'next', true);
                 startCuteAnimalSlideshow();
             })
@@ -523,8 +609,12 @@
 
     function initCuteAnimal() {
         initCuteAnimalSwipe();
+        initCuteAnimalImageClick();
         updateCuteAnimalHint();
         window.addEventListener('resize', updateCuteAnimalHint);
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeCuteAnimalLightbox();
+        });
         loadCuteAnimal();
         if (cuteAnimalRefreshTimer) clearInterval(cuteAnimalRefreshTimer);
         cuteAnimalRefreshTimer = setInterval(() => loadCuteAnimal(), 60 * 60 * 1000);

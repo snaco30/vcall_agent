@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from fastapi.security import OAuth2PasswordBearer
 from pydantic_settings import BaseSettings
 from pydantic import BaseModel
@@ -34,7 +34,7 @@ class LoginRequest(BaseModel):
     username: str
     password: str
 
-def get_current_user(token: str = Depends(oauth2_scheme)):
+def _decode_access_token(token: str) -> str:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="로그인이 필요하거나 인증 토큰이 만료되었습니다.",
@@ -48,6 +48,28 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         return username
     except jwt.PyJWTError:
         raise credentials_exception
+
+
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    return _decode_access_token(token)
+
+
+def get_current_user_for_media(
+    authorization: str | None = Header(None),
+    token: str | None = Query(None),
+):
+    raw_token = None
+    if authorization and authorization.lower().startswith("bearer "):
+        raw_token = authorization[7:].strip()
+    elif token:
+        raw_token = token.strip()
+    if not raw_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="로그인이 필요하거나 인증 토큰이 만료되었습니다.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return _decode_access_token(raw_token)
 
 @router.post("/login")
 def login(data: LoginRequest):

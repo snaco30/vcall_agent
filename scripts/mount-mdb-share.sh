@@ -10,10 +10,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 # shellcheck source=lib/is-mounted.sh
 source "$SCRIPT_DIR/lib/is-mounted.sh"
+# shellcheck source=lib/mount-paths.sh
+source "$SCRIPT_DIR/lib/mount-paths.sh"
 
 SMB_SERVER="${MDB_SMB_SERVER:-posbankserver}"
 SMB_SHARE="${MDB_SMB_SHARE:-vcallmanager1}"
-MOUNT_DIR="${MDB_MOUNT_DIR:-$PROJECT_DIR/mnt/vcallmanager1}"
+MOUNT_DIR="${MDB_MOUNT_DIR:-$(default_mount_dir)}"
 SMB_USER="${MDB_SMB_USER:-}"
 SMB_PASS="${MDB_SMB_PASS:-}"
 SMB_VERS="${MDB_SMB_VERS:-3.0}"
@@ -25,7 +27,7 @@ SMB MDB 공유 마운트
 환경변수:
   MDB_SMB_SERVER  원격 서버 (기본: posbankserver)
   MDB_SMB_SHARE   공유 이름 (기본: vcallmanager1)
-  MDB_MOUNT_DIR   로컬 마운트 경로 (기본: \$PROJECT_DIR/mnt/vcallmanager1)
+  MDB_MOUNT_DIR   로컬 마운트 경로 (기본: \$PROJECT_DIR/data/mnt/vcallmanager1)
   MDB_SMB_USER    SMB 계정 (필수, --check 제외)
   MDB_SMB_PASS    SMB 비밀번호 (필수, --check 제외)
   MDB_SMB_VERS    SMB 버전 (기본: 3.0, Synology 권장)

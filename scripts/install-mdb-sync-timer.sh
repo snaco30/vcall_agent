@@ -6,6 +6,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+# shellcheck source=lib/mount-paths.sh
+source "$SCRIPT_DIR/lib/mount-paths.sh"
 
 if [ "$(id -u)" -ne 0 ]; then
     echo "❌ root 권한이 필요합니다: sudo $0" >&2
@@ -14,7 +16,7 @@ fi
 
 # deploy를 실행한 사용자 추정 (sudo 호출 시 SUDO_USER, 아니면 소유자)
 SVC_USER="${SVC_USER:-${SUDO_USER:-$(stat -c '%U' "$PROJECT_DIR")}}"
-MOUNT_DIR="${MDB_MOUNT_DIR:-$PROJECT_DIR/mnt/vcallmanager1}"
+MOUNT_DIR="${MDB_MOUNT_DIR:-$(default_mount_dir)}"
 DATA_DIR="${MDB_DATA_DIR:-$PROJECT_DIR/data}"
 SYNC_SCRIPT="$PROJECT_DIR/scripts/sync-mdb.sh"
 SYSTEMD_DIR="/etc/systemd/system"

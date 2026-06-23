@@ -111,8 +111,11 @@ def restore_backup_zip(zip_bytes: bytes, mode: str = "merge") -> dict[str, Any]:
                     continue
             cur = conn.execute(
                 """
-                INSERT INTO boards(slug, name, description, sort_order, icon, is_active, created_by, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO boards(
+                    slug, name, description, sort_order, icon, is_active, created_by,
+                    created_at, updated_at, parent_board_id, tab_label
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
                 """,
                 (
                     board["slug"],
@@ -124,9 +127,22 @@ def restore_backup_zip(zip_bytes: bytes, mode: str = "merge") -> dict[str, Any]:
                     board.get("created_by") or "restore",
                     board.get("created_at") or utc_now_iso(),
                     board.get("updated_at") or utc_now_iso(),
+                    board.get("tab_label") or "",
                 ),
             )
             board_id_map[old_id] = int(cur.lastrowid)
+
+        for board in boards:
+            old_id = int(board["id"])
+            new_id = board_id_map.get(old_id)
+            if not new_id:
+                continue
+            old_parent = board.get("parent_board_id")
+            new_parent_id = board_id_map.get(int(old_parent)) if old_parent else None
+            conn.execute(
+                "UPDATE boards SET parent_board_id = ?, tab_label = ? WHERE id = ?",
+                (new_parent_id, board.get("tab_label") or "", new_id),
+            )
 
         for post in posts:
             old_id = int(post["id"])

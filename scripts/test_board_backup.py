@@ -17,6 +17,33 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 
+def _seed_parent_child_boards(board_db) -> dict:
+    now = board_db.utc_now_iso()
+    with board_db.get_conn() as conn:
+        cur = conn.execute(
+            """
+            INSERT INTO boards(
+                slug, name, description, sort_order, icon, is_active, created_by,
+                created_at, updated_at, parent_board_id, tab_label
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
+            """,
+            ("test-parent", "부모게시판", "", 0, "", 1, "tester", now, now, "기본탭"),
+        )
+        parent_id = int(cur.lastrowid)
+        cur = conn.execute(
+            """
+            INSERT INTO boards(
+                slug, name, description, sort_order, icon, is_active, created_by,
+                created_at, updated_at, parent_board_id, tab_label
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            ("test-child", "자식게시판", "", 1, "", 1, "tester", now, now, parent_id, "자식탭"),
+        )
+        child_id = int(cur.lastrowid)
+        conn.commit()
+    return {"parent_id": parent_id, "child_id": child_id}
+
+
 def _seed_sample_data(board_db, board_backup) -> dict:
     now = board_db.utc_now_iso()
     with board_db.get_conn() as conn:
@@ -129,6 +156,36 @@ def run_isolated_roundtrip() -> None:
     shutil.rmtree(tmp, ignore_errors=True)
 
 
+def run_parent_child_restore() -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="board_backup_tabs_"))
+    os.environ["BOARD_DB_PATH"] = str(tmp / "board.db")
+    os.environ["BOARD_FILES_ROOT"] = str(tmp / "board_files")
+
+    import importlib
+    from app.api import board_db, board_backup_service as board_backup
+
+    importlib.reload(board_db)
+    importlib.reload(board_backup)
+
+    board_db.init_board_db()
+    seed = _seed_parent_child_boards(board_db)
+    zip_bytes, _ = board_backup.build_backup_zip()
+
+    with board_db.get_conn() as conn:
+        conn.execute("DELETE FROM boards")
+        conn.commit()
+
+    board_backup.restore_backup_zip(zip_bytes, mode="replace")
+    child = board_db.fetch_one("SELECT parent_board_id, tab_label FROM boards WHERE slug = 'test-child'")
+    parent = board_db.fetch_one("SELECT id, tab_label FROM boards WHERE slug = 'test-parent'")
+    assert child and parent, "복구 후 게시판이 있어야 합니다"
+    assert int(child["parent_board_id"]) == int(parent["id"]), child
+    assert child["tab_label"] == "자식탭"
+    assert parent["tab_label"] == "기본탭"
+    print(f"[OK] 부모-자식 탭 관계 복구 (parent={seed['parent_id']} child={seed['child_id']})")
+    shutil.rmtree(tmp, ignore_errors=True)
+
+
 def run_production_readonly() -> None:
     prod_db = Path("/data/board.db")
     if not prod_db.exists():
@@ -164,6 +221,7 @@ def main() -> int:
     for name, fn in (
         ("production", run_production_readonly),
         ("isolated", run_isolated_roundtrip),
+        ("parent_child", run_parent_child_restore),
     ):
         try:
             fn()

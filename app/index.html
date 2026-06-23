@@ -214,7 +214,6 @@
                 <div id="cuteAnimalUrlRow" class="hidden px-3 py-2 border-t border-zinc-100 bg-zinc-50/90">
                     <p class="text-[10px] font-medium text-zinc-400 mb-1">원본 이미지 경로</p>
                     <a id="cuteAnimalUrlLink" href="#" target="_blank" rel="noopener noreferrer" class="block text-[11px] leading-relaxed text-indigo-600 hover:text-indigo-800 hover:underline break-all"></a>
-                    <p id="cuteAnimalPerfNote" class="hidden text-[10px] text-zinc-400 mt-1.5 leading-relaxed"></p>
                 </div>
             </div>
         </div>
@@ -700,18 +699,6 @@
         pre.src = url;
     }
 
-    function updateCuteAnimalPerfNote(text) {
-        const note = document.getElementById('cuteAnimalPerfNote');
-        if (!note) return;
-        if (!text) {
-            note.textContent = '';
-            note.classList.add('hidden');
-            return;
-        }
-        note.textContent = text;
-        note.classList.remove('hidden');
-    }
-
     function initCuteAnimalSwipe() {
         const stage = document.getElementById('cuteAnimalStage');
         if (!stage || stage.dataset.swipeBound === '1') return;
@@ -764,7 +751,6 @@
         stopCuteAnimalSlideshow();
         setCuteAnimalControlsVisible(false);
         updateCuteAnimalUrl('');
-        updateCuteAnimalPerfNote('');
         cuteAnimalItems = [];
         cuteAnimalIndex = 0;
         if (img) {
@@ -866,7 +852,6 @@
         }
         setCuteAnimalControlsVisible(false);
         updateCuteAnimalUrl('');
-        updateCuteAnimalPerfNote('');
 
         secureFetch('/api/cute-animal')
             .then(data => {
@@ -876,13 +861,6 @@
                 }
                 cuteAnimalItems = data.items;
                 cuteAnimalIndex = 0;
-                if (data.slow_reason) {
-                    updateCuteAnimalPerfNote(data.slow_reason);
-                }
-                if (data.prepare_seconds > 3) {
-                    const extra = `첫 준비에 ${data.prepare_seconds}초 소요됐습니다. 이후는 캐시된 작은 파일을 사용합니다.`;
-                    updateCuteAnimalPerfNote(data.slow_reason ? `${data.slow_reason} ${extra}` : extra);
-                }
                 displayCuteAnimalAt(0, 'next', true);
                 startCuteAnimalSlideshow();
             })

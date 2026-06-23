@@ -244,12 +244,6 @@ def _build_payload(ok: bool, message: str = "") -> dict:
             fetched_at + CACHE_TTL_SECONDS, tz=timezone.utc
         ).astimezone().isoformat(timespec="seconds")
 
-    avg_orig = 0
-    avg_view = 0
-    if items:
-        avg_orig = int(sum(int(i.get("orig_bytes") or 0) for i in items) / len(items))
-        avg_view = int(sum(int(i.get("bytes_view") or 0) for i in items) / len(items))
-
     return {
         "ok": ok,
         "batch_id": _cache.get("batch_id") if ok else None,
@@ -264,13 +258,6 @@ def _build_payload(ok: bool, message: str = "") -> dict:
         "serving": "local_resized" if ok else None,
         "display_max_px": _DISPLAY_MAX_PX,
         "full_max_px": _FULL_MAX_PX,
-        "slow_reason": (
-            "이전에는 외부 CDN 원본(평균 "
-            f"{avg_orig // 1024}KB)을 브라우저가 직접 받아 느렸습니다. "
-            f"서버에서 {_DISPLAY_MAX_PX}px로 줄여 평균 {avg_view // 1024}KB로 제공합니다."
-            if ok and avg_orig > 0
-            else None
-        ),
     }
 
 

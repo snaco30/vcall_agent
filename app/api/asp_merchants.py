@@ -3,7 +3,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.api.asp_db import get_connection, init_asp_db
-from app.api.asp_import import import_asp_csv, maybe_import_on_startup
 from app.api.auth import get_current_user
 
 router = APIRouter(prefix="/api/asp-merchants", tags=["AspMerchants"])
@@ -59,8 +58,8 @@ def _prepare_payload(payload: AspMerchantBase) -> dict:
 
 
 def bootstrap_asp_data() -> None:
+    """런타임에는 SQLite DB만 사용합니다. 원본 txt/csv는 읽지 않습니다."""
     init_asp_db()
-    maybe_import_on_startup()
 
 
 @router.get("")
@@ -74,14 +73,14 @@ def list_asp_merchants(
     sql = """
         SELECT id, merchant_name, saup_no, presi_name, tel_no, addr,
                asp_provider, merchant_id, terminal_id, asp_join_date,
-               usage_status, van_type, damdang, bigo, extras,
-               created_at, updated_at
+               usage_status, van_type, damdang, bigo, extras
         FROM asp_merchants
     """
     params: list = []
     if keyword:
-        sql += " WHERE merchant_name LIKE ? COLLATE NOCASE"
-        params.append(f"%{keyword}%")
+        sql += " WHERE merchant_name LIKE ? ESCAPE '\\' COLLATE NOCASE"
+        safe = keyword.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        params.append(f"%{safe}%")
     sql += " ORDER BY merchant_name COLLATE NOCASE ASC LIMIT ?"
     params.append(limit)
 
@@ -170,11 +169,3 @@ def delete_asp_merchant(merchant_id: int, current_user: str = Depends(get_curren
         if cur.rowcount == 0:
             raise HTTPException(status_code=404, detail="데이터를 찾을 수 없습니다.")
     return {"ok": True}
-
-
-@router.post("/import")
-def import_asp_merchants(current_user: str = Depends(get_current_user)):
-    result = import_asp_csv(replace=True)
-    if not result.get("ok"):
-        raise HTTPException(status_code=400, detail=result.get("message", "가져오기 실패"))
-    return result

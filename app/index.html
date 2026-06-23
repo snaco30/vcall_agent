@@ -250,7 +250,6 @@
             </form>
             <button type="button" onclick="resetAspSearch()" class="px-3 py-2 rounded-lg text-xs font-medium bg-white text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50 transition-all">전체</button>
             <button type="button" onclick="openAspForm()" class="px-3 py-2 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-all">+ 신규</button>
-            <button type="button" id="aspImportBtn" onclick="importAspCsv()" class="px-3 py-2 rounded-lg text-xs font-medium bg-white text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50 transition-all">CSV 재가져오기</button>
             <span id="aspCountBadge" class="sm:ml-auto text-xs font-medium text-zinc-600 bg-zinc-100 px-2.5 py-1 rounded-full">0건</span>
         </div>
         <div class="flex-1 overflow-auto p-4 sm:p-6 bg-zinc-50/50 custom-scrollbar">
@@ -582,26 +581,6 @@
         secureFetch(`/api/asp-merchants/${id}`, { method: 'DELETE' })
             .then(() => loadAspMerchants())
             .catch(err => alert(err?.message || '삭제에 실패했습니다.'));
-    }
-
-    function importAspCsv() {
-        const btn = document.getElementById('aspImportBtn');
-        if (btn) {
-            btn.disabled = true;
-            btn.textContent = '가져오는 중...';
-        }
-        secureFetch('/api/asp-merchants/import', { method: 'POST' })
-            .then(data => {
-                alert(data?.message || '가져오기 완료');
-                loadAspMerchants();
-            })
-            .catch(err => alert(err?.message || 'CSV 가져오기 실패. data/asp_merchant_usage.csv 파일을 확인하세요.'))
-            .finally(() => {
-                if (btn) {
-                    btn.disabled = false;
-                    btn.textContent = 'CSV 재가져오기';
-                }
-            });
     }
 
     function hasHistoryText(value) {

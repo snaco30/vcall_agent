@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ASP 가맹점 CSV → SQLite 임포트"""
+"""ASP 가맹점 데이터 파일(txt/csv) → SQLite DB (관리자 CLI 전용)"""
 from __future__ import annotations
 
 import os
@@ -11,16 +11,17 @@ if ROOT not in sys.path:
 
 os.environ.setdefault("ASP_DB_PATH", os.path.join(ROOT, "data", "asp_merchants.db"))
 
-from app.api.asp_import import import_asp_csv, resolve_csv_path  # noqa: E402
+from app.api.asp_import import import_asp_file  # noqa: E402
 
 
 def main() -> int:
-    path = resolve_csv_path()
-    if not path:
-        print("CSV not found. Copy file to data/asp_merchant_usage.csv")
+    if len(sys.argv) < 2:
+        print("사용법: python3 scripts/import-asp-merchants.py <txt_or_csv_path>")
+        print("예: python3 scripts/import-asp-merchants.py data/asp가맹점\\ 사용현황.txt")
         return 1
-    result = import_asp_csv(path, replace=True)
+    result = import_asp_file(sys.argv[1], replace=True)
     print(result.get("message", result))
+    print(f"imported={result.get('imported')} skipped={result.get('skipped')}")
     return 0 if result.get("ok") else 1
 
 

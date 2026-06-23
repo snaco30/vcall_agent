@@ -2,6 +2,7 @@ import os
 import sqlite3
 from pathlib import Path
 
+
 def _default_asp_db_path() -> str:
     env_path = os.getenv("ASP_DB_PATH")
     if env_path:
@@ -47,10 +48,21 @@ def get_connection() -> sqlite3.Connection:
     return conn
 
 
+def _harden_db_file_permissions() -> None:
+    db_path = Path(ASP_DB_PATH)
+    if not db_path.is_file():
+        return
+    try:
+        os.chmod(db_path, 0o600)
+    except OSError:
+        pass
+
+
 def init_asp_db() -> None:
     with get_connection() as conn:
         conn.executescript(SCHEMA_SQL)
         conn.commit()
+    _harden_db_file_permissions()
 
 
 def asp_row_count() -> int:

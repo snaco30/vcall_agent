@@ -1,18 +1,10 @@
 import csv
 import json
-import os
 import re
+from io import StringIO
 from pathlib import Path
 
-from app.api.asp_db import get_connection, init_asp_db
-
-CSV_CANDIDATES = (
-    os.getenv("ASP_MERCHANT_CSV_PATH", ""),
-    "/data/asp_merchant_usage.csv",
-    "/data/asp가맹점 사용현황.csv",
-    "data/asp_merchant_usage.csv",
-    "data/asp가맹점 사용현황.csv",
-)
+from app.api.asp_db import _harden_db_file_permissions, get_connection, init_asp_db
 
 FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "merchant_name": (
@@ -62,63 +54,55 @@ def _clean_cell(value: object) -> str:
     return str(value).replace("\x00", "").replace("\ufeff", "").strip()
 
 
-def _read_csv_rows(csv_path: Path) -> tuple[list[str], list[dict[str, str]]]:
-    raw = csv_path.read_bytes()
-    text = None
-    for encoding in ("utf-8-sig", "cp949", "euc-kr", "utf-8"):
+def _decode_bytes(raw: bytes) -> str:
+    for encoding in ("utf-8-sig", "utf-16", "utf-16-le", "utf-16-be", "cp949", "euc-kr", "utf-8"):
         try:
-            text = raw.decode(encoding)
-            break
+            return raw.decode(encoding)
         except UnicodeDecodeError:
             continue
-    if text is None:
-        raise ValueError(f"CSV 인코딩을 읽을 수 없습니다: {csv_path}")
+    raise ValueError("파일 인코딩을 읽을 수 없습니다.")
 
-    reader = csv.DictReader(text.splitlines())
-    if not reader.fieldnames:
-        raise ValueError(f"CSV 헤더가 없습니다: {csv_path}")
 
-    headers = [h for h in reader.fieldnames if h]
+def _detect_delimiter(sample_line: str) -> str:
+    if "\t" in sample_line:
+        return "\t"
+    if ";" in sample_line and sample_line.count(";") >= sample_line.count(","):
+        return ";"
+    return ","
+
+
+def _read_tabular_rows(raw: bytes) -> tuple[list[str], list[dict[str, str]]]:
+    text = _decode_bytes(raw)
+    lines = [line for line in text.splitlines() if line.strip()]
+    if not lines:
+        raise ValueError("데이터가 비어 있습니다.")
+
+    delimiter = _detect_delimiter(lines[0])
+    reader = csv.reader(StringIO("\n".join(lines)), delimiter=delimiter)
+    table = [row for row in reader if any(cell.strip() for cell in row)]
+    if not table:
+        raise ValueError("유효한 행이 없습니다.")
+
+    headers = [_clean_cell(cell) for cell in table[0]]
     rows: list[dict[str, str]] = []
-    for row in reader:
+    for row in table[1:]:
         if not row:
             continue
-        cleaned = {_clean_cell(k): _clean_cell(v) for k, v in row.items() if k}
+        padded = row + [""] * max(0, len(headers) - len(row))
+        cleaned = {
+            headers[idx]: _clean_cell(padded[idx])
+            for idx in range(len(headers))
+            if headers[idx]
+        }
         if any(cleaned.values()):
             rows.append(cleaned)
     return headers, rows
 
 
-def resolve_csv_path() -> Path | None:
-    seen: set[str] = set()
-    for candidate in CSV_CANDIDATES:
-        if not candidate or candidate in seen:
-            continue
-        seen.add(candidate)
-        path = Path(candidate)
-        if path.is_file():
-            return path
-    return None
-
-
-def import_asp_csv(csv_path: Path | str | None = None, replace: bool = True) -> dict:
-    init_asp_db()
-    path = Path(csv_path) if csv_path else resolve_csv_path()
-    if not path or not path.is_file():
-        return {
-            "ok": False,
-            "message": "ASP CSV 파일을 찾을 수 없습니다. data/asp_merchant_usage.csv 에 복사해 주세요.",
-            "imported": 0,
-            "skipped": 0,
-            "csv_path": None,
-        }
-
-    headers, rows = _read_csv_rows(path)
+def _rows_to_records(headers: list[str], rows: list[dict[str, str]]) -> tuple[list[dict], int]:
     header_map = _build_header_map(headers)
-
-    if "merchant_name" not in header_map.values():
-        first_header = headers[0]
-        header_map[first_header] = "merchant_name"
+    if "merchant_name" not in header_map.values() and headers:
+        header_map[headers[0]] = "merchant_name"
 
     records: list[dict] = []
     skipped = 0
@@ -149,16 +133,10 @@ def import_asp_csv(csv_path: Path | str | None = None, replace: bool = True) -> 
 
         record["extras"] = json.dumps(extras, ensure_ascii=False)
         records.append(record)
+    return records, skipped
 
-    if not records:
-        return {
-            "ok": False,
-            "message": "가져올 유효한 행이 없습니다.",
-            "imported": 0,
-            "skipped": skipped,
-            "csv_path": str(path),
-        }
 
+def _insert_records(records: list[dict], replace: bool = True) -> None:
     with get_connection() as conn:
         if replace:
             conn.execute("DELETE FROM asp_merchants")
@@ -177,31 +155,43 @@ def import_asp_csv(csv_path: Path | str | None = None, replace: bool = True) -> 
             records,
         )
         conn.commit()
+    _harden_db_file_permissions()
 
+
+def import_asp_bytes(raw: bytes, replace: bool = True) -> dict:
+    """CLI/관리 스크립트 전용 — 웹 API에서 호출하지 않습니다."""
+    init_asp_db()
+    try:
+        headers, rows = _read_tabular_rows(raw)
+    except ValueError as exc:
+        return {"ok": False, "message": str(exc), "imported": 0, "skipped": 0}
+
+    records, skipped = _rows_to_records(headers, rows)
+    if not records:
+        return {
+            "ok": False,
+            "message": "가져올 유효한 행이 없습니다.",
+            "imported": 0,
+            "skipped": skipped,
+        }
+
+    _insert_records(records, replace=replace)
     return {
         "ok": True,
-        "message": f"{len(records)}건을 가져왔습니다.",
+        "message": f"{len(records)}건을 DB에 저장했습니다.",
         "imported": len(records),
         "skipped": skipped,
-        "csv_path": str(path),
-        "headers": headers,
     }
 
 
-def maybe_import_on_startup() -> dict | None:
-    if asp_row_count_safe() > 0:
-        return None
-    path = resolve_csv_path()
-    if not path:
-        return None
-    return import_asp_csv(path, replace=True)
-
-
-def asp_row_count_safe() -> int:
-    try:
-        init_asp_db()
-        with get_connection() as conn:
-            row = conn.execute("SELECT COUNT(*) AS cnt FROM asp_merchants").fetchone()
-            return int(row["cnt"]) if row else 0
-    except Exception:
-        return 0
+def import_asp_file(data_path: Path | str, replace: bool = True) -> dict:
+    """CLI/관리 스크립트 전용 — 파일 내용을 DB로 복사합니다."""
+    path = Path(data_path)
+    if not path.is_file():
+        return {
+            "ok": False,
+            "message": f"파일을 찾을 수 없습니다: {path}",
+            "imported": 0,
+            "skipped": 0,
+        }
+    return import_asp_bytes(path.read_bytes(), replace=replace)

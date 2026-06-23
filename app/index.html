@@ -55,6 +55,16 @@
             transform: translateY(-1px);
             box-shadow: 0 2px 8px rgba(99, 102, 241, 0.12);
         }
+        #aspMerchantModal .asp-sheet {
+            height: 100dvh;
+            max-height: 100dvh;
+        }
+        @media (min-width: 640px) {
+            #aspMerchantModal .asp-sheet {
+                height: auto;
+                max-height: 92vh;
+            }
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-indigo-50/40 via-zinc-50 to-zinc-100 text-zinc-800 antialiased min-h-screen">
@@ -231,65 +241,65 @@
 </div>
 
 <!-- ASP Merchant Modal -->
-<div id="aspMerchantModal" class="fixed inset-0 z-[62] hidden bg-zinc-900/50 backdrop-blur-sm p-4 sm:p-6" role="dialog" aria-modal="true" aria-label="ASP 가맹점 목록" onclick="closeAspMerchant()">
-    <div class="bg-white rounded-xl shadow-2xl shadow-zinc-900/10 w-full h-full max-w-6xl mx-auto ring-1 ring-zinc-200/60 overflow-hidden flex flex-col" onclick="event.stopPropagation()">
-        <div class="px-5 sm:px-6 py-4 border-b border-zinc-200 flex justify-between items-center">
-            <div>
-                <h3 class="text-base font-bold text-zinc-900">ASP 가맹점 목록</h3>
-                <p class="text-xs text-zinc-500 mt-0.5">요청하신 기초 데이터 목록</p>
-            </div>
-            <button type="button" onclick="closeAspMerchant()" class="text-zinc-400 hover:text-zinc-700 p-2 rounded-full hover:bg-zinc-100 transition-all" aria-label="닫기">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
-        </div>
-        <div class="px-5 sm:px-6 py-3 border-b border-zinc-100 bg-zinc-50/80 flex flex-col sm:flex-row sm:items-center gap-2">
-            <div class="text-xs text-zinc-600">
-                총 <span id="aspMerchantCount" class="font-semibold text-zinc-900">0</span>건
-            </div>
-            <div class="flex items-center gap-2">
-                <button type="button" onclick="exportAspMerchantExcel()" class="inline-flex items-center px-3 py-2 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-all">
-                    엑셀변환
+<div id="aspMerchantModal" class="fixed inset-0 z-[62] hidden bg-zinc-900/50 backdrop-blur-sm sm:p-4 sm:p-6" role="dialog" aria-modal="true" aria-label="ASP 가맹점 목록" onclick="closeAspMerchant()">
+    <div class="asp-sheet bg-white sm:rounded-2xl shadow-2xl shadow-zinc-900/10 w-full max-w-2xl sm:max-w-3xl mx-auto ring-0 sm:ring-1 ring-zinc-200/60 overflow-hidden flex flex-col" onclick="event.stopPropagation()">
+        <div class="shrink-0 bg-white border-b border-zinc-200">
+            <div class="px-4 sm:px-6 pt-4 pb-3 flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <h3 class="text-lg font-bold text-zinc-900 tracking-tight">ASP 가맹점</h3>
+                    <p class="text-xs text-zinc-500 mt-0.5">거래처 상호 · ASP ID · 신청일자</p>
+                </div>
+                <button type="button" onclick="closeAspMerchant()" class="shrink-0 text-zinc-400 hover:text-zinc-700 p-2 -mr-1 rounded-full hover:bg-zinc-100 transition-all" aria-label="닫기">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
-            <input
-                id="aspMerchantSearchInput"
-                type="text"
-                oninput="filterAspMerchantList()"
-                class="w-full sm:w-72 text-xs bg-white ring-1 ring-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-                placeholder="거래처(상호) / ASP ID 검색"
-            >
-        </div>
-        <div class="flex-1 overflow-auto bg-zinc-50/50 custom-scrollbar p-4 sm:p-6">
-            <div class="bg-white rounded-xl ring-1 ring-zinc-200/60 shadow-sm overflow-hidden">
-                <div class="overflow-auto max-h-[70vh]">
-                    <table class="w-full text-xs">
-                        <thead class="sticky top-0 z-10 bg-zinc-100/95 text-zinc-700">
-                            <tr>
-                                <th class="text-left px-4 py-3 font-semibold">거래처(상호)</th>
-                                <th class="text-left px-4 py-3 font-semibold">ASP ID</th>
-                                <th class="text-left px-4 py-3 font-semibold">신청일자</th>
-                                <th class="text-left px-4 py-3 font-semibold">비고</th>
-                                <th class="text-left px-4 py-3 font-semibold w-28">관리</th>
-                            </tr>
-                        </thead>
-                        <tbody id="aspMerchantRows" class="divide-y divide-zinc-100"></tbody>
-                    </table>
+            <div class="px-4 sm:px-6 pb-4 space-y-3">
+                <div class="relative">
+                    <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input
+                        id="aspMerchantSearchInput"
+                        type="search"
+                        oninput="filterAspMerchantList()"
+                        class="w-full text-sm bg-zinc-50 ring-1 ring-zinc-200 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:bg-white transition-all"
+                        placeholder="상호 또는 ASP ID 검색"
+                        autocomplete="off"
+                    >
                 </div>
+                <div class="flex items-center justify-between gap-2">
+                    <span id="aspMerchantCount" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 ring-1 ring-emerald-100">0건</span>
+                    <button type="button" onclick="exportAspMerchantExcel()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 active:scale-[0.98] transition-all">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        엑셀변환
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="flex-1 overflow-y-auto custom-scrollbar bg-zinc-50/90 px-4 py-4 sm:px-6 sm:py-5">
+            <div id="aspMerchantList" class="space-y-3 max-w-2xl mx-auto w-full"></div>
+            <div id="aspMerchantEmpty" class="hidden max-w-2xl mx-auto w-full text-center py-16 px-4">
+                <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-zinc-100 text-zinc-400 mb-3">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <p class="text-sm font-medium text-zinc-600">검색 결과가 없습니다</p>
+                <p class="text-xs text-zinc-400 mt-1">다른 키워드로 다시 검색해 보세요</p>
             </div>
         </div>
     </div>
 </div>
 
 <!-- ASP Merchant Edit Modal -->
-<div id="aspMerchantEditModal" class="fixed inset-0 z-[63] hidden bg-zinc-900/50 backdrop-blur-sm p-4 sm:p-6" role="dialog" aria-modal="true" aria-label="ASP 가맹점 수정" onclick="closeAspMerchantEdit()">
-    <div class="bg-white rounded-xl shadow-2xl shadow-zinc-900/10 w-full max-w-2xl mx-auto ring-1 ring-zinc-200/60 overflow-hidden" onclick="event.stopPropagation()">
-        <div class="px-5 sm:px-6 py-4 border-b border-zinc-200 flex justify-between items-center">
-            <h3 class="text-base font-bold text-zinc-900">ASP 가맹점 수정</h3>
+<div id="aspMerchantEditModal" class="fixed inset-0 z-[63] hidden bg-zinc-900/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-6" role="dialog" aria-modal="true" aria-label="ASP 가맹점 수정" onclick="closeAspMerchantEdit()">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl shadow-zinc-900/10 w-full max-w-lg mx-auto ring-0 sm:ring-1 ring-zinc-200/60 overflow-hidden max-h-[90dvh] flex flex-col" onclick="event.stopPropagation()">
+        <div class="sm:hidden flex justify-center pt-3 pb-1">
+            <span class="w-10 h-1 rounded-full bg-zinc-300"></span>
+        </div>
+        <div class="px-5 sm:px-6 py-4 border-b border-zinc-200 flex justify-between items-center shrink-0">
+            <h3 class="text-base font-bold text-zinc-900">가맹점 정보 수정</h3>
             <button type="button" onclick="closeAspMerchantEdit()" class="text-zinc-400 hover:text-zinc-700 p-2 rounded-full hover:bg-zinc-100 transition-all" aria-label="닫기">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
-        <div class="p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto custom-scrollbar">
             <input type="hidden" id="aspMerchantEditIndex">
             <label class="block sm:col-span-2">
                 <span class="text-[11px] font-semibold text-zinc-600">거래처(상호)</span>
@@ -308,9 +318,9 @@
                 <textarea id="aspMerchantEditNote" rows="3" class="mt-1 w-full text-sm ring-1 ring-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"></textarea>
             </label>
         </div>
-        <div class="px-5 sm:px-6 py-4 border-t border-zinc-100 flex justify-end gap-2">
-            <button type="button" onclick="closeAspMerchantEdit()" class="px-4 py-2 rounded-lg text-xs font-medium bg-white text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50">취소</button>
-            <button type="button" onclick="saveAspMerchantEdit()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700">저장</button>
+        <div class="px-5 sm:px-6 py-4 border-t border-zinc-100 flex gap-2 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <button type="button" onclick="closeAspMerchantEdit()" class="flex-1 px-4 py-3 rounded-xl text-sm font-medium bg-white text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50">취소</button>
+            <button type="button" onclick="saveAspMerchantEdit()" class="flex-1 px-4 py-3 rounded-xl text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 active:scale-[0.98]">저장</button>
         </div>
     </div>
 </div>
@@ -375,7 +385,8 @@
     const incomingModalEl = document.getElementById('incomingCallsModal');
     const aspMerchantModalEl = document.getElementById('aspMerchantModal');
     const aspMerchantEditModalEl = document.getElementById('aspMerchantEditModal');
-    const aspMerchantRowsEl = document.getElementById('aspMerchantRows');
+    const aspMerchantListEl = document.getElementById('aspMerchantList');
+    const aspMerchantEmptyEl = document.getElementById('aspMerchantEmpty');
     const aspMerchantCountEl = document.getElementById('aspMerchantCount');
     const aspMerchantSearchInputEl = document.getElementById('aspMerchantSearchInput');
     const aspMerchantEditIndexEl = document.getElementById('aspMerchantEditIndex');
@@ -532,23 +543,51 @@ GIANT(자이언트)천안	giant	2017-03-02
 에스케이씨하스복지센타	skchaas		
 청평얼음꽃축제*2	iceflower	`;
 
+    function aspDisplayValue(value) {
+        const text = (value ?? '').toString().trim();
+        return text || '';
+    }
+
+    function renderAspMerchantCard(item) {
+        const name = escapeHtml(aspDisplayValue(item.merchantName) || '상호 없음');
+        const aspId = escapeHtml(aspDisplayValue(item.aspId) || '-');
+        const joinDate = aspDisplayValue(item.joinDate);
+        const note = aspDisplayValue(item.note);
+        const dateLabel = joinDate
+            ? `<span class="inline-flex items-center gap-1 text-xs text-zinc-600"><svg class="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>${escapeHtml(joinDate)}</span>`
+            : `<span class="text-xs text-zinc-400">신청일자 없음</span>`;
+        const noteBlock = note
+            ? `<p class="mt-3 text-xs text-zinc-600 leading-relaxed bg-zinc-50 rounded-lg px-3 py-2 ring-1 ring-zinc-100"><span class="font-medium text-zinc-400">비고</span> ${escapeHtml(note)}</p>`
+            : '';
+
+        return `
+            <article class="bg-white rounded-2xl ring-1 ring-zinc-200/70 shadow-sm p-4 sm:p-5">
+                <div class="min-w-0">
+                    <h4 class="text-[15px] sm:text-base font-bold text-zinc-900 leading-snug break-words">${name}</h4>
+                    <div class="mt-3 flex flex-wrap items-center gap-2">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 ring-1 ring-emerald-100 text-xs font-semibold font-mono tracking-tight">${aspId}</span>
+                        ${dateLabel}
+                    </div>
+                    ${noteBlock}
+                </div>
+                <div class="mt-4 pt-3 border-t border-zinc-100 grid grid-cols-2 gap-2">
+                    <button type="button" onclick="openAspMerchantEdit(${item.__idx})" class="w-full py-2.5 rounded-xl text-sm font-medium bg-zinc-50 text-zinc-700 ring-1 ring-zinc-200 hover:bg-indigo-50 hover:text-indigo-700 hover:ring-indigo-200 active:scale-[0.98] transition-all">수정</button>
+                    <button type="button" onclick="deleteAspMerchant(${item.__idx})" class="w-full py-2.5 rounded-xl text-sm font-medium bg-rose-50 text-rose-700 ring-1 ring-rose-100 hover:bg-rose-100 active:scale-[0.98] transition-all">삭제</button>
+                </div>
+            </article>
+        `;
+    }
+
     function renderAspMerchantRows(items) {
         aspMerchantFilteredItems = items;
-        aspMerchantRowsEl.innerHTML = items.map(item => `
-            <tr class="hover:bg-zinc-50/70">
-                <td class="px-4 py-2.5 text-zinc-800">${escapeHtml(item.merchantName || '-')}</td>
-                <td class="px-4 py-2.5 text-zinc-700">${escapeHtml(item.aspId || '-')}</td>
-                <td class="px-4 py-2.5 text-zinc-700">${escapeHtml(item.joinDate || '-')}</td>
-                <td class="px-4 py-2.5 text-zinc-600">${escapeHtml(item.note || '-')}</td>
-                <td class="px-4 py-2.5">
-                    <div class="flex items-center gap-1.5">
-                        <button type="button" onclick="openAspMerchantEdit(${item.__idx})" class="px-2 py-1 rounded-md text-[11px] font-medium bg-white text-zinc-700 ring-1 ring-zinc-200 hover:bg-indigo-50 hover:text-indigo-700">수정</button>
-                        <button type="button" onclick="deleteAspMerchant(${item.__idx})" class="px-2 py-1 rounded-md text-[11px] font-medium bg-white text-rose-600 ring-1 ring-rose-200 hover:bg-rose-50">삭제</button>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
-        aspMerchantCountEl.textContent = String(items.length);
+        if (!items.length) {
+            aspMerchantListEl.innerHTML = '';
+            aspMerchantEmptyEl.classList.remove('hidden');
+        } else {
+            aspMerchantListEl.innerHTML = items.map(renderAspMerchantCard).join('');
+            aspMerchantEmptyEl.classList.add('hidden');
+        }
+        aspMerchantCountEl.textContent = `${items.length}건`;
     }
 
     function filterAspMerchantList() {

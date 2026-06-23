@@ -714,6 +714,40 @@ function sidebarActiveBoardId(board) {
     return board.id === currentBoardId ? board.id : null;
 }
 
+function boardCardRingClass(active) {
+    return active
+        ? "ring-indigo-300 bg-indigo-50/70 hover:bg-indigo-100/80"
+        : "ring-zinc-200 hover:bg-indigo-50 hover:ring-indigo-200";
+}
+
+function setBoardCardRing(el, active) {
+    if (!el) return;
+    el.classList.remove(...boardCardRingClass(true).split(" "), ...boardCardRingClass(false).split(" "));
+    el.classList.add(...boardCardRingClass(active).split(" "));
+}
+
+function syncBoardSidebarState() {
+    const expandedParentId = getSidebarExpandedParentId();
+    boardListEl.querySelectorAll(".board-group").forEach((groupEl) => {
+        const board = boards.find((row) => row.id === Number(groupEl.dataset.boardGroupId));
+        if (!board) return;
+
+        const hasChildren = board.tabs?.length > 1;
+        const expanded = hasChildren && board.id === expandedParentId;
+        groupEl.querySelector(".board-group-children")?.classList.toggle("is-expanded", expanded);
+        setBoardCardRing(groupEl.querySelector(".board-card"), sidebarActiveBoardId(board) === board.id);
+
+        const hint = groupEl.querySelector("[data-board-tab-hint]");
+        if (hint && hasChildren) {
+            hint.textContent = `${expanded ? "▾" : "▸"} 하위 탭 ${board.tabs.length - 1}개`;
+        }
+
+        groupEl.querySelectorAll(".board-tab-child-card").forEach((childEl) => {
+            setBoardCardRing(childEl, Number(childEl.dataset.boardTabId) === currentBoardId);
+        });
+    });
+}
+
 function renderBoardTabs() {
     const group = getBoardTabGroup();
     if (!group) {
@@ -751,8 +785,8 @@ function selectBoardTab(boardId) {
     currentPage = 1;
     currentQuery = "";
     postSearchInputEl.value = "";
-    renderBoardList();
     renderBoardTabs();
+    syncBoardSidebarState();
     loadPosts(1).catch((error) => alert(error.message));
 }
 
@@ -767,29 +801,32 @@ function renderBoardList() {
 function renderBoardGroup(board) {
     const expandedParentId = getSidebarExpandedParentId();
     const hasChildren = board.tabs?.length > 1;
-    const showChildren = hasChildren && board.id === expandedParentId;
-    const children = showChildren ? board.tabs.slice(1) : [];
-    const childHtml = children
-        .map((tab, index) => renderChildTabRow(board, tab, index === children.length - 1))
-        .join("");
+    const expanded = hasChildren && board.id === expandedParentId;
+    const childHtml = hasChildren
+        ? board.tabs
+              .slice(1)
+              .map((tab, index, arr) => renderChildTabRow(board, tab, index === arr.length - 1))
+              .join("")
+        : "";
+    const childrenBlock = hasChildren
+        ? `<div class="board-group-children${expanded ? " is-expanded" : ""}"><div class="board-group-children-inner space-y-1.5 pointer-events-auto">${childHtml}</div></div>`
+        : "";
     return `
-        <div class="board-group space-y-1" data-board-group-id="${board.id}">
-            ${renderParentBoardCard(board, { hasChildren, expanded: showChildren })}
-            ${children.length ? `<div class="board-group-children space-y-1 pointer-events-auto">${childHtml}</div>` : ""}
+        <div class="board-group space-y-1.5" data-board-group-id="${board.id}">
+            ${renderParentBoardCard(board, { hasChildren, expanded })}
+            ${childrenBlock}
         </div>
     `;
 }
 
 function renderParentBoardCard(board, { hasChildren = false, expanded = false } = {}) {
     const isActive = sidebarActiveBoardId(board) === board.id;
-    const activeClass = isActive
-        ? "ring-indigo-300 bg-indigo-50/70 hover:bg-indigo-100/80"
-        : "ring-zinc-200 hover:bg-indigo-50 hover:ring-indigo-200";
+    const activeClass = boardCardRingClass(isActive);
     const tabHint =
         board.tabs?.length <= 1 && board.description
-            ? `<p class="text-[10px] text-zinc-400 truncate mt-0.5 pl-4 pointer-events-none">${escapeHtml(board.description)}</p>`
+            ? `<p class="text-[10px] text-zinc-400 mt-1 line-clamp-2 pointer-events-none">${escapeHtml(board.description)}</p>`
             : hasChildren
-              ? `<p class="text-[10px] text-indigo-500 truncate mt-0.5 pl-4 pointer-events-none">${expanded ? "▾" : "▸"} 하위 탭 ${board.tabs.length - 1}개</p>`
+              ? `<p class="text-[10px] text-indigo-500 mt-1 pl-0 pointer-events-none" data-board-tab-hint>${expanded ? "▾" : "▸"} 하위 탭 ${board.tabs.length - 1}개</p>`
               : "";
     const inactiveLabel = board.is_active ? "" : `<span class="text-[9px] text-rose-600 shrink-0">OFF</span>`;
     const newPostDot =
@@ -797,19 +834,23 @@ function renderParentBoardCard(board, { hasChildren = false, expanded = false } 
             ? `<span class="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" title="최근 15일 이내 새 글 ${board.new_post_count}건"></span>`
             : "";
     return `
-        <div class="board-card rounded-lg ring-1 ${activeClass} px-2 py-1.5 cursor-pointer transition-all select-none touch-none" data-board-id="${board.id}" role="button" tabindex="0">
-            <div class="flex items-center gap-1 min-w-0">
-                <span class="text-[10px] text-zinc-300 shrink-0" aria-hidden="true">⠿</span>
-                <span class="text-[11px] shrink-0">${escapeHtml(board.icon || "📋")}</span>
-                <span class="text-[11px] font-semibold text-zinc-900 truncate">${escapeHtml(board.name)}</span>
-                <span class="ml-auto shrink-0 flex items-center gap-1">
-                    ${newPostDot}
-                    <span class="text-[10px] text-indigo-600">${board.post_count || 0}</span>
-                </span>
-                ${inactiveLabel}
+        <div class="board-card rounded-lg ring-1 ${activeClass} px-2.5 py-3 min-h-[4.25rem] cursor-pointer transition-all select-none touch-none" data-board-id="${board.id}" role="button" tabindex="0">
+            <div class="flex items-start gap-1.5 min-w-0">
+                <span class="text-[10px] text-zinc-300 shrink-0 mt-0.5" aria-hidden="true">⠿</span>
+                <span class="text-sm shrink-0 leading-none">${escapeHtml(board.icon || "📋")}</span>
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-1 min-w-0">
+                        <span class="text-xs font-semibold text-zinc-900 leading-snug line-clamp-2">${escapeHtml(board.name)}</span>
+                        <span class="ml-auto shrink-0 flex items-center gap-1">
+                            ${newPostDot}
+                            <span class="text-[10px] text-indigo-600">${board.post_count || 0}</span>
+                        </span>
+                        ${inactiveLabel}
+                    </div>
+                    ${tabHint}
+                </div>
             </div>
-            ${tabHint}
-            <div class="mt-1 flex justify-end">
+            <div class="mt-2 flex justify-end">
                 <button type="button" data-board-edit-id="${board.id}" class="board-edit-btn text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-500 hover:bg-zinc-200">설정</button>
             </div>
         </div>
@@ -818,9 +859,7 @@ function renderParentBoardCard(board, { hasChildren = false, expanded = false } 
 
 function renderChildTabRow(board, tab, isLast) {
     const isActive = currentBoardId === tab.id;
-    const activeClass = isActive
-        ? "ring-indigo-300 bg-indigo-50/70 hover:bg-indigo-100/80"
-        : "ring-zinc-200 hover:bg-indigo-50 hover:ring-indigo-200";
+    const activeClass = boardCardRingClass(isActive);
     const branch = isLast ? "└" : "├";
     const inactiveLabel = tab.is_active ? "" : `<span class="text-[9px] text-rose-600 shrink-0">OFF</span>`;
     const newPostDot =
@@ -829,15 +868,15 @@ function renderChildTabRow(board, tab, isLast) {
             : "";
     return `
         <div
-            class="board-tab-child-card rounded-lg ring-1 ${activeClass} ml-3 pl-2 pr-2 py-1.5 cursor-pointer transition-all border-l-2 border-indigo-100"
+            class="board-tab-child-card rounded-lg ring-1 ${activeClass} ml-3 pl-2.5 pr-2 py-2.5 min-h-[3rem] cursor-pointer transition-all border-l-2 border-indigo-100"
             data-board-tab-id="${tab.id}"
             data-parent-board-id="${board.id}"
             role="button"
             tabindex="0"
         >
-            <div class="flex items-center gap-1 min-w-0">
-                <span class="text-[10px] text-zinc-400 shrink-0 font-mono">${branch}</span>
-                <span class="text-[11px] font-medium text-zinc-800 truncate">${escapeHtml(tab.tab_label || tab.name)}</span>
+            <div class="flex items-start gap-1.5 min-w-0">
+                <span class="text-[10px] text-zinc-400 shrink-0 font-mono mt-0.5">${branch}</span>
+                <span class="text-xs font-medium text-zinc-800 leading-snug line-clamp-2">${escapeHtml(tab.tab_label || tab.name)}</span>
                 <span class="ml-auto shrink-0 flex items-center gap-1">
                     ${newPostDot}
                     <span class="text-[10px] text-indigo-600">${tab.post_count || 0}</span>
@@ -1032,7 +1071,7 @@ function selectBoard(boardId) {
     currentPage = 1;
     currentQuery = "";
     postSearchInputEl.value = "";
-    renderBoardList();
+    syncBoardSidebarState();
     renderBoardTabs();
     loadPosts(1).catch((error) => alert(error.message));
 }

@@ -76,7 +76,7 @@ fi
 RUN_USER="$(id -un)"
 RUN_GID="$(id -g)"
 
-mkdir -p "$MOUNT_DIR"
+ensure_mount_dir "$MOUNT_DIR"
 
 if has_mdb_in_mount "$MOUNT_DIR"; then
     echo "✅ 이미 마운트됨: $MOUNT_DIR"

@@ -53,3 +53,33 @@ unmount_stale() {
     echo "[mount] stale SMB 마운트 해제: $dir" >&2
     sudo umount -l "$dir" 2>/dev/null || sudo umount "$dir" 2>/dev/null || true
 }
+
+# Synology 등에서 마운트 실패 시 파일로 남은 경로 복구
+ensure_mount_dir() {
+    local dir="${1%/}"
+    local parent
+    parent="$(dirname "$dir")"
+
+    if [ -e "$parent" ] && [ ! -d "$parent" ]; then
+        echo "[mount] 부모 경로가 디렉터리가 아님 — 제거: $parent" >&2
+        rm -f "$parent" 2>/dev/null || sudo rm -f "$parent" 2>/dev/null || return 1
+    fi
+
+    if [ -d "$dir" ]; then
+        return 0
+    fi
+
+    if [ -e "$dir" ]; then
+        if is_mounted "$dir"; then
+            unmount_stale "$dir"
+            [ -d "$dir" ] && return 0
+        fi
+        echo "[mount] 마운트 경로가 디렉터리가 아님 — 제거 후 재생성: $dir" >&2
+        rm -f "$dir" 2>/dev/null || sudo rm -f "$dir" 2>/dev/null || {
+            echo "❌ 마운트 경로 제거 실패: $dir" >&2
+            return 1
+        }
+    fi
+
+    mkdir -p "$dir"
+}

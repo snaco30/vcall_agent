@@ -69,7 +69,8 @@ source "$PROJECT_DIR/scripts/lib/mount-paths.sh"
 
 MOUNT_HOST="${MDB_MOUNT_DIR:-$(default_mount_dir)}"
 ALT_MOUNT_HOST="$(legacy_mount_dir)"
-mkdir -p "$MOUNT_HOST"
+ensure_mount_dir "$MOUNT_HOST" || echo "⚠️  마운트 디렉터리 준비 실패 ($MOUNT_HOST) — SMB 볼륨은 생략될 수 있습니다"
+ensure_mount_dir "$ALT_MOUNT_HOST" 2>/dev/null || true
 if ! is_accessible "$MOUNT_HOST" && is_accessible "$ALT_MOUNT_HOST"; then
     echo "⚠️  기본 경로 접근 불가 — legacy mnt/vcallmanager1 사용"
     MOUNT_HOST="$ALT_MOUNT_HOST"

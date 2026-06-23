@@ -74,6 +74,9 @@ let boardDragSuppressClick = false;
 const BOARD_DRAG_LONG_PRESS_MS = 450;
 const BOARD_DRAG_MOVE_CANCEL_PX = 10;
 
+const BOARD_SETTINGS_ICON =
+    '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>';
+
 const postModalEl = document.getElementById("postModal");
 const postModalTitleEl = document.getElementById("postModalTitle");
 const postTitleInputEl = document.getElementById("postTitleInput");
@@ -834,24 +837,22 @@ function renderParentBoardCard(board, { hasChildren = false, expanded = false } 
             ? `<span class="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" title="최근 15일 이내 새 글 ${board.new_post_count}건"></span>`
             : "";
     return `
-        <div class="board-card rounded-lg ring-1 ${activeClass} px-2.5 py-3 min-h-[4.25rem] cursor-pointer transition-all select-none touch-none" data-board-id="${board.id}" role="button" tabindex="0">
+        <div class="board-card rounded-lg ring-1 ${activeClass} px-2.5 py-2.5 cursor-pointer transition-all select-none touch-none" data-board-id="${board.id}" role="button" tabindex="0">
             <div class="flex items-start gap-1.5 min-w-0">
                 <span class="text-[10px] text-zinc-300 shrink-0 mt-0.5" aria-hidden="true">⠿</span>
                 <span class="text-sm shrink-0 leading-none">${escapeHtml(board.icon || "📋")}</span>
                 <div class="min-w-0 flex-1">
-                    <div class="flex items-center gap-1 min-w-0">
-                        <span class="text-xs font-semibold text-zinc-900 leading-snug line-clamp-2">${escapeHtml(board.name)}</span>
+                    <div class="flex items-center gap-0.5 min-w-0">
+                        <span class="text-xs font-semibold text-zinc-900 truncate">${escapeHtml(board.name)}</span>
+                        <button type="button" data-board-edit-id="${board.id}" class="board-edit-btn shrink-0 p-0.5 rounded text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100/80" title="게시판 설정" aria-label="게시판 설정">${BOARD_SETTINGS_ICON}</button>
                         <span class="ml-auto shrink-0 flex items-center gap-1">
                             ${newPostDot}
                             <span class="text-[10px] text-indigo-600">${board.post_count || 0}</span>
+                            ${inactiveLabel}
                         </span>
-                        ${inactiveLabel}
                     </div>
                     ${tabHint}
                 </div>
-            </div>
-            <div class="mt-2 flex justify-end">
-                <button type="button" data-board-edit-id="${board.id}" class="board-edit-btn text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-500 hover:bg-zinc-200">설정</button>
             </div>
         </div>
     `;

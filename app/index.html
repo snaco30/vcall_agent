@@ -109,9 +109,9 @@
                 </div>
             </div>
             <div class="flex items-center gap-2 sm:gap-3">
-                <button type="button" onclick="openAspModal()" class="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 rounded-lg shadow-sm transition-all">
+                <button type="button" onclick="openAspMerchant()" class="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 rounded-lg shadow-sm transition-all">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                    ASP가입현황
+                    ASP가맹점
                 </button>
                 <div id="userInfo" class="flex items-center gap-2 text-xs font-medium text-zinc-600 bg-zinc-50 px-3 py-1.5 rounded-lg ring-1 ring-zinc-200/80"></div>
                 <button onclick="handleLogout()" class="text-xs text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 font-medium px-3 py-1.5 rounded-lg transition-all">로그아웃</button>
@@ -231,103 +231,87 @@
 </div>
 
 <!-- ASP Merchant Modal -->
-<div id="aspModal" class="fixed inset-0 z-50 hidden bg-zinc-900/40 backdrop-blur-sm flex justify-center items-center p-4 sm:p-6">
-    <div class="bg-white rounded-xl shadow-2xl shadow-zinc-900/10 w-full h-full flex flex-col overflow-hidden max-w-5xl ring-1 ring-zinc-200/60">
-        <div class="bg-white px-5 sm:px-6 py-4 flex justify-between items-center border-b border-zinc-200">
+<div id="aspMerchantModal" class="fixed inset-0 z-[62] hidden bg-zinc-900/50 backdrop-blur-sm p-4 sm:p-6" role="dialog" aria-modal="true" aria-label="ASP 가맹점 목록" onclick="closeAspMerchant()">
+    <div class="bg-white rounded-xl shadow-2xl shadow-zinc-900/10 w-full h-full max-w-6xl mx-auto ring-1 ring-zinc-200/60 overflow-hidden flex flex-col" onclick="event.stopPropagation()">
+        <div class="px-5 sm:px-6 py-4 border-b border-zinc-200 flex justify-between items-center">
             <div>
-                <h3 class="text-base font-bold text-zinc-900">ASP 가입현황</h3>
-                <p class="text-xs text-zinc-500 mt-0.5">거래처 상호로 검색 · 등록 · 수정 · 삭제</p>
+                <h3 class="text-base font-bold text-zinc-900">ASP 가맹점 목록</h3>
+                <p class="text-xs text-zinc-500 mt-0.5">요청하신 기초 데이터 목록</p>
             </div>
-            <button type="button" onclick="closeAspModal()" class="text-zinc-400 hover:text-zinc-700 p-2 rounded-full hover:bg-zinc-100 transition-all" aria-label="닫기">
+            <button type="button" onclick="closeAspMerchant()" class="text-zinc-400 hover:text-zinc-700 p-2 rounded-full hover:bg-zinc-100 transition-all" aria-label="닫기">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
-        <div class="px-5 sm:px-6 py-3 border-b border-zinc-100 bg-zinc-50/80 flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:items-center">
-            <form id="aspSearchForm" onsubmit="handleAspSearch(event)" class="flex flex-1 min-w-[220px] gap-2">
-                <input type="text" id="aspSearchInput" class="flex-1 text-sm bg-white ring-1 ring-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/30" placeholder="거래처 상호 검색 (부분 일치)">
-                <button type="submit" class="px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition-all">검색</button>
-            </form>
-            <button type="button" onclick="resetAspSearch()" class="px-3 py-2 rounded-lg text-xs font-medium bg-white text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50 transition-all">전체</button>
-            <button type="button" onclick="openAspForm()" class="px-3 py-2 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-all">+ 신규</button>
-            <span id="aspCountBadge" class="sm:ml-auto text-xs font-medium text-zinc-600 bg-zinc-100 px-2.5 py-1 rounded-full">0건</span>
+        <div class="px-5 sm:px-6 py-3 border-b border-zinc-100 bg-zinc-50/80 flex flex-col sm:flex-row sm:items-center gap-2">
+            <div class="text-xs text-zinc-600">
+                총 <span id="aspMerchantCount" class="font-semibold text-zinc-900">0</span>건
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="exportAspMerchantExcel()" class="inline-flex items-center px-3 py-2 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-all">
+                    엑셀변환
+                </button>
+            </div>
+            <input
+                id="aspMerchantSearchInput"
+                type="text"
+                oninput="filterAspMerchantList()"
+                class="w-full sm:w-72 text-xs bg-white ring-1 ring-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                placeholder="거래처(상호) / ASP ID 검색"
+            >
         </div>
-        <div class="flex-1 overflow-auto p-4 sm:p-6 bg-zinc-50/50 custom-scrollbar">
-            <div id="aspList" class="space-y-3 max-w-4xl mx-auto w-full"></div>
-            <div id="aspEmptyState" class="hidden text-center py-16 text-sm text-zinc-400">검색 결과가 없습니다.</div>
+        <div class="flex-1 overflow-auto bg-zinc-50/50 custom-scrollbar p-4 sm:p-6">
+            <div class="bg-white rounded-xl ring-1 ring-zinc-200/60 shadow-sm overflow-hidden">
+                <div class="overflow-auto max-h-[70vh]">
+                    <table class="w-full text-xs">
+                        <thead class="sticky top-0 z-10 bg-zinc-100/95 text-zinc-700">
+                            <tr>
+                                <th class="text-left px-4 py-3 font-semibold">거래처(상호)</th>
+                                <th class="text-left px-4 py-3 font-semibold">ASP ID</th>
+                                <th class="text-left px-4 py-3 font-semibold">신청일자</th>
+                                <th class="text-left px-4 py-3 font-semibold">비고</th>
+                                <th class="text-left px-4 py-3 font-semibold w-28">관리</th>
+                            </tr>
+                        </thead>
+                        <tbody id="aspMerchantRows" class="divide-y divide-zinc-100"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- ASP Edit Modal -->
-<div id="aspFormModal" class="fixed inset-0 z-[55] hidden bg-zinc-900/50 backdrop-blur-sm flex justify-center items-center p-4">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg ring-1 ring-zinc-200/60 overflow-hidden">
-        <div class="px-5 py-4 border-b border-zinc-100 flex justify-between items-center">
-            <h4 id="aspFormTitle" class="text-sm font-bold text-zinc-900">ASP 가맹점 등록</h4>
-            <button type="button" onclick="closeAspForm()" class="text-zinc-400 hover:text-zinc-700 p-1.5 rounded-full hover:bg-zinc-100">
+<!-- ASP Merchant Edit Modal -->
+<div id="aspMerchantEditModal" class="fixed inset-0 z-[63] hidden bg-zinc-900/50 backdrop-blur-sm p-4 sm:p-6" role="dialog" aria-modal="true" aria-label="ASP 가맹점 수정" onclick="closeAspMerchantEdit()">
+    <div class="bg-white rounded-xl shadow-2xl shadow-zinc-900/10 w-full max-w-2xl mx-auto ring-1 ring-zinc-200/60 overflow-hidden" onclick="event.stopPropagation()">
+        <div class="px-5 sm:px-6 py-4 border-b border-zinc-200 flex justify-between items-center">
+            <h3 class="text-base font-bold text-zinc-900">ASP 가맹점 수정</h3>
+            <button type="button" onclick="closeAspMerchantEdit()" class="text-zinc-400 hover:text-zinc-700 p-2 rounded-full hover:bg-zinc-100 transition-all" aria-label="닫기">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
-        <form id="aspEditForm" onsubmit="saveAspMerchant(event)" class="p-5 space-y-3 max-h-[70vh] overflow-y-auto custom-scrollbar">
-            <input type="hidden" id="aspEditId" value="">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label class="sm:col-span-2 block">
-                    <span class="text-[11px] font-semibold text-zinc-600">거래처 상호 *</span>
-                    <input type="text" id="aspFieldMerchantName" required class="mt-1 w-full text-sm ring-1 ring-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
-                </label>
-                <label class="block">
-                    <span class="text-[11px] font-semibold text-zinc-600">ASP ID</span>
-                    <input type="text" id="aspFieldMerchantId" class="mt-1 w-full text-sm ring-1 ring-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
-                </label>
-                <label class="block">
-                    <span class="text-[11px] font-semibold text-zinc-600">신청일자</span>
-                    <input type="text" id="aspFieldJoinDate" placeholder="YYYY-MM-DD" class="mt-1 w-full text-sm ring-1 ring-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
-                </label>
-                <label class="block">
-                    <span class="text-[11px] font-semibold text-zinc-600">사업자번호</span>
-                    <input type="text" id="aspFieldSaupNo" class="mt-1 w-full text-sm ring-1 ring-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
-                </label>
-                <label class="block">
-                    <span class="text-[11px] font-semibold text-zinc-600">대표자</span>
-                    <input type="text" id="aspFieldPresiName" class="mt-1 w-full text-sm ring-1 ring-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
-                </label>
-                <label class="block">
-                    <span class="text-[11px] font-semibold text-zinc-600">전화번호</span>
-                    <input type="text" id="aspFieldTelNo" class="mt-1 w-full text-sm ring-1 ring-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
-                </label>
-                <label class="block">
-                    <span class="text-[11px] font-semibold text-zinc-600">사용현황</span>
-                    <input type="text" id="aspFieldUsageStatus" class="mt-1 w-full text-sm ring-1 ring-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
-                </label>
-                <label class="block">
-                    <span class="text-[11px] font-semibold text-zinc-600">ASP사</span>
-                    <input type="text" id="aspFieldAspProvider" class="mt-1 w-full text-sm ring-1 ring-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
-                </label>
-                <label class="block">
-                    <span class="text-[11px] font-semibold text-zinc-600">VAN</span>
-                    <input type="text" id="aspFieldVanType" class="mt-1 w-full text-sm ring-1 ring-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
-                </label>
-                <label class="block">
-                    <span class="text-[11px] font-semibold text-zinc-600">터미널번호(TID)</span>
-                    <input type="text" id="aspFieldTerminalId" class="mt-1 w-full text-sm ring-1 ring-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
-                </label>
-                <label class="block">
-                    <span class="text-[11px] font-semibold text-zinc-600">담당자</span>
-                    <input type="text" id="aspFieldDamdang" class="mt-1 w-full text-sm ring-1 ring-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
-                </label>
-                <label class="sm:col-span-2 block">
-                    <span class="text-[11px] font-semibold text-zinc-600">주소</span>
-                    <input type="text" id="aspFieldAddr" class="mt-1 w-full text-sm ring-1 ring-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
-                </label>
-                <label class="sm:col-span-2 block">
-                    <span class="text-[11px] font-semibold text-zinc-600">비고</span>
-                    <textarea id="aspFieldBigo" rows="2" class="mt-1 w-full text-sm ring-1 ring-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"></textarea>
-                </label>
-            </div>
-            <div class="pt-2 flex justify-end gap-2">
-                <button type="button" onclick="closeAspForm()" class="px-4 py-2 rounded-lg text-xs font-medium bg-white text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50">취소</button>
-                <button type="submit" class="px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700">저장</button>
-            </div>
-        </form>
+        <div class="p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input type="hidden" id="aspMerchantEditIndex">
+            <label class="block sm:col-span-2">
+                <span class="text-[11px] font-semibold text-zinc-600">거래처(상호)</span>
+                <input id="aspMerchantEditName" type="text" class="mt-1 w-full text-sm ring-1 ring-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
+            </label>
+            <label class="block">
+                <span class="text-[11px] font-semibold text-zinc-600">ASP ID</span>
+                <input id="aspMerchantEditId" type="text" class="mt-1 w-full text-sm ring-1 ring-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
+            </label>
+            <label class="block">
+                <span class="text-[11px] font-semibold text-zinc-600">신청일자</span>
+                <input id="aspMerchantEditDate" type="text" class="mt-1 w-full text-sm ring-1 ring-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
+            </label>
+            <label class="block sm:col-span-2">
+                <span class="text-[11px] font-semibold text-zinc-600">비고</span>
+                <textarea id="aspMerchantEditNote" rows="3" class="mt-1 w-full text-sm ring-1 ring-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"></textarea>
+            </label>
+        </div>
+        <div class="px-5 sm:px-6 py-4 border-t border-zinc-100 flex justify-end gap-2">
+            <button type="button" onclick="closeAspMerchantEdit()" class="px-4 py-2 rounded-lg text-xs font-medium bg-white text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50">취소</button>
+            <button type="button" onclick="saveAspMerchantEdit()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700">저장</button>
+        </div>
     </div>
 </div>
 
@@ -389,6 +373,16 @@
 <script>
     const modalEl = document.getElementById('historyModal');
     const incomingModalEl = document.getElementById('incomingCallsModal');
+    const aspMerchantModalEl = document.getElementById('aspMerchantModal');
+    const aspMerchantEditModalEl = document.getElementById('aspMerchantEditModal');
+    const aspMerchantRowsEl = document.getElementById('aspMerchantRows');
+    const aspMerchantCountEl = document.getElementById('aspMerchantCount');
+    const aspMerchantSearchInputEl = document.getElementById('aspMerchantSearchInput');
+    const aspMerchantEditIndexEl = document.getElementById('aspMerchantEditIndex');
+    const aspMerchantEditNameEl = document.getElementById('aspMerchantEditName');
+    const aspMerchantEditIdEl = document.getElementById('aspMerchantEditId');
+    const aspMerchantEditDateEl = document.getElementById('aspMerchantEditDate');
+    const aspMerchantEditNoteEl = document.getElementById('aspMerchantEditNote');
     let historyItemsForModal = [];
     let activeHistoryYear = 'all';
     let skipEmptyHistory = false;
@@ -404,27 +398,269 @@
     let cuteAnimalTouchStartY = 0;
     const CUTE_ANIMAL_SLIDE_MS = 8000;
     const CUTE_ANIMAL_SWIPE_MIN_PX = 48;
+    let aspMerchantItems = null;
+    let aspMerchantFilteredItems = [];
 
-    const aspModalEl = document.getElementById('aspModal');
-    const aspFormModalEl = document.getElementById('aspFormModal');
-    let aspItems = [];
-    let aspSearchKeyword = '';
+    const ASP_MERCHANT_RAW = `거래처(상호)	ASP ID	신청일자	비고
+라발란치아(지원정보)	a3123264795	2014-07-04	
+계동치킨(탄방동)	kd6661	2014-06-16	
+브뤼셀(지원정보)	a6121243426	2014-06-11	
+신광트랜드(과학관)_남촌가든사용	science1659	2014-05-27	
+노가리를찾는사람들(지원정보)	shckrtk47131	2014-05-23	
+종로전성샌(울산)[논산고구려사용]	jeon7950	2014-04-24	
+오마이(천안두정)[만인산 사용]	oh28881	2014-02-24	
+오마이밥버거(광명)-->바비또밥버거	oh83574	2013-10-28	
+교원파닭(지족)	kyowon17881	2013-08-21	
+쇼콜라뿌뻬(지원 	a6121243426	2014-08-25	
+한국문구(배재점)	mung6174	2014-11-25	
+허니(코뚜레)사용중	a3210	2015-04-15	
+학생백화점[새로남커피10층]	a1363 	2015-05-20	
+아저씨(목상동)	a3513	2015-07-13	
+주식회사 올치에프씨(신통치킨본사)	allchifc	2015-07-29	
+신토바기(신통치킨) [미사용중]	allchifc	2015-07-29	
+신통치킨(의왕 오전점) [미사용중]	allchifc	2015-08-13	
+신통치킨(아산신용화점)[미사용중]	allchifc	2015-08-13	
+신통치킨(청주율량점) [미사용중]	allchifc	2015-08-13	
+승리스포츠[아저씨전민점사용]	a2020	2015-08-26	
+월드슈퍼(논산)	worldsuper	2015-10-06	
+더블리스[오조커피사용]	a00208	2015-12-07	
+카페재재	jaejaecafe	2015-12-15	
+하늘바베큐[아저씨봉산동)[미사용중]	a00278	2016-01-25	
+황가네콩나물국밥(김밥도둑)[팔팔생고기 진천사용]	hwang9888	2016-03-23	
+이가닭숯불갈비[해지 1000 회원가능]설악추어탕카페봄	chi5178	2016-04-11	
+무공이네(계룡)	mu2724	2016-04-18	
+프로펫[미사용중]	pp1199	2016-04-20	
+건하천문점(1000, 회원가능)[미사용중]	kh0734	2016-04-22	
+노가리를찾는사람들쌍용점 	shckrtk47131	2014-12-08	
+트라이조치원점	pos55186	2016-05-10	
+(주)한스푸드시스템, 포춘차이나_[미사용중][차이나홍사용]"	pos08905	2016-07-25	
+개구쟁이[만두레식당사용][미사용중]	pos00388	2016-08-01	
+들풀담소_현재사용안함[해지 1000회원가능][전미원사용]	pos00173	2016-08-16	
+풍성한식당(태영축산)19_03_19폐업[체리마트]	pos94958	2016-12-16	
+GIANT(자이언트)천안	giant	2017-03-02	
+만물상회	mmmart	2017-03-07	
+사이언스골프(수정수퍼에서 사용 중)[미사용중]	sciencegolf	2017-04-13	
+월산본가	moon5	2017-04-21	
+달콤한 삼겹살(신탄진점)	dalkom	2017-05-29	
+팔공돈[해지 1000 회원가능]대박육회사용중	palgong	2017-06-09	
+달콤한 삼겹살(조치원점)	dalkom	2017-06-20	
+레스토랑돈티고[미사용중]비번초기화해야함.	gorilla	2017-06-23	
+치킨과바람피자[카페조기나루 사용 중]	pos60462	2017-07-03	
+달콤한 삼겹살(하복대점)	dalkom	2017-07-04	
+파밍하우스(은구비 2호점사용)	pmhouse	2017-07-17	
+아이스크림왕국[슬램커피사용]	iceiceice	2017-07-19	
+향미락전통전골	pos57806	2017-07-20	
+들풀강원도막국수(2층사용)_1001들풀담소	dp00452	2017-08-02	
+가베카페(옥천점_비번초기화해야함)	gabe	2017-08-08	
+모꼬지)[유림식당]거부소바사용중	mokkoji	2017-08-28	
+새로남커피숍	pos47335	2017-08-29	
+파밍하우스(달콤아이디로 사용)	dalkom	2017-08-31	
+마더쉽협동조합[소래버섯나라[행복한곰탕]사용 중)	mothership	2017-08-31	
+무량산초심[대부도해물손칼국수]	pos98131	2017-09-06	
+달콤한삼겹살(공주점)	dalkom	2017-09-06	
+달콤한삼겹살(가수원점)	dalkom	2017-09-06	
+만인산휴게소[다솜차반사용]	whouse	2017-10-19	
+달콤한삼겹살(새롬점)	dalkom	2017-10-24	
+진미매운탕	jinmy	2017-11-01	
+풍전돈까스	pungjeon	2017-11-23	
+꼬마비아저씨	kkoabe	2017-11-27	
+달콤한삼겹살	dalkom	2017-11-29	
+13월 [코지커피]	wal13	2017-12-07	
+은구비로(세계로유통)- 미사용중 lite	eungubiro11	2017-12-11	
+(파밍하우스)은구비커피로스터즈1호점사용	pmhouse	2017-12-11	
+진또배기[다누기에서사용]	jin111	2017-12-12	
+족발보감	bogam11	2017-12-20	
+한국문구(배재점)	mung6174	2018-02-07	
+동네닭집(신통치킨의왕)_해지_lite[브리티쉬사용]	d6012713775	2018-03-08	
+[논산들풀]_담소 같이사용	dp00452	2018-03-05	
+통큰삼겹살[갈골집용암점]	tongken11	2018-03-16	
+아저씨(장대동)[63번길 사용]	uncle1	2018-03-28	
+효산재	Lee11	2018-04-25	
+산애들애	san11	2018-06-01	
+라차우	lachao	2018-06-05	
+블링블링 아이스크림 할인점_해지_lite[숯고을사용중]	blingbling	2018-06-08	
+아저씨(덕명동)	ajussi	2018-06-15	
+빙기실영농조합법인	bingbing1	2018-06-27	
+처갓집양념치킨보은점(니캉내캉 사용)	heogajip	2018-07-05	
+아저씨반석점	aajj1	2018-07-16	
+들풀숯불갈비앤메밀막국수	ddpp11	2018-07-25	
+남도본가	tp1001294	2018-08-27	
+돈티고교현점[잠깐 사용 중지]	tp1001396	2018-09-11	
+두껍삼두정점[오지다 사용19.12.24]	tp1001483	20180921	
+강남스포츠[용사 사용중]	pos69548		
+라이즈커피로스터즈	rise1	2019-04-12	
+수왕기업	soowang	2019-05-08	
+교원파닭치킨(노은점)K	gyowon8809	2019-05-24	
+한사랑정육유통	hanlove	2019-07-15	
+아워스 우스	tp1004995/oursours	2019-10-21	
+뉴타지마할인도음식점.HALAL	taji7861	2020-05-20	
+좋은친구들	pos81161		
+주식회사건강카페(한밭수목원)	cmhc40		
+와플칸[키오스크][미사용중]	waffle6555	2020-08-25	
+더좋은날(들풀1층)	pos56595		
+디디마트화학연구원점[미사용중]	deete00	2020-10-08	
+(재)대전경제통상진흥원[키오스크]	djba3000	2020-10-13	
+고기명작	myeongjak0260	2021-06-18	
+산내스터디카페	san9523	2021-07-06	
+블라썸	blossom2	2021-08-10	
+비에스에프엔지(BS F&G)	bsfng	2022-07-12	
+엑스트라커피	extracoffee1	2022-09-19	
+아누타문지점	anuta9680	2022-09-20	
+주식회사더넥스트	momtobaby	2022-09-29	
+청기와냉면초계막국수	giwa12	2023-03-24	
+공주보석사우나	pos00081		
+한밭식당	hanbat7557	2023-04-12	
+명인치킨	myoungin5876	2023-04-18	
+연남솥밥	yeonnam1	2023-04-24	
+떡마마카페	tteokmama	2023-06-16	
+에이치	HH3135	2023-09-18	
+청평얼음꽃송어축제	ice-flower	2023-12-27	
+63번길이에프(2F)	beon-gil63	1900-01-00	
+고깃간무한리필	hanlove		
+갈두천협동조합	galdu	2014-12.01	
+나이스코리아	nikor	2014-10-24	
+나이스코리아	nikor	2014-08-27	
+나이스코리아	nikor	2026-06-23	
+국방과학연구소복지위원회	add70361	2013-10-28	
+대한불교조계종제6교구갑사	gapsa	2015-06-18	
+(주)연합아이엔지	yosh9918	2019-07-12	
+(재)대전광역시중소기업종합지원센터TJ마트시청점	tjcity12	2021-03-25	
+디프런스커피	diffcafd		
+시립장애인종합복지관	well01506		
+한국원자력연구원노동조합	nuclear		
+복수육류도매센터	domae6660		
+에스케이씨하스복지센타	skchaas		
+청평얼음꽃축제*2	iceflower	`;
 
-    const ASP_FIELD_MAP = [
-        ['aspFieldMerchantName', 'merchant_name'],
-        ['aspFieldSaupNo', 'saup_no'],
-        ['aspFieldPresiName', 'presi_name'],
-        ['aspFieldTelNo', 'tel_no'],
-        ['aspFieldJoinDate', 'asp_join_date'],
-        ['aspFieldUsageStatus', 'usage_status'],
-        ['aspFieldAspProvider', 'asp_provider'],
-        ['aspFieldVanType', 'van_type'],
-        ['aspFieldMerchantId', 'merchant_id'],
-        ['aspFieldTerminalId', 'terminal_id'],
-        ['aspFieldDamdang', 'damdang'],
-        ['aspFieldAddr', 'addr'],
-        ['aspFieldBigo', 'bigo'],
-    ];
+    function renderAspMerchantRows(items) {
+        aspMerchantFilteredItems = items;
+        aspMerchantRowsEl.innerHTML = items.map(item => `
+            <tr class="hover:bg-zinc-50/70">
+                <td class="px-4 py-2.5 text-zinc-800">${escapeHtml(item.merchantName || '-')}</td>
+                <td class="px-4 py-2.5 text-zinc-700">${escapeHtml(item.aspId || '-')}</td>
+                <td class="px-4 py-2.5 text-zinc-700">${escapeHtml(item.joinDate || '-')}</td>
+                <td class="px-4 py-2.5 text-zinc-600">${escapeHtml(item.note || '-')}</td>
+                <td class="px-4 py-2.5">
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" onclick="openAspMerchantEdit(${item.__idx})" class="px-2 py-1 rounded-md text-[11px] font-medium bg-white text-zinc-700 ring-1 ring-zinc-200 hover:bg-indigo-50 hover:text-indigo-700">수정</button>
+                        <button type="button" onclick="deleteAspMerchant(${item.__idx})" class="px-2 py-1 rounded-md text-[11px] font-medium bg-white text-rose-600 ring-1 ring-rose-200 hover:bg-rose-50">삭제</button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+        aspMerchantCountEl.textContent = String(items.length);
+    }
+
+    function filterAspMerchantList() {
+        if (!aspMerchantItems) return;
+        const keyword = (aspMerchantSearchInputEl?.value || '').trim().toLowerCase();
+        if (!keyword) {
+            renderAspMerchantRows(aspMerchantItems);
+            return;
+        }
+        const filtered = aspMerchantItems.filter(item =>
+            item.merchantName.toLowerCase().includes(keyword) ||
+            item.aspId.toLowerCase().includes(keyword)
+        );
+        renderAspMerchantRows(filtered);
+    }
+
+    function openAspMerchantEdit(index) {
+        const row = aspMerchantItems?.find(item => item.__idx === index);
+        if (!row) return;
+        aspMerchantEditIndexEl.value = String(index);
+        aspMerchantEditNameEl.value = row.merchantName || '';
+        aspMerchantEditIdEl.value = row.aspId || '';
+        aspMerchantEditDateEl.value = row.joinDate || '';
+        aspMerchantEditNoteEl.value = row.note || '';
+        aspMerchantEditModalEl.classList.remove('hidden');
+    }
+
+    function closeAspMerchantEdit() {
+        aspMerchantEditModalEl.classList.add('hidden');
+    }
+
+    function saveAspMerchantEdit() {
+        const index = Number(aspMerchantEditIndexEl.value);
+        const row = aspMerchantItems?.find(item => item.__idx === index);
+        if (!row) return;
+        row.merchantName = (aspMerchantEditNameEl.value || '').trim();
+        row.aspId = (aspMerchantEditIdEl.value || '').trim();
+        row.joinDate = (aspMerchantEditDateEl.value || '').trim();
+        row.note = (aspMerchantEditNoteEl.value || '').trim();
+        closeAspMerchantEdit();
+        filterAspMerchantList();
+    }
+
+    function deleteAspMerchant(index) {
+        const row = aspMerchantItems?.find(item => item.__idx === index);
+        if (!row) return;
+        if (!confirm(`"${row.merchantName || '해당 항목'}" 데이터를 삭제할까요?`)) return;
+        aspMerchantItems = aspMerchantItems.filter(item => item.__idx !== index);
+        aspMerchantItems.forEach((item, idx) => { item.__idx = idx; });
+        filterAspMerchantList();
+    }
+
+    function exportAspMerchantExcel() {
+        const rows = aspMerchantFilteredItems.length ? aspMerchantFilteredItems : (aspMerchantItems || []);
+        if (!rows.length) {
+            alert('내보낼 데이터가 없습니다.');
+            return;
+        }
+        const header = ['거래처(상호)', 'ASP ID', '신청일자', '비고'];
+        const escapeCsv = (value) => {
+            const text = String(value ?? '');
+            if (/[",\n]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
+            return text;
+        };
+        const lines = [header.join(',')].concat(
+            rows.map(item => [
+                escapeCsv(item.merchantName),
+                escapeCsv(item.aspId),
+                escapeCsv(item.joinDate),
+                escapeCsv(item.note),
+            ].join(','))
+        );
+        const csv = '\uFEFF' + lines.join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `asp_merchants_${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    function openAspMerchant() {
+        if (!aspMerchantItems) {
+            const lines = ASP_MERCHANT_RAW.split('\n')
+                .map(line => line.trimEnd())
+                .filter(line => line.length > 0);
+            aspMerchantItems = lines.slice(1).map(line => {
+                const cols = line.split('\t');
+                return {
+                    __idx: 0,
+                    merchantName: (cols[0] || '').trim(),
+                    aspId: (cols[1] || '').trim(),
+                    joinDate: (cols[2] || '').trim(),
+                    note: (cols.slice(3).join('\t') || '').trim(),
+                };
+            });
+            aspMerchantItems.forEach((item, idx) => { item.__idx = idx; });
+        }
+        if (aspMerchantSearchInputEl) aspMerchantSearchInputEl.value = '';
+        renderAspMerchantRows(aspMerchantItems);
+        aspMerchantModalEl.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+    }
+
+    function closeAspMerchant() {
+        aspMerchantModalEl.classList.add('hidden');
+        aspMerchantEditModalEl.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+    }
 
     function escapeHtml(value) {
         return String(value ?? '')
@@ -432,155 +668,6 @@
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
-    }
-
-    function openAspModal() {
-        if (!aspModalEl) return;
-        aspModalEl.classList.remove('hidden');
-        document.body.classList.add('overflow-hidden');
-        loadAspMerchants();
-    }
-
-    function closeAspModal() {
-        if (!aspModalEl) return;
-        aspModalEl.classList.add('hidden');
-        document.body.classList.remove('overflow-hidden');
-        closeAspForm();
-    }
-
-    function handleAspSearch(event) {
-        event.preventDefault();
-        aspSearchKeyword = (document.getElementById('aspSearchInput')?.value || '').trim();
-        loadAspMerchants();
-    }
-
-    function resetAspSearch() {
-        aspSearchKeyword = '';
-        const input = document.getElementById('aspSearchInput');
-        if (input) input.value = '';
-        loadAspMerchants();
-    }
-
-    function updateAspCountBadge(count) {
-        const badge = document.getElementById('aspCountBadge');
-        if (badge) badge.textContent = `${count}건`;
-    }
-
-    function renderAspList(items) {
-        const listEl = document.getElementById('aspList');
-        const emptyEl = document.getElementById('aspEmptyState');
-        if (!listEl || !emptyEl) return;
-
-        if (!items.length) {
-            listEl.innerHTML = '';
-            emptyEl.classList.remove('hidden');
-            return;
-        }
-
-        emptyEl.classList.add('hidden');
-        listEl.innerHTML = items.map(item => `
-            <div class="bg-white rounded-xl ring-1 ring-zinc-200/60 shadow-sm p-4 sm:p-5">
-                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                    <div class="min-w-0">
-                        <h4 class="text-sm font-bold text-zinc-900">${escapeHtml(item.merchant_name)}</h4>
-                        <p class="text-[11px] text-emerald-700 font-medium mt-0.5">ASP ID: ${escapeHtml(item.merchant_id || '-')}</p>
-                        <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-xs text-zinc-600">
-                            <p><span class="text-zinc-400">신청일자</span> ${escapeHtml(item.asp_join_date || '-')}</p>
-                            ${item.addr ? `<p class="sm:col-span-2"><span class="text-zinc-400">주소</span> ${escapeHtml(item.addr)}</p>` : ''}
-                            ${item.bigo ? `<p class="sm:col-span-2"><span class="text-zinc-400">비고</span> ${escapeHtml(item.bigo)}</p>` : ''}
-                        </div>
-                    </div>
-                    <div class="flex shrink-0 gap-2">
-                        <button type="button" onclick="openAspForm(${item.id})" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-zinc-700 ring-1 ring-zinc-200 hover:bg-indigo-50 hover:text-indigo-700 transition-all">수정</button>
-                        <button type="button" onclick="deleteAspMerchant(${item.id})" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-rose-600 ring-1 ring-rose-200 hover:bg-rose-50 transition-all">삭제</button>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    function loadAspMerchants() {
-        const searchPart = aspSearchKeyword ? `search=${encodeURIComponent(aspSearchKeyword)}` : '';
-        const query = searchPart ? `?${searchPart}&_=${Date.now()}` : `?_${Date.now()}`;
-        return secureFetch(`/api/asp-merchants${query}`)
-            .then(items => {
-                aspItems = Array.isArray(items) ? items : [];
-                renderAspList(aspItems);
-                updateAspCountBadge(aspItems.length);
-            })
-            .catch(() => {
-                aspItems = [];
-                renderAspList([]);
-                updateAspCountBadge(0);
-            });
-    }
-
-    function openAspForm(id = null) {
-        const title = document.getElementById('aspFormTitle');
-        const idInput = document.getElementById('aspEditId');
-        const item = id ? aspItems.find(row => row.id === id) : null;
-
-        if (title) title.textContent = item ? 'ASP 가맹점 수정' : 'ASP 가맹점 등록';
-        if (idInput) idInput.value = item ? String(item.id) : '';
-
-        ASP_FIELD_MAP.forEach(([elementId, field]) => {
-            const el = document.getElementById(elementId);
-            if (el) el.value = item ? (item[field] || '') : '';
-        });
-
-        if (aspFormModalEl) aspFormModalEl.classList.remove('hidden');
-    }
-
-    function closeAspForm() {
-        if (aspFormModalEl) aspFormModalEl.classList.add('hidden');
-        const form = document.getElementById('aspEditForm');
-        if (form) form.reset();
-        const idInput = document.getElementById('aspEditId');
-        if (idInput) idInput.value = '';
-    }
-
-    function collectAspFormPayload() {
-        const payload = {};
-        ASP_FIELD_MAP.forEach(([elementId, field]) => {
-            const el = document.getElementById(elementId);
-            payload[field] = el ? el.value.trim() : '';
-        });
-        return payload;
-    }
-
-    function saveAspMerchant(event) {
-        event.preventDefault();
-        const id = document.getElementById('aspEditId')?.value;
-        const payload = collectAspFormPayload();
-        if (!payload.merchant_name) {
-            alert('거래처 상호를 입력해 주세요.');
-            return;
-        }
-
-        const isEdit = Boolean(id);
-        const url = isEdit ? `/api/asp-merchants/${id}` : '/api/asp-merchants';
-        const method = isEdit ? 'PUT' : 'POST';
-
-        secureFetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        })
-            .then(() => {
-                closeAspForm();
-                loadAspMerchants();
-            })
-            .catch(err => alert(err?.message || '저장에 실패했습니다.'));
-    }
-
-    function deleteAspMerchant(id) {
-        const item = aspItems.find(row => row.id === id);
-        const name = item?.merchant_name || '해당 항목';
-        if (!confirm(`"${name}" 을(를) 삭제할까요?`)) return;
-
-        secureFetch(`/api/asp-merchants/${id}`, { method: 'DELETE' })
-            .then(() => loadAspMerchants())
-            .catch(err => alert(err?.message || '삭제에 실패했습니다.'));
     }
 
     function hasHistoryText(value) {
@@ -1614,7 +1701,9 @@
 
     window.addEventListener('keydown', e => {
         if (e.key !== 'Escape') return;
-        if (!incomingModalEl.classList.contains('hidden')) closeIncomingModal();
+        if (!aspMerchantEditModalEl.classList.contains('hidden')) closeAspMerchantEdit();
+        else if (!aspMerchantModalEl.classList.contains('hidden')) closeAspMerchant();
+        else if (!incomingModalEl.classList.contains('hidden')) closeIncomingModal();
         else closeModal();
     });
 </script>

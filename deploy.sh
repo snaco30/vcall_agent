@@ -86,7 +86,6 @@ echo "🌐 7002번 포트로 서비스를 구동합니다 (컨테이너명: vcal
 DOCKER_VOLUMES=(
   -v "$PROJECT_DIR/data":/data
   -v "$PROJECT_DIR/app":/code/app
-  -v "$PROJECT_DIR/scripts":/code/scripts:ro
 )
 case "$MOUNT_HOST" in
     "$PROJECT_DIR/data"/*)
@@ -111,13 +110,6 @@ docker run -d \
   "${DOCKER_VOLUMES[@]}" \
   --restart always \
   vcall-manager-web
-
-echo "📥 ASP 기초 데이터를 DB에 동기화합니다..."
-if [ -f "$PROJECT_DIR/scripts/asp_seed.tsv" ]; then
-  python3 "$PROJECT_DIR/scripts/import-asp-merchants.py" "$PROJECT_DIR/scripts/asp_seed.tsv"
-else
-  echo "⚠️  scripts/asp_seed.tsv 없음 — ASP DB 동기화 생략"
-fi
 
 echo "=========================================="
 echo "✅ 배포가 성공적으로 완료되었습니다!"

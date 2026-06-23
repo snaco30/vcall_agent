@@ -8,12 +8,5 @@ data/mdb_sync.meta
 data/*.tmp
 data/mnt/
 data/cute_animal_cache/
-data/asp_merchants.db
-data/asp_merchant_usage.csv
-data/asp_merchant_usage.txt
-data/asp가맹점 사용현황.txt
-data/asp가맹점 사용현황.csv
-data/asp_slices/
-data/asp_slices_hd/
 
 mnt/

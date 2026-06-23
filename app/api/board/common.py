@@ -51,9 +51,8 @@ def sanitize_slug(slug: str) -> str:
     value = (slug or "").strip().lower()
     if not value:
         raise HTTPException(status_code=400, detail="게시판 slug가 필요합니다.")
-    for char in value:
-        if not (char.isalnum() or char in ("-", "_")):
-            raise HTTPException(status_code=400, detail="slug는 영문/숫자/-/_만 사용할 수 있습니다.")
+    if not all(char.isascii() and (char.isalnum() or char in ("-", "_")) for char in value):
+        raise HTTPException(status_code=400, detail="slug는 영문/숫자/-/_만 사용할 수 있습니다.")
     return value
 
 

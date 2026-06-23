@@ -95,6 +95,72 @@ def init_board_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_comments_post_created ON comments(post_id, created_at);
             """
         )
+        _migrate_posts_source_ref(conn)
+        _migrate_board_tabs(conn)
+
+
+def _migrate_board_tabs(conn: sqlite3.Connection) -> None:
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(boards)").fetchall()}
+    if "parent_board_id" not in columns:
+        conn.execute("ALTER TABLE boards ADD COLUMN parent_board_id INTEGER REFERENCES boards(id) ON DELETE SET NULL")
+    if "tab_label" not in columns:
+        conn.execute("ALTER TABLE boards ADD COLUMN tab_label TEXT")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_boards_parent ON boards(parent_board_id) WHERE parent_board_id IS NOT NULL"
+    )
+    _seed_easypos_tab_boards(conn)
+    conn.commit()
+
+
+def _seed_easypos_tab_boards(conn: sqlite3.Connection) -> None:
+    """초기 이지포스 탭 시드 — 이미 있으면 건너뜀."""
+    parent = conn.execute("SELECT id FROM boards WHERE slug = 'easypos-board'").fetchone()
+    if not parent:
+        return
+    parent_id = int(parent[0])
+    conn.execute(
+        "UPDATE boards SET tab_label = COALESCE(NULLIF(tab_label, ''), 'KICCPOS') WHERE id = ?",
+        (parent_id,),
+    )
+    child = conn.execute("SELECT id FROM boards WHERE slug = 'easypos-tableorder'").fetchone()
+    if child:
+        return
+    now = utc_now_iso()
+    conn.execute(
+        """
+        INSERT INTO boards(
+            slug, name, description, sort_order, icon, is_active, created_by,
+            created_at, updated_at, parent_board_id, tab_label
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            "easypos-tableorder",
+            "테이블오더",
+            "이지포스 테이블오더 안드로이드",
+            1,
+            "",
+            1,
+            "admin",
+            now,
+            now,
+            parent_id,
+            "테이블오더",
+        ),
+    )
+
+
+def _migrate_posts_source_ref(conn: sqlite3.Connection) -> None:
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(posts)").fetchall()}
+    if "source_ref" not in columns:
+        conn.execute("ALTER TABLE posts ADD COLUMN source_ref TEXT")
+    conn.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_posts_board_source_ref
+        ON posts(board_id, source_ref)
+        WHERE source_ref IS NOT NULL AND deleted_at IS NULL
+        """
+    )
+    conn.commit()
 
 
 def row_to_dict(row: sqlite3.Row | None) -> dict[str, Any] | None:

@@ -11,12 +11,14 @@ from app.api.board.boards import router as boards_router
 from app.api.board.comments import router as comments_router
 from app.api.board.files import router as files_router
 from app.api.board.post_import import router as post_import_router
+from app.api.board.scrape import router as scrape_router
 from app.api.board.posts import router as posts_router
 
 router = APIRouter(prefix="/api/boards")
 
 # 고정 경로가 먼저 매칭되도록 순서 유지
 router.include_router(backup_router)
+router.include_router(scrape_router)
 router.include_router(post_import_router)
 router.include_router(posts_router)
 router.include_router(files_router)

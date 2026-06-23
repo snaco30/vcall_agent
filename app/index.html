@@ -500,7 +500,8 @@
     }
 
     function loadAspMerchants() {
-        const query = aspSearchKeyword ? `?search=${encodeURIComponent(aspSearchKeyword)}` : '';
+        const searchPart = aspSearchKeyword ? `search=${encodeURIComponent(aspSearchKeyword)}` : '';
+        const query = searchPart ? `?${searchPart}&_=${Date.now()}` : `?_${Date.now()}`;
         return secureFetch(`/api/asp-merchants${query}`)
             .then(items => {
                 aspItems = Array.isArray(items) ? items : [];

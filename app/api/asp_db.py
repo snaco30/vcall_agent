@@ -3,16 +3,13 @@ import sqlite3
 from pathlib import Path
 
 
-def _default_asp_db_path() -> str:
+def get_asp_db_path() -> str:
     env_path = os.getenv("ASP_DB_PATH")
     if env_path:
         return env_path
     if Path("/data").is_dir():
         return "/data/asp_merchants.db"
     return "data/asp_merchants.db"
-
-
-ASP_DB_PATH = _default_asp_db_path()
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS asp_merchants (
@@ -40,7 +37,7 @@ CREATE INDEX IF NOT EXISTS idx_asp_merchants_name ON asp_merchants(merchant_name
 
 
 def get_connection() -> sqlite3.Connection:
-    db_path = Path(ASP_DB_PATH)
+    db_path = Path(get_asp_db_path())
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
@@ -49,7 +46,7 @@ def get_connection() -> sqlite3.Connection:
 
 
 def _harden_db_file_permissions() -> None:
-    db_path = Path(ASP_DB_PATH)
+    db_path = Path(get_asp_db_path())
     if not db_path.is_file():
         return
     try:

@@ -1,5 +1,5 @@
 import json
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 
 from app.api.asp_db import get_connection, init_asp_db
@@ -64,10 +64,12 @@ def bootstrap_asp_data() -> None:
 
 @router.get("")
 def list_asp_merchants(
+    response: Response,
     search: str = Query("", description="거래처 상호 부분 검색"),
     limit: int = Query(200, ge=1, le=1000),
     current_user: str = Depends(get_current_user),
 ):
+    response.headers["Cache-Control"] = "no-store"
     init_asp_db()
     keyword = search.strip()
     sql = """

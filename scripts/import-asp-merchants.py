@@ -17,7 +17,7 @@ from app.api.asp_import import import_asp_file  # noqa: E402
 def main() -> int:
     if len(sys.argv) < 2:
         print("사용법: python3 scripts/import-asp-merchants.py <txt_or_csv_path>")
-        print("예: python3 scripts/import-asp-merchants.py data/asp가맹점\\ 사용현황.txt")
+        print("예: python3 scripts/import-asp-merchants.py scripts/asp_seed.tsv")
         return 1
     result = import_asp_file(sys.argv[1], replace=True)
     print(result.get("message", result))

@@ -10,10 +10,12 @@ from app.api.merchants import router as merchants_router
 from app.api.history import router as history_router
 from app.api.sync import router as sync_router, run_mdb_sync
 from app.api.cute_animals import router as cute_animal_router
+from app.api.asp_merchants import router as asp_merchants_router, bootstrap_asp_data
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    bootstrap_asp_data()
     run_mdb_sync()
     yield
 
@@ -38,6 +40,7 @@ app.include_router(merchants_router)
 app.include_router(history_router)
 app.include_router(sync_router)
 app.include_router(cute_animal_router)
+app.include_router(asp_merchants_router)
 
 @app.get("/")
 def read_index():

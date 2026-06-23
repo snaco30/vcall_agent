@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V-CALL 게시판</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
+    <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor-viewer.min.css">
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 9999px; }
+        .toastui-editor-contents img { max-width: 100%; height: auto; cursor: pointer; }
+        #detailViewer img { max-width: 100%; height: auto; }
+        #detailViewer p[style*="text-align: center"],
+        #detailViewer div[style*="text-align: center"] { text-align: center; }
+        #detailViewer p[style*="text-align: right"],
+        #detailViewer div[style*="text-align: right"] { text-align: right; }
+        .board-editor-img-overlay {
+            position: fixed;
+            z-index: 80;
+            pointer-events: none;
+            border: 2px solid #4f46e5;
+            box-sizing: border-box;
+        }
+        .board-editor-img-overlay.hidden { display: none; }
+        .board-editor-img-handle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #fff;
+            border: 2px solid #4f46e5;
+            border-radius: 2px;
+            pointer-events: auto;
+            box-sizing: border-box;
+        }
+        .board-editor-img-handle.nw { top: -6px; left: -6px; cursor: nwse-resize; }
+        .board-editor-img-handle.ne { top: -6px; right: -6px; cursor: nesw-resize; }
+        .board-editor-img-handle.sw { bottom: -6px; left: -6px; cursor: nesw-resize; }
+        .board-editor-img-handle.se { bottom: -6px; right: -6px; cursor: nwse-resize; }
+        .board-editor-img-handle.e { top: 50%; right: -6px; transform: translateY(-50%); cursor: ew-resize; }
+        .board-editor-img-handle.w { top: 50%; left: -6px; transform: translateY(-50%); cursor: ew-resize; }
+        .board-editor-img-handle.s { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+        .board-editor-img-handle.n { top: -6px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+        .board-editor-img-align {
+            position: fixed;
+            z-index: 81;
+            display: flex;
+            gap: 4px;
+            padding: 4px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 14px rgba(0,0,0,.12);
+            border: 1px solid #e4e4e7;
+        }
+        .board-editor-img-align.hidden { display: none; }
+        .board-editor-img-align button {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 6px;
+            color: #3f3f46;
+            background: #f4f4f5;
+        }
+        .board-editor-img-align button:hover { background: #e4e4e7; }
+        .board-editor-img-align button.active { background: #4f46e5; color: #fff; }
+    </style>
+</head>
+<body class="bg-zinc-100 text-zinc-800 min-h-screen">
+<div class="min-h-screen">
+    <nav class="bg-white/95 backdrop-blur border-b border-zinc-200 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-indigo-600 text-white font-bold flex items-center justify-center">V</div>
+                <div>
+                    <h1 class="text-base font-bold text-zinc-900">게시판 센터</h1>
+                    <p class="text-xs text-zinc-500">Toast UI Editor 기반 운영 게시판</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="boardBackupBtn" class="px-3 py-2 text-xs font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700">백업/복구</button>
+                <button id="boardCreateBtn" class="px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">게시판 생성</button>
+                <button id="goHomeBtn" class="px-3 py-2 text-xs font-semibold rounded-lg bg-zinc-100 text-zinc-700 hover:bg-zinc-200">메인으로</button>
+                <button type="button" id="appVersionBtn" class="text-[11px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg ring-1 ring-indigo-100 transition-all" title="업데이트 내역">V1.0.001</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-5">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+            <aside class="lg:col-span-2 bg-white rounded-xl ring-1 ring-zinc-200 shadow-sm overflow-hidden">
+                <div class="px-3 py-2 border-b border-zinc-200 bg-zinc-50">
+                    <h2 class="text-xs font-semibold text-zinc-900">게시판</h2>
+                </div>
+                <div id="boardList" class="p-2 space-y-1.5 max-h-[70vh] overflow-y-auto custom-scrollbar"></div>
+            </aside>
+
+            <section class="lg:col-span-10 space-y-4">
+                <div class="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-4 sm:p-5">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div class="min-w-0">
+                            <p id="currentBoardMeta" class="text-xs text-indigo-600 font-semibold"></p>
+                            <h2 id="currentBoardTitle" class="text-lg font-bold text-zinc-900">게시판을 선택하세요</h2>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input id="postSearchInput" type="search" placeholder="제목/본문 검색" class="w-48 sm:w-64 px-3 py-2 text-sm rounded-lg bg-zinc-50 ring-1 ring-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
+                            <button id="postSearchBtn" class="px-3 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">검색</button>
+                            <button id="postExcelBtn" class="hidden px-3 py-2 text-xs font-semibold rounded-lg bg-sky-600 text-white hover:bg-sky-700">엑셀 업로드</button>
+                            <button id="postCreateBtn" class="hidden px-3 py-2 text-xs font-semibold rounded-lg bg-zinc-900 text-white hover:bg-zinc-800">글쓰기</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="postList" class="space-y-3"></div>
+                <div id="postPagination" class="hidden bg-white rounded-xl ring-1 ring-zinc-200 p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"></div>
+            </section>
+        </div>
+    </main>
+</div>
+
+<div id="boardModal" class="hidden fixed inset-0 z-50 bg-zinc-900/60 p-4" role="dialog" aria-modal="true">
+    <div class="max-w-lg mx-auto bg-white rounded-2xl ring-1 ring-zinc-200 shadow-xl overflow-hidden">
+        <div class="px-5 py-4 border-b border-zinc-200 flex items-center justify-between">
+            <h3 class="text-base font-bold text-zinc-900">게시판 생성/수정</h3>
+            <button id="boardModalCloseBtn" class="text-zinc-400 hover:text-zinc-700">닫기</button>
+        </div>
+        <form id="boardForm" class="p-5 space-y-3">
+            <input id="boardIdInput" type="hidden">
+            <label class="block text-xs font-semibold text-zinc-600">slug
+                <input id="boardSlugInput" type="text" required class="mt-1 w-full px-3 py-2 rounded-lg ring-1 ring-zinc-200">
+            </label>
+            <label class="block text-xs font-semibold text-zinc-600">이름
+                <input id="boardNameInput" type="text" required class="mt-1 w-full px-3 py-2 rounded-lg ring-1 ring-zinc-200">
+            </label>
+            <label class="block text-xs font-semibold text-zinc-600">설명
+                <textarea id="boardDescInput" rows="2" class="mt-1 w-full px-3 py-2 rounded-lg ring-1 ring-zinc-200"></textarea>
+            </label>
+            <div class="grid grid-cols-2 gap-3">
+                <label class="block text-xs font-semibold text-zinc-600">정렬순서
+                    <input id="boardSortInput" type="number" value="0" class="mt-1 w-full px-3 py-2 rounded-lg ring-1 ring-zinc-200">
+                </label>
+                <label class="block text-xs font-semibold text-zinc-600">아이콘
+                    <input id="boardIconInput" type="text" placeholder="📌" class="mt-1 w-full px-3 py-2 rounded-lg ring-1 ring-zinc-200">
+                </label>
+            </div>
+            <label class="inline-flex items-center gap-2 text-sm">
+                <input id="boardActiveInput" type="checkbox" checked>
+                <span>활성 상태</span>
+            </label>
+            <div class="flex justify-end gap-2 pt-1">
+                <button type="button" id="boardDeleteBtn" class="hidden px-3 py-2 text-xs font-semibold rounded-lg bg-rose-50 text-rose-700 ring-1 ring-rose-200">삭제</button>
+                <button type="submit" class="px-3 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">저장</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="postModal" class="hidden fixed inset-0 z-[60] bg-zinc-900/70 p-0 sm:p-6" role="dialog" aria-modal="true">
+    <div class="w-full h-full sm:h-auto sm:max-h-[92vh] max-w-5xl mx-auto bg-white sm:rounded-2xl ring-1 ring-zinc-200 shadow-2xl overflow-hidden flex flex-col">
+        <div class="px-4 sm:px-5 py-3 border-b border-zinc-200 flex items-center justify-between shrink-0">
+            <h3 id="postModalTitle" class="text-base font-bold text-zinc-900">게시글 작성</h3>
+            <button id="postModalCloseBtn" class="text-zinc-400 hover:text-zinc-700">닫기</button>
+        </div>
+        <div id="postModalBody" class="flex-1 min-h-0 p-4 sm:p-5 overflow-y-auto custom-scrollbar space-y-4">
+            <label class="block text-xs font-semibold text-zinc-600">제목
+                <input id="postTitleInput" type="text" class="mt-1 w-full px-3 py-2 rounded-lg ring-1 ring-zinc-200">
+            </label>
+            <label class="inline-flex items-center gap-2 text-sm">
+                <input id="postPinnedInput" type="checkbox">
+                <span>상단 고정글</span>
+            </label>
+            <div id="editorRoot" class="ring-1 ring-zinc-200 rounded-xl overflow-hidden"></div>
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <p class="text-xs font-semibold text-zinc-600">첨부파일 (최대 5개, .zip/.txt/.png)</p>
+                    <input id="attachmentInput" type="file" accept=".zip,.txt,.png" multiple class="text-xs">
+                </div>
+                <div id="attachmentList" class="space-y-2"></div>
+            </div>
+        </div>
+        <div class="p-4 border-t border-zinc-200 flex justify-end gap-2 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <button id="postDeleteBtn" class="hidden px-3 py-2 text-xs font-semibold rounded-lg bg-rose-50 text-rose-700 ring-1 ring-rose-200">게시글 삭제</button>
+            <button id="postSaveDraftBtn" class="px-3 py-2 text-xs font-semibold rounded-lg bg-zinc-100 text-zinc-700 hover:bg-zinc-200">임시저장</button>
+            <button id="postPublishBtn" class="px-3 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">발행</button>
+        </div>
+    </div>
+</div>
+
+<div id="postDetailModal" class="hidden fixed inset-0 z-[65] bg-zinc-900/70 p-0 sm:p-6" role="dialog" aria-modal="true">
+    <div class="w-full h-full sm:h-auto sm:max-h-[92vh] max-w-4xl mx-auto bg-white sm:rounded-2xl ring-1 ring-zinc-200 shadow-2xl overflow-hidden flex flex-col">
+        <div class="px-4 sm:px-5 py-3 border-b border-zinc-200 flex items-center justify-between shrink-0">
+            <h3 id="detailTitle" class="text-base font-bold text-zinc-900 truncate pr-3"></h3>
+            <button id="detailCloseBtn" class="text-zinc-400 hover:text-zinc-700 shrink-0">닫기</button>
+        </div>
+        <div id="detailScrollArea" class="flex-1 min-h-0 p-4 sm:p-5 overflow-y-auto custom-scrollbar space-y-4">
+            <p id="detailMeta" class="text-xs text-zinc-500"></p>
+            <div id="detailViewer" class="prose prose-zinc max-w-none"></div>
+            <div>
+                <h4 class="text-sm font-semibold text-zinc-900 mb-2">첨부파일</h4>
+                <div id="detailAttachments" class="space-y-2"></div>
+            </div>
+            <div>
+                <h4 class="text-sm font-semibold text-zinc-900 mb-2">댓글</h4>
+                <div id="commentList" class="space-y-2 mb-2"></div>
+                <div class="flex gap-2">
+                    <input id="commentInput" type="text" placeholder="댓글 입력" class="flex-1 px-3 py-2 text-sm rounded-lg ring-1 ring-zinc-200">
+                    <button id="commentSubmitBtn" class="px-3 py-2 text-xs font-semibold rounded-lg bg-zinc-900 text-white">등록</button>
+                </div>
+            </div>
+        </div>
+        <div class="p-4 border-t border-zinc-200 flex justify-end gap-2 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <button id="detailEditBtn" class="px-3 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white">수정</button>
+        </div>
+    </div>
+</div>
+
+<div id="excelImportModal" class="hidden fixed inset-0 z-[67] bg-zinc-900/60 p-4" role="dialog" aria-modal="true" aria-label="엑셀 일괄 등록">
+    <div class="max-w-md mx-auto bg-white rounded-2xl ring-1 ring-zinc-200 shadow-xl overflow-hidden">
+        <div class="px-5 py-4 border-b border-zinc-200 flex items-center justify-between">
+            <div>
+                <h3 class="text-base font-bold text-zinc-900">엑셀 일괄 등록</h3>
+                <p id="excelImportBoardLabel" class="text-[11px] text-zinc-500 mt-0.5"></p>
+            </div>
+            <button id="excelImportModalCloseBtn" type="button" class="text-zinc-400 hover:text-zinc-700">닫기</button>
+        </div>
+        <div class="p-5 space-y-4">
+            <p class="text-xs text-zinc-600 leading-relaxed">
+                양식을 받아 제목·본문·고정·상태 열을 채운 뒤 <code class="text-[10px] bg-zinc-100 px-1 rounded">.xlsx</code> 파일을 불러와 적용하세요. (최대 500건)
+            </p>
+            <button id="excelTemplateDownloadBtn" type="button" class="w-full px-3 py-2.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">엑셀 양식 다운받기</button>
+            <div class="rounded-lg ring-1 ring-zinc-200 bg-zinc-50 px-3 py-2.5 space-y-2">
+                <p id="excelSelectedFileName" class="text-[11px] text-zinc-500 truncate">선택된 파일 없음</p>
+                <label id="excelLoadFileLabel" class="w-full inline-flex items-center justify-center px-3 py-2.5 text-xs font-semibold rounded-lg bg-sky-600 text-white hover:bg-sky-700 cursor-pointer">
+                    엑셀 불러오기
+                    <input id="postExcelInput" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="hidden">
+                </label>
+            </div>
+            <div id="excelValidationErrors" class="hidden text-[11px] text-rose-700 bg-rose-50 rounded-lg ring-1 ring-rose-200 px-3 py-2 space-y-1 max-h-32 overflow-y-auto custom-scrollbar"></div>
+            <p id="excelImportResultMsg" class="hidden text-xs rounded-lg px-3 py-2"></p>
+            <button id="excelSaveBtn" type="button" disabled class="w-full px-3 py-2.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-indigo-600">저장하기</button>
+        </div>
+    </div>
+</div>
+
+<div id="backupModal" class="hidden fixed inset-0 z-[68] bg-zinc-900/60 p-4" role="dialog" aria-modal="true">
+    <div class="max-w-lg mx-auto bg-white rounded-2xl ring-1 ring-zinc-200 shadow-xl overflow-hidden">
+        <div class="px-5 py-4 border-b border-zinc-200 flex items-center justify-between">
+            <h3 class="text-base font-bold text-zinc-900">게시판 백업 / 복구</h3>
+            <button id="backupModalCloseBtn" class="text-zinc-400 hover:text-zinc-700">닫기</button>
+        </div>
+        <div class="p-5 space-y-4">
+            <div id="backupStatusBox" class="text-xs text-zinc-600 bg-zinc-50 rounded-lg ring-1 ring-zinc-200 px-3 py-2.5"></div>
+            <div class="space-y-2">
+                <p class="text-xs font-semibold text-zinc-700">글 데이터 (ZIP 압축)</p>
+                <button id="backupDownloadBtn" type="button" class="w-full px-3 py-2.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">백업 ZIP 다운로드</button>
+                <div class="flex gap-2">
+                    <select id="restoreModeSelect" class="flex-1 text-xs px-2 py-2 rounded-lg ring-1 ring-zinc-200 bg-white">
+                        <option value="merge">병합 복구</option>
+                        <option value="replace">전체 교체</option>
+                    </select>
+                    <label class="flex-1 inline-flex items-center justify-center px-3 py-2 text-xs font-semibold rounded-lg bg-zinc-900 text-white hover:bg-zinc-800 cursor-pointer">
+                        ZIP 복구
+                        <input id="restoreFileInput" type="file" accept=".zip,application/zip" class="hidden">
+                    </label>
+                </div>
+            </div>
+            <div class="space-y-2 pt-2 border-t border-zinc-100">
+                <p class="text-xs font-semibold text-zinc-700">이미지 · 첨부파일 (서버 직접 백업)</p>
+                <p class="text-[11px] text-zinc-500 leading-relaxed">운영 서버에서 아래 폴더를 직접 복사·압축해 백업·복구하세요. Docker 배포 시 호스트 경로는 <code class="text-[10px] bg-zinc-100 px-1 rounded">./data/</code> 아래와 동일합니다.</p>
+                <div id="backupPathsBox" class="text-[11px] text-zinc-700 bg-zinc-50 rounded-lg ring-1 ring-zinc-200 px-3 py-2.5 font-mono break-all space-y-1"></div>
+            </div>
+            <p id="backupResultMsg" class="hidden text-xs rounded-lg px-3 py-2"></p>
+        </div>
+    </div>
+</div>
+
+<div id="versionModal" class="hidden fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col ring-1 ring-zinc-200">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-zinc-100">
+            <div>
+                <h3 id="versionModalTitle" class="text-base font-bold text-zinc-900">버전 정보</h3>
+                <p id="appVersionSummary" class="text-xs text-zinc-500 mt-0.5"></p>
+            </div>
+            <button type="button" id="versionModalCloseBtn" class="text-zinc-400 hover:text-zinc-700 p-1 rounded-lg hover:bg-zinc-100">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div id="versionChangelogList" class="px-5 py-4 overflow-y-auto space-y-5 custom-scrollbar flex-1"></div>
+    </div>
+</div>
+
+<script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
+<script src="/static/version.js"></script>
+<script src="/static/board.js"></script>
+</body>
+</html>

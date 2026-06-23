@@ -26,6 +26,7 @@ fi
 
 # 2. 데이터 디렉토리 준비
 mkdir -p "$PROJECT_DIR/data"
+mkdir -p "$PROJECT_DIR/data/board_files"
 
 # 2-1. 동기화·마운트·timer 설치 스크립트 실행 권한
 chmod +x "$PROJECT_DIR/scripts/sync-mdb.sh" \
@@ -56,6 +57,7 @@ fi
 # 2-3. MDB·data 디렉토리 권한 최소화
 echo "🔒 data 디렉토리 및 MDB 파일 권한을 최소화합니다..."
 chmod 750 "$PROJECT_DIR/data"
+chmod 750 "$PROJECT_DIR/data/board_files" 2>/dev/null || true
 [ -f "$PROJECT_DIR/data/vanpro97_call.mdb" ] && chmod 640 "$PROJECT_DIR/data/vanpro97_call.mdb"
 [ -f "$PROJECT_DIR/data/mdb_sync.meta" ] && chmod 640 "$PROJECT_DIR/data/mdb_sync.meta"
 

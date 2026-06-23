@@ -5,8 +5,12 @@
 
 data/vanpro97_call.mdb
 data/mdb_sync.meta
+data/board.db
+data/board_files/
 data/*.tmp
 data/mnt/
 data/cute_animal_cache/
 
-mnt/
+__pycache__/
+*.py[cod]
+.cursor/

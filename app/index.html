@@ -116,6 +116,9 @@
                 인증 및 시스템 접속
             </button>
         </form>
+        <p class="text-center mt-6">
+            <button type="button" id="loginVersionBtn" class="text-[11px] font-medium text-zinc-400 hover:text-indigo-600 transition-colors">V1.0.001 · 업데이트 내역</button>
+        </p>
     </div>
 </div>
 
@@ -131,11 +134,16 @@
                 </div>
             </div>
             <div class="flex items-center gap-2 sm:gap-3">
+                <button type="button" onclick="openBoardPage()" class="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg shadow-sm transition-all">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h8M8 11h8m-8 4h5M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                    게시판
+                </button>
                 <button type="button" onclick="openAspMerchant()" class="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 rounded-lg shadow-sm transition-all">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                     ASP가맹점
                 </button>
                 <div id="userInfo" class="flex items-center gap-2 text-xs font-medium text-zinc-600 bg-zinc-50 px-3 py-1.5 rounded-lg ring-1 ring-zinc-200/80"></div>
+                <button type="button" id="appVersionBtn" class="text-[11px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg ring-1 ring-indigo-100 transition-all" title="업데이트 내역">V1.0.001</button>
                 <button onclick="handleLogout()" class="text-xs text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 font-medium px-3 py-1.5 rounded-lg transition-all">로그아웃</button>
             </div>
         </div>
@@ -738,6 +746,15 @@ GIANT(자이언트)천안	giant	2017-03-02
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
+    }
+
+    function openBoardPage() {
+        const token = localStorage.getItem('vcall_token');
+        if (!token) {
+            alert('로그인 후 이용해 주세요.');
+            return;
+        }
+        location.href = '/board';
     }
 
     function openAspMerchant() {
@@ -1811,8 +1828,33 @@ GIANT(자이언트)천안	giant	2017-03-02
         if (!aspMerchantEditModalEl.classList.contains('hidden')) closeAspMerchantEdit();
         else if (!aspMerchantModalEl.classList.contains('hidden')) closeAspMerchant();
         else if (!incomingModalEl.classList.contains('hidden')) closeIncomingModal();
+        else if (!document.getElementById('versionModal')?.classList.contains('hidden')) closeVersionModal();
         else closeModal();
     });
 </script>
+<script src="/static/version.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        loadAppVersionBadge('appVersionBtn');
+        loadAppVersionBadge('loginVersionBtn');
+        bindVersionModal();
+        document.getElementById('loginVersionBtn')?.addEventListener('click', openVersionModal);
+    });
+</script>
+
+<div id="versionModal" class="hidden fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col ring-1 ring-zinc-200">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-zinc-100">
+            <div>
+                <h3 id="versionModalTitle" class="text-base font-bold text-zinc-900">버전 정보</h3>
+                <p id="appVersionSummary" class="text-xs text-zinc-500 mt-0.5"></p>
+            </div>
+            <button type="button" id="versionModalCloseBtn" class="text-zinc-400 hover:text-zinc-700 p-1 rounded-lg hover:bg-zinc-100">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div id="versionChangelogList" class="px-5 py-4 overflow-y-auto space-y-5 custom-scrollbar flex-1"></div>
+    </div>
+</div>
 </body>
 </html>

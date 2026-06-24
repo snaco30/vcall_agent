@@ -7,6 +7,9 @@ let currentPage = 1;
 let currentQuery = "";
 let editor = null;
 let editingPostId = null;
+let editingPostBoardId = null;
+let editingPostOriginalBoardId = null;
+let postBoardMoveTempId = null;
 let detailPostId = null;
 let viewerInstance = null;
 let selectedEditorImage = null;
@@ -100,7 +103,13 @@ const postModalEl = document.getElementById("postModal");
 const postModalTitleEl = document.getElementById("postModalTitle");
 const postTitleInputEl = document.getElementById("postTitleInput");
 const postBoardMoveWrapEl = document.getElementById("postBoardMoveWrap");
-const postBoardMoveSelectEl = document.getElementById("postBoardMoveSelect");
+const postBoardMoveCurrentLabelEl = document.getElementById("postBoardMoveCurrentLabel");
+const postBoardMovePendingHintEl = document.getElementById("postBoardMovePendingHint");
+const postBoardMovePendingTextEl = document.getElementById("postBoardMovePendingText");
+const postBoardMoveBtnEl = document.getElementById("postBoardMoveBtn");
+const postBoardMoveModalEl = document.getElementById("postBoardMoveModal");
+const postBoardMoveTreeEl = document.getElementById("postBoardMoveTree");
+const postBoardMoveModalSelectionLabelEl = document.getElementById("postBoardMoveModalSelectionLabel");
 const postPinnedInputEl = document.getElementById("postPinnedInput");
 const attachmentInputEl = document.getElementById("attachmentInput");
 const attachmentListEl = document.getElementById("attachmentList");
@@ -127,6 +136,7 @@ const restoreModeSelectEl = document.getElementById("restoreModeSelect");
 
 let postModalDragOffset = { x: 0, y: 0 };
 let postModalDragState = null;
+const postBoardMoveExpanded = new Set();
 
 function isPostModalMovable() {
     return window.matchMedia("(min-width: 640px)").matches;
@@ -968,42 +978,155 @@ function indexBoardTabs(boardList) {
     }
 }
 
-function populatePostBoardMoveSelect(selectedBoardId) {
-    if (!postBoardMoveSelectEl) return;
-    postBoardMoveSelectEl.innerHTML = "";
-    for (const board of boards) {
-        if (!board.is_active) continue;
-        if (board.tabs?.length) {
-            for (const tab of board.tabs) {
-                if (!tab.is_active) continue;
-                const option = document.createElement("option");
-                option.value = String(tab.id);
-                const tabLabel = (tab.tab_label || tab.name || "").trim();
-                option.textContent = board.tabs.length > 1 ? `${board.name} · ${tabLabel}` : tabLabel || board.name;
-                postBoardMoveSelectEl.appendChild(option);
-            }
-            continue;
-        }
-        const option = document.createElement("option");
-        option.value = String(board.id);
-        option.textContent = board.name;
-        postBoardMoveSelectEl.appendChild(option);
+function getPostBoardLabel(boardId) {
+    const entry = boardTabMap[boardId];
+    if (!entry) {
+        const fallback = boards.find((board) => board.id === boardId);
+        return fallback?.name || "알 수 없음";
     }
-    if (selectedBoardId != null) {
-        postBoardMoveSelectEl.value = String(selectedBoardId);
+    if (entry.parent_board_id) {
+        const parent = boards.find((board) => board.id === entry.parent_board_id);
+        const tabName = (entry.tab_label || entry.name || "").trim();
+        if (parent?.tabs?.length > 1) {
+            return `${parent.name} · ${tabName}`;
+        }
+    }
+    return (entry.tab_label || entry.name || "").trim() || "게시판";
+}
+
+function updatePostBoardMoveDisplay() {
+    if (!postBoardMoveCurrentLabelEl) return;
+    postBoardMoveCurrentLabelEl.textContent = getPostBoardLabel(editingPostBoardId);
+    const changed =
+        editingPostBoardId != null &&
+        editingPostOriginalBoardId != null &&
+        Number(editingPostBoardId) !== Number(editingPostOriginalBoardId);
+    postBoardMovePendingHintEl?.classList.toggle("hidden", !changed);
+    if (postBoardMovePendingTextEl && changed) {
+        postBoardMovePendingTextEl.textContent = `저장 시 「${getPostBoardLabel(editingPostBoardId)}」(으)로 이동합니다.`;
+    }
+    postBoardMoveBtnEl?.classList.toggle("ring-amber-300", changed);
+    postBoardMoveBtnEl?.classList.toggle("bg-amber-50", changed);
+    postBoardMoveBtnEl?.classList.toggle("text-amber-800", changed);
+    postBoardMoveWrapEl?.classList.toggle("ring-amber-200", changed);
+    postBoardMoveWrapEl?.classList.toggle("from-amber-50/80", changed);
+}
+
+function renderPostBoardMoveLeaf(boardId, label, selectedId, postCount, kind) {
+    const selected = Number(boardId) === Number(selectedId);
+    const titleClass = kind === "child" ? "text-sm font-medium" : "text-sm font-semibold";
+    return `
+        <button
+            type="button"
+            class="board-move-node w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all duration-150 ${titleClass} ${selected ? "is-selected" : ""}"
+            data-move-board-id="${boardId}"
+        >
+            <span class="board-move-radio shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center ${selected ? "border-indigo-600 bg-indigo-600" : "border-zinc-300 bg-white"}" aria-hidden="true">
+                ${selected ? '<span class="w-1.5 h-1.5 rounded-full bg-white"></span>' : ""}
+            </span>
+            <span class="flex-1 min-w-0 truncate ${selected ? "text-indigo-700" : "text-zinc-800"}">${escapeHtml(label)}</span>
+            <span class="shrink-0 text-[10px] font-medium tabular-nums px-1.5 py-0.5 rounded-full ${selected ? "bg-indigo-100 text-indigo-600" : "bg-zinc-100 text-zinc-500"}">${postCount || 0}</span>
+        </button>
+    `;
+}
+
+function renderPostBoardMoveGroup(board, selectedId) {
+    const hasChildren = board.tabs?.length > 1;
+    if (!hasChildren) {
+        const targetId = board.tabs?.length ? board.tabs[0].id : board.id;
+        return `<div class="board-move-group">${renderPostBoardMoveLeaf(targetId, board.name, selectedId, board.post_count || 0, "main")}</div>`;
+    }
+
+    const expanded = postBoardMoveExpanded.has(board.id);
+    const parentTab = board.tabs[0];
+    const childrenHtml = expanded
+        ? board.tabs
+              .slice(1)
+              .filter((tab) => tab.is_active !== false)
+              .map((tab) =>
+                  renderPostBoardMoveLeaf(tab.id, tab.tab_label || tab.name, selectedId, tab.post_count || 0, "child")
+              )
+              .join("")
+        : "";
+    return `
+        <div class="board-move-group mb-2 last:mb-0">
+            <div class="flex items-stretch gap-0.5">
+                <button
+                    type="button"
+                    class="board-move-expand-btn shrink-0 w-8 flex items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 transition-colors"
+                    data-move-expand-id="${board.id}"
+                    aria-expanded="${expanded}"
+                    aria-label="${expanded ? "하위 탭 접기" : "하위 탭 펼치기"}"
+                >
+                    <span class="board-move-chevron inline-flex transition-transform duration-200${expanded ? " is-expanded" : ""}" aria-hidden="true">${BOARD_CHEVRON_SVG}</span>
+                </button>
+                <div class="flex-1 min-w-0">
+                    ${renderPostBoardMoveLeaf(parentTab.id, board.name, selectedId, board.post_count || 0, "main")}
+                </div>
+            </div>
+            <div class="board-move-children ml-4 pl-3 border-l border-zinc-200 mt-0.5 space-y-0.5${expanded ? "" : " hidden"}">${childrenHtml}</div>
+        </div>
+    `;
+}
+
+function renderPostBoardMoveTree() {
+    if (!postBoardMoveTreeEl) return;
+    const selectedId = postBoardMoveTempId;
+    const activeBoards = boards.filter((board) => board.is_active);
+    if (!activeBoards.length) {
+        postBoardMoveTreeEl.innerHTML = `<p class="text-xs text-zinc-500 px-3 py-8 text-center">이동 가능한 게시판이 없습니다.</p>`;
+        return;
+    }
+    postBoardMoveTreeEl.innerHTML = activeBoards.map((board) => renderPostBoardMoveGroup(board, selectedId)).join("");
+    if (postBoardMoveModalSelectionLabelEl) {
+        postBoardMoveModalSelectionLabelEl.textContent = getPostBoardLabel(selectedId);
     }
 }
 
+function initPostBoardMoveExpanded() {
+    postBoardMoveExpanded.clear();
+    for (const board of boards) {
+        if (board.is_active && board.tabs?.length > 1) {
+            postBoardMoveExpanded.add(board.id);
+        }
+    }
+}
+
+function openPostBoardMoveModal() {
+    if (!postBoardMoveModalEl) return;
+    postBoardMoveTempId = editingPostBoardId;
+    initPostBoardMoveExpanded();
+    renderPostBoardMoveTree();
+    postBoardMoveModalEl.classList.remove("hidden");
+    postBoardMoveTreeEl?.querySelector(".board-move-node.is-selected")?.scrollIntoView({ block: "nearest" });
+}
+
+function closePostBoardMoveModal() {
+    postBoardMoveModalEl?.classList.add("hidden");
+    postBoardMoveTempId = null;
+}
+
+function confirmPostBoardMove() {
+    if (postBoardMoveTempId == null) return;
+    editingPostBoardId = Number(postBoardMoveTempId);
+    updatePostBoardMoveDisplay();
+    closePostBoardMoveModal();
+}
+
 function showPostBoardMove(boardId) {
-    populatePostBoardMoveSelect(boardId);
+    editingPostBoardId = Number(boardId);
+    editingPostOriginalBoardId = Number(boardId);
+    updatePostBoardMoveDisplay();
     postBoardMoveWrapEl?.classList.remove("hidden");
 }
 
 function hidePostBoardMove() {
     postBoardMoveWrapEl?.classList.add("hidden");
-    if (postBoardMoveSelectEl) {
-        postBoardMoveSelectEl.innerHTML = "";
-    }
+    editingPostBoardId = null;
+    editingPostOriginalBoardId = null;
+    closePostBoardMoveModal();
+    postBoardMoveBtnEl?.classList.remove("ring-amber-300", "bg-amber-50", "text-amber-800");
+    postBoardMoveWrapEl?.classList.remove("ring-amber-200", "from-amber-50/80");
 }
 
 function getBoardTabGroup() {
@@ -2069,16 +2192,18 @@ async function savePost(status) {
         status,
     };
     let movedBoardId = null;
-    if (!postBoardMoveWrapEl?.classList.contains("hidden") && postBoardMoveSelectEl?.value) {
-        movedBoardId = Number(postBoardMoveSelectEl.value);
-        payload.board_id = movedBoardId;
+    if (!postBoardMoveWrapEl?.classList.contains("hidden") && editingPostBoardId != null) {
+        movedBoardId = Number(editingPostBoardId);
+        if (movedBoardId !== Number(editingPostOriginalBoardId)) {
+            payload.board_id = movedBoardId;
+        }
     }
     await secureFetch(`/api/boards/posts/${editingPostId}`, {
         method: "PATCH",
         body: JSON.stringify(payload),
     });
     closePostModal();
-    if (movedBoardId) {
+    if (movedBoardId && movedBoardId !== Number(editingPostOriginalBoardId)) {
         currentBoardId = movedBoardId;
     }
     if (status === "published") {
@@ -2434,6 +2559,48 @@ function bindEvents() {
     });
     document.getElementById("postModalCloseBtn").addEventListener("click", closePostModal);
     initPostModalDrag();
+    postBoardMoveBtnEl?.addEventListener("click", openPostBoardMoveModal);
+    document.getElementById("postBoardMoveModalCloseBtn")?.addEventListener("click", closePostBoardMoveModal);
+    document.getElementById("postBoardMoveCancelBtn")?.addEventListener("click", closePostBoardMoveModal);
+    document.getElementById("postBoardMoveConfirmBtn")?.addEventListener("click", confirmPostBoardMove);
+    postBoardMoveModalEl?.addEventListener("click", (event) => {
+        if (event.target === postBoardMoveModalEl) {
+            closePostBoardMoveModal();
+        }
+    });
+    postBoardMoveTreeEl?.addEventListener("click", (event) => {
+        const expandBtn = event.target.closest("[data-move-expand-id]");
+        if (expandBtn) {
+            event.preventDefault();
+            const boardId = Number(expandBtn.dataset.moveExpandId);
+            if (postBoardMoveExpanded.has(boardId)) {
+                postBoardMoveExpanded.delete(boardId);
+            } else {
+                postBoardMoveExpanded.add(boardId);
+            }
+            renderPostBoardMoveTree();
+            return;
+        }
+        const node = event.target.closest("[data-move-board-id]");
+        if (!node) return;
+        postBoardMoveTempId = Number(node.dataset.moveBoardId);
+        renderPostBoardMoveTree();
+    });
+    postBoardMoveTreeEl?.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        const node = event.target.closest("[data-move-board-id]");
+        if (!node) return;
+        event.preventDefault();
+        postBoardMoveTempId = Number(node.dataset.moveBoardId);
+        renderPostBoardMoveTree();
+    });
+    document.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape") return;
+        if (!postBoardMoveModalEl?.classList.contains("hidden")) {
+            event.preventDefault();
+            closePostBoardMoveModal();
+        }
+    });
     document.getElementById("postSaveDraftBtn").addEventListener("click", () => {
         savePost("draft").catch((error) => alert(error.message));
     });

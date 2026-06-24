@@ -78,12 +78,12 @@ const BOARD_SETTINGS_ICON =
     '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>';
 
 const POST_ATTACHMENT_ICON =
-    '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>';
+    '<svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>';
 
 function renderPostAttachmentBadge(count) {
     const attachmentCount = Number(count) || 0;
     if (attachmentCount <= 0) return "";
-    return `<span class="inline-flex items-center gap-0.5 px-1.5 py-1 rounded-md bg-zinc-100 text-zinc-500" title="첨부파일 ${attachmentCount}개">${POST_ATTACHMENT_ICON}<span class="text-[11px] font-semibold tabular-nums">${attachmentCount}</span></span>`;
+    return `<span class="inline-flex items-center gap-0.5 px-1 py-0.5 sm:px-1.5 sm:py-1 rounded-md bg-zinc-100 text-zinc-500" title="첨부파일 ${attachmentCount}개">${POST_ATTACHMENT_ICON}<span class="text-[10px] sm:text-[11px] font-semibold tabular-nums">${attachmentCount}</span></span>`;
 }
 
 const postModalEl = document.getElementById("postModal");
@@ -779,7 +779,7 @@ function renderBoardTabs() {
                 <button
                     type="button"
                     data-board-tab-id="${tab.id}"
-                    class="board-tab-btn inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
+                    class="board-tab-btn inline-flex items-center gap-1 px-2 py-1.5 sm:gap-1.5 sm:px-3 sm:py-2 rounded-lg text-[10px] sm:text-xs font-semibold transition-colors ${
                         active ? "bg-indigo-600 text-white" : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
                     }"
                 >
@@ -846,7 +846,7 @@ function renderParentBoardCard(board, { hasChildren = false, expanded = false } 
             ? `<span class="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" title="최근 15일 이내 새 글 ${board.new_post_count}건"></span>`
             : "";
     return `
-        <div class="board-card rounded-lg ring-1 ${activeClass} px-2.5 py-2.5 cursor-pointer transition-all select-none touch-none" data-board-id="${board.id}" role="button" tabindex="0">
+        <div class="board-card rounded-lg ring-1 ${activeClass} px-2 py-2 sm:px-2.5 sm:py-2.5 cursor-pointer transition-all select-none touch-none" data-board-id="${board.id}" role="button" tabindex="0">
             <div class="flex items-start gap-1.5 min-w-0">
                 <span class="text-[10px] text-zinc-300 shrink-0 mt-0.5" aria-hidden="true">⠿</span>
                 <span class="text-sm shrink-0 leading-none">${escapeHtml(board.icon || "📋")}</span>
@@ -878,7 +878,7 @@ function renderChildTabRow(board, tab, isLast) {
             : "";
     return `
         <div
-            class="board-tab-child-card rounded-lg ring-1 ${activeClass} ml-3 pl-2.5 pr-2 py-2.5 min-h-[3rem] cursor-pointer transition-all border-l-2 border-indigo-100"
+            class="board-tab-child-card rounded-lg ring-1 ${activeClass} ml-2 sm:ml-3 pl-2 pr-1.5 sm:pl-2.5 sm:pr-2 py-2 sm:py-2.5 min-h-[2.75rem] sm:min-h-[3rem] cursor-pointer transition-all border-l-2 border-indigo-100"
             data-board-tab-id="${tab.id}"
             data-parent-board-id="${board.id}"
             role="button"
@@ -1394,22 +1394,22 @@ async function loadPosts(page = currentPage) {
     const result = await secureFetch(`/api/boards/${board.id}/posts?${query.toString()}`);
 
     if (!result.items.length) {
-        postListEl.innerHTML = `<div class="bg-white rounded-xl ring-1 ring-zinc-200 p-8 text-center text-sm text-zinc-500">게시글이 없습니다.</div>`;
+        postListEl.innerHTML = `<div class="bg-white rounded-xl ring-1 ring-zinc-200 p-6 sm:p-8 text-center text-xs sm:text-sm text-zinc-500">게시글이 없습니다.</div>`;
     } else {
         postListEl.innerHTML = result.items
             .map(
                 (post) => `
-                <article class="bg-white rounded-xl ring-1 ring-zinc-200 shadow-sm p-4">
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="min-w-0 flex-1">
-                            <button class="post-detail-btn text-left w-full" data-post-id="${post.id}">
-                                <h3 class="text-base font-bold text-zinc-900 break-words">${post.is_pinned ? "📌 " : ""}${escapeHtml(post.title || "(제목 없음)")}</h3>
-                                <p class="text-xs text-zinc-500 mt-1">작성자 ${escapeHtml(post.author_username)} · ${formatDateTime(post.created_at)} · 조회 ${post.view_count}</p>
+                <article class="bg-white rounded-xl ring-1 ring-zinc-200 shadow-sm p-3 sm:p-4 w-full min-w-0">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                        <div class="min-w-0 flex-1 w-full">
+                            <button class="post-detail-btn text-left w-full min-w-0" data-post-id="${post.id}">
+                                <h3 class="text-sm sm:text-base font-bold text-zinc-900 break-words leading-snug">${post.is_pinned ? "📌 " : ""}${escapeHtml(post.title || "(제목 없음)")}</h3>
+                                <p class="text-[10px] sm:text-xs text-zinc-500 mt-1 break-words leading-relaxed">작성자 ${escapeHtml(post.author_username)} · ${formatDateTime(post.created_at)} · 조회 ${post.view_count}</p>
                             </button>
                         </div>
-                        <div class="flex items-center gap-2 shrink-0">
+                        <div class="flex items-center justify-end gap-1.5 sm:gap-2 shrink-0 self-end sm:self-start">
                             ${renderPostAttachmentBadge(post.attachment_count)}
-                            <button class="post-edit-btn text-[11px] px-2 py-1 rounded bg-zinc-100 text-zinc-600 hover:bg-zinc-200" data-post-id="${post.id}">수정</button>
+                            <button class="post-edit-btn text-[10px] sm:text-[11px] px-2 py-1 rounded bg-zinc-100 text-zinc-600 hover:bg-zinc-200" data-post-id="${post.id}">수정</button>
                         </div>
                     </div>
                 </article>
@@ -1441,20 +1441,20 @@ function renderPagination(total, page, pageSize) {
                 return `<span class="px-1 text-xs text-zinc-400">…</span>`;
             }
             const active = item === page;
-            return `<button data-page="${item}" class="page-btn min-w-[2rem] px-2 py-1.5 rounded-lg text-xs font-medium ${
+            return `<button data-page="${item}" class="page-btn min-w-[1.75rem] sm:min-w-[2rem] px-1.5 sm:px-2 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-medium ${
                 active ? "bg-indigo-600 text-white" : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
             }">${item}</button>`;
         })
         .join("");
 
     postPaginationEl.innerHTML = `
-        <p class="text-xs text-zinc-500">${start}-${end} / 총 ${total}건 · 페이지당 ${pageSize}개</p>
-        <div class="flex flex-wrap items-center justify-center gap-1">
-            <button data-page="1" class="page-btn px-2 py-1.5 rounded-lg text-xs bg-zinc-100 text-zinc-700 hover:bg-zinc-200" ${page === 1 ? "disabled" : ""}>«</button>
-            <button data-page="${Math.max(1, page - 1)}" class="page-btn px-2 py-1.5 rounded-lg text-xs bg-zinc-100 text-zinc-700 hover:bg-zinc-200" ${page === 1 ? "disabled" : ""}>‹</button>
+        <p class="text-[10px] sm:text-xs text-zinc-500 text-center sm:text-left">${start}-${end} / 총 ${total}건 · 페이지당 ${pageSize}개</p>
+        <div class="flex flex-wrap items-center justify-center gap-0.5 sm:gap-1">
+            <button data-page="1" class="page-btn px-1.5 sm:px-2 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs bg-zinc-100 text-zinc-700 hover:bg-zinc-200" ${page === 1 ? "disabled" : ""}>«</button>
+            <button data-page="${Math.max(1, page - 1)}" class="page-btn px-1.5 sm:px-2 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs bg-zinc-100 text-zinc-700 hover:bg-zinc-200" ${page === 1 ? "disabled" : ""}>‹</button>
             ${pageButtons}
-            <button data-page="${Math.min(totalPages, page + 1)}" class="page-btn px-2 py-1.5 rounded-lg text-xs bg-zinc-100 text-zinc-700 hover:bg-zinc-200" ${page === totalPages ? "disabled" : ""}>›</button>
-            <button data-page="${totalPages}" class="page-btn px-2 py-1.5 rounded-lg text-xs bg-zinc-100 text-zinc-700 hover:bg-zinc-200" ${page === totalPages ? "disabled" : ""}>»</button>
+            <button data-page="${Math.min(totalPages, page + 1)}" class="page-btn px-1.5 sm:px-2 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs bg-zinc-100 text-zinc-700 hover:bg-zinc-200" ${page === totalPages ? "disabled" : ""}>›</button>
+            <button data-page="${totalPages}" class="page-btn px-1.5 sm:px-2 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs bg-zinc-100 text-zinc-700 hover:bg-zinc-200" ${page === totalPages ? "disabled" : ""}>»</button>
         </div>
     `;
 }

@@ -106,30 +106,38 @@
         .board-list-scroll::-webkit-scrollbar {
             display: none;
         }
+        @media (max-width: 639px) {
+            html, body { overflow-x: hidden; }
+            #boardList { max-height: 38vh; }
+            .board-nav-btn { min-height: 2rem; }
+            .board-toolbar-btn { min-height: 2.25rem; }
+        }
     </style>
 </head>
-<body class="bg-zinc-100 text-zinc-800 min-h-screen">
+<body class="bg-zinc-100 text-zinc-800 min-h-screen overflow-x-hidden">
 <div class="min-h-screen">
     <nav class="bg-white/95 backdrop-blur border-b border-zinc-200 sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-lg bg-indigo-600 text-white font-bold flex items-center justify-center">V</div>
-                <div>
-                    <h1 class="text-base font-bold text-zinc-900">게시판 센터</h1>
-                    <p class="text-xs text-zinc-500">Toast UI Editor 기반 운영 게시판</p>
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-indigo-600 text-white font-bold flex items-center justify-center shrink-0">V</div>
+                    <div class="min-w-0">
+                        <h1 class="text-sm sm:text-base font-bold text-zinc-900 truncate">게시판 센터</h1>
+                        <p class="text-[10px] sm:text-xs text-zinc-500 hidden sm:block">Toast UI Editor 기반 운영 게시판</p>
+                    </div>
                 </div>
-            </div>
-            <div class="flex items-center gap-2">
-                <button id="boardBackupBtn" class="px-3 py-2 text-xs font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700">백업/복구</button>
-                <button id="boardCreateBtn" class="px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">게시판 생성</button>
-                <button id="goHomeBtn" class="px-3 py-2 text-xs font-semibold rounded-lg bg-zinc-100 text-zinc-700 hover:bg-zinc-200">메인으로</button>
-                <button type="button" id="appVersionBtn" class="text-[11px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg ring-1 ring-indigo-100 transition-all" title="업데이트 내역">V1.0.003</button>
+                <div class="flex flex-wrap items-center gap-1 sm:gap-2 w-full sm:w-auto sm:justify-end">
+                    <button id="boardBackupBtn" class="board-nav-btn flex-1 sm:flex-none px-2 py-1.5 text-[10px] sm:px-3 sm:py-2 sm:text-xs font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700"><span class="sm:hidden">백업</span><span class="hidden sm:inline">백업/복구</span></button>
+                    <button id="boardCreateBtn" class="board-nav-btn flex-1 sm:flex-none px-2 py-1.5 text-[10px] sm:px-3 sm:py-2 sm:text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"><span class="sm:hidden">생성</span><span class="hidden sm:inline">게시판 생성</span></button>
+                    <button id="goHomeBtn" class="board-nav-btn flex-1 sm:flex-none px-2 py-1.5 text-[10px] sm:px-3 sm:py-2 sm:text-xs font-semibold rounded-lg bg-zinc-100 text-zinc-700 hover:bg-zinc-200">메인</button>
+                    <button type="button" id="appVersionBtn" class="board-nav-btn shrink-0 text-[10px] sm:text-[11px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-lg ring-1 ring-indigo-100 transition-all" title="업데이트 내역">V1.0.003</button>
+                </div>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-5">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+    <main class="max-w-7xl mx-auto px-3 sm:px-6 py-3 sm:py-5">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-2.5 sm:gap-3">
             <aside class="lg:col-span-2 bg-white rounded-xl ring-1 ring-zinc-200 shadow-sm overflow-hidden flex flex-col lg:sticky lg:top-[3.25rem] lg:max-h-[calc(100vh-4.25rem)]">
                 <div class="px-3 py-2 border-b border-zinc-200 bg-zinc-50 shrink-0">
                     <h2 class="text-xs font-semibold text-zinc-900">게시판</h2>
@@ -138,28 +146,30 @@
                 <div id="boardList" class="board-list-scroll p-2 space-y-2 flex-1 min-h-0 overflow-y-auto"></div>
             </aside>
 
-            <section class="lg:col-span-10">
-                <div class="max-w-3xl mx-auto w-full space-y-4">
-                <div class="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-4 sm:p-5">
-                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <section class="lg:col-span-10 min-w-0">
+                <div class="w-full max-w-full sm:max-w-3xl sm:mx-auto space-y-3 sm:space-y-4">
+                <div class="bg-white rounded-xl sm:rounded-2xl ring-1 ring-zinc-200 shadow-sm p-3 sm:p-5">
+                    <div class="flex flex-col gap-3">
                         <div class="min-w-0">
-                            <p id="currentBoardMeta" class="text-xs text-indigo-600 font-semibold"></p>
-                            <h2 id="currentBoardTitle" class="text-lg font-bold text-zinc-900">게시판을 선택하세요</h2>
+                            <p id="currentBoardMeta" class="text-[10px] sm:text-xs text-indigo-600 font-semibold truncate"></p>
+                            <h2 id="currentBoardTitle" class="text-base sm:text-lg font-bold text-zinc-900 break-words">게시판을 선택하세요</h2>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <input id="postSearchInput" type="search" placeholder="제목/본문 검색" class="w-48 sm:w-64 px-3 py-2 text-sm rounded-lg bg-zinc-50 ring-1 ring-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
-                            <button id="postSearchBtn" class="px-3 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">검색</button>
-                            <button id="postExcelBtn" class="hidden px-3 py-2 text-xs font-semibold rounded-lg bg-sky-600 text-white hover:bg-sky-700">엑셀 업로드</button>
-                            <button id="postScrapeBtn" class="hidden px-3 py-2 text-xs font-semibold rounded-lg bg-violet-600 text-white hover:bg-violet-700">외부 스크랩</button>
-                            <button id="postCreateBtn" class="hidden px-3 py-2 text-xs font-semibold rounded-lg bg-zinc-900 text-white hover:bg-zinc-800">글쓰기</button>
+                        <div class="flex flex-col gap-2 w-full">
+                            <input id="postSearchInput" type="search" placeholder="제목/본문 검색" class="w-full min-w-0 px-3 py-2 text-sm rounded-lg bg-zinc-50 ring-1 ring-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
+                            <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-1.5 sm:gap-2 w-full">
+                                <button id="postSearchBtn" class="board-toolbar-btn w-full sm:w-auto px-2 py-2 text-[11px] sm:px-3 sm:text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">검색</button>
+                                <button id="postExcelBtn" class="board-toolbar-btn hidden w-full sm:w-auto px-2 py-2 text-[11px] sm:px-3 sm:text-xs font-semibold rounded-lg bg-sky-600 text-white hover:bg-sky-700"><span class="sm:hidden">엑셀</span><span class="hidden sm:inline">엑셀 업로드</span></button>
+                                <button id="postScrapeBtn" class="board-toolbar-btn hidden w-full sm:w-auto px-2 py-2 text-[11px] sm:px-3 sm:text-xs font-semibold rounded-lg bg-violet-600 text-white hover:bg-violet-700"><span class="sm:hidden">스크랩</span><span class="hidden sm:inline">외부 스크랩</span></button>
+                                <button id="postCreateBtn" class="board-toolbar-btn hidden w-full sm:w-auto px-2 py-2 text-[11px] sm:px-3 sm:text-xs font-semibold rounded-lg bg-zinc-900 text-white hover:bg-zinc-800">글쓰기</button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div id="boardTabBar" class="hidden bg-white rounded-xl ring-1 ring-zinc-200 p-1.5 flex flex-wrap gap-1.5"></div>
+                <div id="boardTabBar" class="hidden bg-white rounded-xl ring-1 ring-zinc-200 p-1 sm:p-1.5 flex flex-wrap gap-1 sm:gap-1.5"></div>
 
-                <div id="postList" class="space-y-3"></div>
-                <div id="postPagination" class="hidden bg-white rounded-xl ring-1 ring-zinc-200 p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"></div>
+                <div id="postList" class="space-y-2 sm:space-y-3"></div>
+                <div id="postPagination" class="hidden bg-white rounded-xl ring-1 ring-zinc-200 p-2.5 sm:p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3"></div>
                 </div>
             </section>
         </div>
@@ -264,17 +274,17 @@
             </label>
             <div id="editorRoot" class="ring-1 ring-zinc-200 rounded-xl overflow-hidden"></div>
             <div>
-                <div class="flex items-center justify-between mb-2">
-                    <p class="text-xs font-semibold text-zinc-600">첨부파일 (최대 5개, 파일당 1GB, .zip/.txt/.png/.pdf)</p>
-                    <input id="attachmentInput" type="file" accept=".zip,.txt,.png,.pdf" multiple class="text-xs">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2">
+                    <p class="text-[10px] sm:text-xs font-semibold text-zinc-600 leading-snug">첨부파일 (최대 5개, 파일당 1GB, .zip/.txt/.png/.pdf)</p>
+                    <input id="attachmentInput" type="file" accept=".zip,.txt,.png,.pdf" multiple class="text-[10px] sm:text-xs w-full sm:w-auto">
                 </div>
                 <div id="attachmentList" class="space-y-2"></div>
             </div>
         </div>
-        <div class="p-4 border-t border-zinc-200 flex justify-end gap-2 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            <button id="postDeleteBtn" class="hidden px-3 py-2 text-xs font-semibold rounded-lg bg-rose-50 text-rose-700 ring-1 ring-rose-200">게시글 삭제</button>
-            <button id="postSaveDraftBtn" class="px-3 py-2 text-xs font-semibold rounded-lg bg-zinc-100 text-zinc-700 hover:bg-zinc-200">임시저장</button>
-            <button id="postPublishBtn" class="px-3 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">발행</button>
+        <div class="p-3 sm:p-4 border-t border-zinc-200 flex flex-wrap justify-end gap-1.5 sm:gap-2 shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <button id="postDeleteBtn" class="hidden px-2.5 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-xs font-semibold rounded-lg bg-rose-50 text-rose-700 ring-1 ring-rose-200">게시글 삭제</button>
+            <button id="postSaveDraftBtn" class="px-2.5 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-xs font-semibold rounded-lg bg-zinc-100 text-zinc-700 hover:bg-zinc-200">임시저장</button>
+            <button id="postPublishBtn" class="px-2.5 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">발행</button>
         </div>
     </div>
 </div>
@@ -295,9 +305,9 @@
             <div>
                 <h4 class="text-sm font-semibold text-zinc-900 mb-2">댓글</h4>
                 <div id="commentList" class="space-y-2 mb-2"></div>
-                <div class="flex gap-2">
-                    <input id="commentInput" type="text" placeholder="댓글 입력" class="flex-1 px-3 py-2 text-sm rounded-lg ring-1 ring-zinc-200">
-                    <button id="commentSubmitBtn" class="px-3 py-2 text-xs font-semibold rounded-lg bg-zinc-900 text-white">등록</button>
+                <div class="flex gap-1.5 sm:gap-2">
+                    <input id="commentInput" type="text" placeholder="댓글 입력" class="flex-1 min-w-0 px-3 py-2 text-sm rounded-lg ring-1 ring-zinc-200">
+                    <button id="commentSubmitBtn" class="shrink-0 px-2.5 py-2 sm:px-3 text-[11px] sm:text-xs font-semibold rounded-lg bg-zinc-900 text-white">등록</button>
                 </div>
             </div>
         </div>

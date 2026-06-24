@@ -74,6 +74,14 @@ let boardDragSuppressClick = false;
 const BOARD_DRAG_LONG_PRESS_MS = 450;
 const BOARD_DRAG_MOVE_CANCEL_PX = 10;
 
+const BOARD_CHEVRON_SVG =
+    '<svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>';
+
+const BOARD_NAV_MAIN_ACTIVE = ["bg-blue-50", "text-blue-600"];
+const BOARD_NAV_MAIN_IDLE = ["text-slate-900", "hover:bg-slate-50"];
+const BOARD_NAV_CHILD_ACTIVE = ["bg-blue-50", "text-blue-600", "font-semibold"];
+const BOARD_NAV_CHILD_IDLE = ["text-slate-500", "hover:bg-slate-50"];
+
 const BOARD_SETTINGS_ICON =
     '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>';
 
@@ -726,16 +734,30 @@ function sidebarActiveBoardId(board) {
     return board.id === currentBoardId ? board.id : null;
 }
 
-function boardCardRingClass(active) {
-    return active
-        ? "ring-indigo-300 bg-indigo-50/70 hover:bg-indigo-100/80"
-        : "ring-zinc-200 hover:bg-indigo-50 hover:ring-indigo-200";
+function boardMainNavBaseClass() {
+    return "board-card group/item flex items-center gap-2 px-3 py-2.5 rounded-md cursor-pointer transition-colors duration-150 select-none touch-none";
 }
 
-function setBoardCardRing(el, active) {
+function boardChildNavBaseClass() {
+    return "board-tab-child-card pl-6 pr-3 py-2 rounded-md cursor-pointer transition-colors duration-150 text-sm";
+}
+
+function setBoardNavActive(el, active, kind = "main") {
     if (!el) return;
-    el.classList.remove(...boardCardRingClass(true).split(" "), ...boardCardRingClass(false).split(" "));
-    el.classList.add(...boardCardRingClass(active).split(" "));
+    if (kind === "child") {
+        el.classList.remove(...BOARD_NAV_CHILD_ACTIVE, ...BOARD_NAV_CHILD_IDLE);
+        el.classList.add(...(active ? BOARD_NAV_CHILD_ACTIVE : BOARD_NAV_CHILD_IDLE));
+        return;
+    }
+    el.classList.remove(...BOARD_NAV_MAIN_ACTIVE, ...BOARD_NAV_MAIN_IDLE);
+    el.classList.add(...(active ? BOARD_NAV_MAIN_ACTIVE : BOARD_NAV_MAIN_IDLE));
+    const title = el.querySelector("[data-board-title]");
+    if (title) {
+        title.classList.toggle("text-blue-600", active);
+        title.classList.toggle("font-semibold", active);
+        title.classList.toggle("text-slate-900", !active);
+        title.classList.toggle("font-bold", !active);
+    }
 }
 
 function syncBoardSidebarState() {
@@ -748,15 +770,10 @@ function syncBoardSidebarState() {
         const expanded = hasChildren && board.id === expandedParentId;
         groupEl.classList.toggle("has-expanded-children", expanded);
         groupEl.querySelector(".board-group-children")?.classList.toggle("is-expanded", expanded);
-        setBoardCardRing(groupEl.querySelector(".board-card"), sidebarActiveBoardId(board) === board.id);
-
-        const hint = groupEl.querySelector("[data-board-tab-hint]");
-        if (hint && hasChildren) {
-            hint.textContent = `하위 탭 ${board.tabs.length - 1}개`;
-        }
+        setBoardNavActive(groupEl.querySelector(".board-card"), sidebarActiveBoardId(board) === board.id, "main");
 
         groupEl.querySelectorAll(".board-tab-child-card").forEach((childEl) => {
-            setBoardCardRing(childEl, Number(childEl.dataset.boardTabId) === currentBoardId);
+            setBoardNavActive(childEl, Number(childEl.dataset.boardTabId) === currentBoardId, "child");
         });
     });
 }
@@ -825,7 +842,7 @@ function renderBoardGroup(board) {
         ? `<div class="board-group-children${expanded ? " is-expanded" : ""}"><div class="board-group-children-inner pointer-events-auto">${childHtml}</div></div>`
         : "";
     return `
-        <div class="board-group${expanded ? " has-expanded-children" : ""}" data-board-group-id="${board.id}">
+        <div class="board-group mb-5 last:mb-0${expanded ? " has-expanded-children" : ""}" data-board-group-id="${board.id}">
             ${renderParentBoardCard(board, { hasChildren, expanded })}
             ${childrenBlock}
         </div>
@@ -834,64 +851,47 @@ function renderBoardGroup(board) {
 
 function renderParentBoardCard(board, { hasChildren = false, expanded = false } = {}) {
     const isActive = sidebarActiveBoardId(board) === board.id;
-    const activeClass = boardCardRingClass(isActive);
-    const tabHint =
+    const activeMain = isActive ? BOARD_NAV_MAIN_ACTIVE : BOARD_NAV_MAIN_IDLE;
+    const description =
         board.tabs?.length <= 1 && board.description
-            ? `<p class="board-card-meta mt-1 line-clamp-2 pointer-events-none">${escapeHtml(board.description)}</p>`
-            : hasChildren
-              ? `<p class="board-tab-hint pointer-events-none" data-board-tab-hint>하위 탭 ${board.tabs.length - 1}개</p>`
-              : "";
-    const inactiveLabel = board.is_active ? "" : `<span class="text-[9px] text-rose-600 shrink-0">OFF</span>`;
+            ? `<p class="px-3 pb-1 text-xs text-slate-500 leading-snug pointer-events-none">${escapeHtml(board.description)}</p>`
+            : "";
     const newPostDot =
         (board.new_post_count || 0) > 0
             ? `<span class="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" title="최근 15일 이내 새 글 ${board.new_post_count}건"></span>`
             : "";
+    const chevron = hasChildren
+        ? `<span class="board-chevron shrink-0 pointer-events-none inline-flex transition-transform duration-200" aria-hidden="true">${BOARD_CHEVRON_SVG}</span>`
+        : "";
+    const inactiveLabel = board.is_active ? "" : `<span class="text-[10px] text-rose-500 shrink-0 font-medium">OFF</span>`;
+    const titleClass = isActive
+        ? "text-[15px] font-semibold leading-snug break-words text-blue-600"
+        : "text-[15px] font-bold leading-snug break-words text-slate-900";
     return `
-        <div class="board-card rounded-lg ring-1 ${activeClass} cursor-pointer transition-all select-none touch-none" data-board-id="${board.id}" role="button" tabindex="0">
-            <div class="flex items-start gap-2 min-w-0">
-                <span class="board-drag-handle" aria-hidden="true"></span>
-                <span class="text-sm shrink-0 leading-none mt-0.5">${escapeHtml(board.icon || "📋")}</span>
-                <div class="min-w-0 flex-1">
-                    <div class="flex items-center gap-1 min-w-0">
-                        <span class="board-card-title truncate">${escapeHtml(board.name)}</span>
-                        <button type="button" data-board-edit-id="${board.id}" class="board-edit-btn shrink-0 p-0.5 rounded text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100/80" title="게시판 설정" aria-label="게시판 설정">${BOARD_SETTINGS_ICON}</button>
-                        <span class="ml-auto shrink-0 flex items-center gap-1">
-                            ${newPostDot}
-                            <span class="board-card-count">${board.post_count || 0}</span>
-                            ${inactiveLabel}
-                        </span>
-                    </div>
-                    ${tabHint}
-                </div>
-            </div>
+        <div class="${boardMainNavBaseClass()} ${activeMain.join(" ")}" data-board-id="${board.id}" role="button" tabindex="0">
+            <span class="flex-1 min-w-0 ${titleClass}" data-board-title>${escapeHtml(board.name)}</span>
+            ${newPostDot}
+            <span class="shrink-0 bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full tabular-nums font-medium">${board.post_count || 0}</span>
+            ${inactiveLabel}
+            ${chevron}
+            <button type="button" data-board-edit-id="${board.id}" class="board-edit-btn shrink-0 p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 opacity-0 group-hover/item:opacity-100 focus:opacity-100 transition-opacity" title="게시판 설정" aria-label="게시판 설정">${BOARD_SETTINGS_ICON}</button>
         </div>
+        ${description}
     `;
 }
 
 function renderChildTabRow(board, tab) {
     const isActive = currentBoardId === tab.id;
-    const activeClass = boardCardRingClass(isActive);
-    const inactiveLabel = tab.is_active ? "" : `<span class="text-[9px] text-rose-600 shrink-0">OFF</span>`;
-    const newPostDot =
-        (tab.new_post_count || 0) > 0
-            ? `<span class="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" title="최근 15일 이내 새 글 ${tab.new_post_count}건"></span>`
-            : "";
+    const activeChild = isActive ? BOARD_NAV_CHILD_ACTIVE : BOARD_NAV_CHILD_IDLE;
     return `
         <div
-            class="board-tab-child-card ring-1 ${activeClass} cursor-pointer transition-all"
+            class="${boardChildNavBaseClass()} ${activeChild.join(" ")}"
             data-board-tab-id="${tab.id}"
             data-parent-board-id="${board.id}"
             role="button"
             tabindex="0"
         >
-            <div class="flex items-center gap-1.5 min-w-0">
-                <span class="board-tab-child-title flex-1 min-w-0 line-clamp-2">${escapeHtml(tab.tab_label || tab.name)}</span>
-                <span class="ml-auto shrink-0 flex items-center gap-1">
-                    ${newPostDot}
-                    <span class="board-tab-child-count">${tab.post_count || 0}</span>
-                </span>
-                ${inactiveLabel}
-            </div>
+            <span class="leading-snug break-words">${escapeHtml(tab.tab_label || tab.name)}</span>
         </div>
     `;
 }

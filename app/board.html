@@ -64,16 +64,15 @@
         }
         .board-editor-img-align button:hover { background: #e4e4e7; }
         .board-editor-img-align button.active { background: #4f46e5; color: #fff; }
+        .board-group.is-drag-ready .board-card {
+            background-color: #f1f5f9;
+        }
         .board-group.is-dragging {
-            opacity: 0.95;
-            box-shadow: 0 10px 28px rgba(79, 70, 229, 0.18);
+            opacity: 0.92;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
             cursor: grabbing;
             z-index: 50;
             position: relative;
-        }
-        .board-group.is-drag-ready .board-card {
-            box-shadow: 0 0 0 2px #a5b4fc;
-            background: #eef2ff;
         }
         body.board-drag-active {
             user-select: none;
@@ -107,122 +106,9 @@
             display: none;
         }
 
-        /* ── 사이드바 게시판 리스트 ── */
-        .board-sidebar { background: #fafafa; }
-        .board-sidebar-header h2 { color: #222; font-weight: 700; }
-        .board-sidebar-list {
-            padding: 0.625rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.625rem;
-        }
-        .board-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0;
-            margin-bottom: 0.125rem;
-        }
-        .board-group + .board-group {
-            margin-top: 0.375rem;
-            padding-top: 0.375rem;
-            border-top: 1px solid #ececec;
-        }
-        .board-card {
-            position: relative;
-            padding: 0.625rem 0.625rem 0.625rem 0.5rem;
-            background: #fff;
-        }
-        .board-card:hover { background: #f8f8ff; }
-        .board-drag-handle {
-            flex-shrink: 0;
-            width: 3px;
-            align-self: stretch;
-            min-height: 1.25rem;
-            border-radius: 9999px;
-            background: transparent;
-            transition: background 0.15s;
-        }
-        .board-card:hover .board-drag-handle,
-        .board-group.is-drag-ready .board-drag-handle {
-            background: #d4d4d8;
-        }
-        .board-card-title {
-            color: #222;
-            font-weight: 700;
-            font-size: 0.8125rem;
-            line-height: 1.35;
-        }
-        .board-card.ring-indigo-300 .board-card-title {
-            color: #1e1b4b;
-        }
-        .board-card-meta {
-            color: #666;
-            font-size: 0.6875rem;
-            font-weight: 500;
-        }
-        .board-card-count {
-            color: #4f46e5;
-            font-size: 0.6875rem;
-            font-weight: 600;
-        }
-        .board-tab-hint {
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-            margin-top: 0.25rem;
-            color: #6366f1;
-            font-size: 0.625rem;
-            font-weight: 500;
-        }
-        .board-tab-hint::before {
-            content: "";
-            display: inline-block;
-            width: 0.35rem;
-            height: 0.35rem;
-            border-right: 1.5px solid currentColor;
-            border-bottom: 1.5px solid currentColor;
-            transform: rotate(-45deg);
-            transition: transform 0.2s ease;
-            flex-shrink: 0;
-        }
-        .board-group.has-expanded-children .board-tab-hint::before {
-            transform: rotate(45deg);
-        }
-        .board-group-children-inner {
-            margin-top: 0.25rem;
-            margin-left: 0.625rem;
-            padding: 0.25rem 0 0.25rem 0.625rem;
-            border-left: 2px solid #e0e7ff;
-            display: flex;
-            flex-direction: column;
-            gap: 0.125rem;
-        }
-        .board-tab-child-card {
-            margin-left: 0 !important;
-            padding: 0.375rem 0.5rem 0.375rem 0.625rem !important;
-            min-height: 0 !important;
-            border-left: none !important;
-            background: #fff;
-            border-radius: 0.375rem;
-        }
-        .board-tab-child-card:hover { background: #f4f4f5; }
-        .board-tab-child-title {
-            color: #444;
-            font-weight: 500;
-            font-size: 0.75rem;
-            line-height: 1.4;
-        }
-        .board-tab-child-count {
-            color: #71717a;
-            font-size: 0.625rem;
-            font-weight: 600;
-        }
-        .board-tab-child-card.ring-indigo-300 {
-            background: #eef2ff;
-        }
-        .board-tab-child-card.ring-indigo-300 .board-tab-child-title {
-            color: #312e81;
-            font-weight: 600;
+        /* ── 사이드바: 펼침 애니메이션·체브론 ── */
+        .board-group.has-expanded-children .board-chevron {
+            transform: rotate(90deg);
         }
 
         @media (max-width: 639px) {
@@ -256,16 +142,16 @@
     </nav>
 
     <main class="max-w-7xl mx-auto px-3 sm:px-6 py-3 sm:py-5">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-2.5 sm:gap-3">
-            <aside class="board-sidebar lg:col-span-2 bg-white rounded-xl ring-1 ring-zinc-200 shadow-sm overflow-hidden flex flex-col lg:sticky lg:top-[3.25rem] lg:max-h-[calc(100vh-4.25rem)]">
-                <div class="board-sidebar-header px-3 py-2 border-b border-zinc-200 bg-zinc-50 shrink-0">
-                    <h2 class="text-xs font-semibold text-zinc-900">게시판</h2>
-                    <p class="text-[10px] text-zinc-500 mt-0.5">길게 눌러 드래그해 순서 변경</p>
+        <div class="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-3 sm:gap-4">
+            <aside class="board-sidebar w-full lg:w-[280px] shrink-0 bg-white rounded-xl ring-1 ring-slate-200 shadow-sm overflow-hidden flex flex-col lg:sticky lg:top-[3.25rem] lg:max-h-[calc(100vh-4.25rem)]">
+                <div class="board-sidebar-header px-4 py-3 border-b border-slate-200 bg-slate-50 shrink-0">
+                    <h2 class="text-sm font-bold text-slate-900">게시판</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">길게 눌러 드래그해 순서 변경</p>
                 </div>
-                <div id="boardList" class="board-list-scroll board-sidebar-list flex-1 min-h-0 overflow-y-auto"></div>
+                <div id="boardList" class="board-list-scroll flex-1 min-h-0 overflow-y-auto py-2 px-2"></div>
             </aside>
 
-            <section class="lg:col-span-10 min-w-0">
+            <section class="min-w-0">
                 <div class="w-full max-w-full sm:max-w-3xl sm:mx-auto space-y-3 sm:space-y-4">
                 <div class="bg-white rounded-xl sm:rounded-2xl ring-1 ring-zinc-200 shadow-sm p-3 sm:p-5">
                     <div class="flex flex-col gap-3">

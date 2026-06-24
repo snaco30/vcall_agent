@@ -1397,22 +1397,28 @@ async function loadPosts(page = currentPage) {
     } else {
         postListEl.innerHTML = result.items
             .map(
-                (post) => `
+                (post, index) => {
+                    const listNo = result.total - (result.page - 1) * result.page_size - index;
+                    return `
                 <article class="bg-white rounded-xl ring-1 ring-zinc-200 shadow-sm p-3 sm:p-4 w-full min-w-0">
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                    <div class="flex gap-2 sm:gap-3">
+                        <span class="shrink-0 w-7 sm:w-9 pt-0.5 text-right text-[10px] sm:text-xs text-zinc-400 tabular-nums font-semibold leading-snug" aria-hidden="true">${listNo}</span>
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3 min-w-0 flex-1">
                         <div class="min-w-0 flex-1 w-full">
                             <button class="post-detail-btn text-left w-full min-w-0" data-post-id="${post.id}">
                                 <h3 class="text-sm sm:text-base font-bold text-zinc-900 break-words leading-snug">${post.is_pinned ? "📌 " : ""}${escapeHtml(post.title || "(제목 없음)")}</h3>
-                                <p class="text-[10px] sm:text-xs text-zinc-500 mt-1 break-words leading-relaxed">작성자 ${escapeHtml(post.author_username)} · ${formatDateTime(post.created_at)} · 조회 ${post.view_count}</p>
+                                <p class="text-[10px] sm:text-xs text-zinc-500 mt-1 break-words leading-relaxed">${formatDateTime(post.created_at)} · ${escapeHtml(post.author_username)} · 조회 ${post.view_count}</p>
                             </button>
                         </div>
                         <div class="flex items-center justify-end gap-1.5 sm:gap-2 shrink-0 self-end sm:self-start">
                             ${renderPostAttachmentBadge(post.attachment_count)}
                             <button class="post-edit-btn text-[10px] sm:text-[11px] px-2 py-1 rounded bg-zinc-100 text-zinc-600 hover:bg-zinc-200" data-post-id="${post.id}">수정</button>
                         </div>
+                        </div>
                     </div>
                 </article>
-            `
+            `;
+                }
             )
             .join("");
     }

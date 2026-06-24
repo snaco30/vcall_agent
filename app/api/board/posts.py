@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.auth import get_current_user
-from app.api.board.common import ensure_post, normalize_post, sanitize_html
+from app.api.board.common import ensure_board, ensure_post, normalize_post, sanitize_html
 from app.api.board.schemas import PostUpdate
 from app.api.board_db import execute, fetch_all, fetch_one, utc_now_iso
 
@@ -64,13 +64,22 @@ def update_post(post_id: int, payload: PostUpdate, current_user: str = Depends(g
         if not body_html:
             raise HTTPException(status_code=400, detail="본문을 입력해 주세요.")
 
+    board_id = int(post["board_id"])
+    if payload.board_id is not None:
+        target_board_id = int(payload.board_id)
+        if target_board_id != board_id:
+            target_board = ensure_board(target_board_id)
+            if not bool(target_board.get("is_active", 0)):
+                raise HTTPException(status_code=400, detail="비활성 게시판으로는 이동할 수 없습니다.")
+            board_id = target_board_id
+
     execute(
         """
         UPDATE posts
-        SET title = ?, body_html = ?, is_pinned = ?, status = ?, updated_at = ?
+        SET board_id = ?, title = ?, body_html = ?, is_pinned = ?, status = ?, updated_at = ?
         WHERE id = ?
         """,
-        (title, body_html, 1 if payload.is_pinned else 0, status, utc_now_iso(), post_id),
+        (board_id, title, body_html, 1 if payload.is_pinned else 0, status, utc_now_iso(), post_id),
     )
     return normalize_post(ensure_post(post_id))
 

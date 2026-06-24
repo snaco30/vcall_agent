@@ -54,6 +54,7 @@ class PostUpdate(BaseModel):
     body_html: str = ""
     is_pinned: bool = False
     status: str = Field(default="published")
+    board_id: int | None = None
 
 
 class CommentCreate(BaseModel):

@@ -99,6 +99,8 @@ function renderPostAttachmentBadge(count) {
 const postModalEl = document.getElementById("postModal");
 const postModalTitleEl = document.getElementById("postModalTitle");
 const postTitleInputEl = document.getElementById("postTitleInput");
+const postBoardMoveWrapEl = document.getElementById("postBoardMoveWrap");
+const postBoardMoveSelectEl = document.getElementById("postBoardMoveSelect");
 const postPinnedInputEl = document.getElementById("postPinnedInput");
 const attachmentInputEl = document.getElementById("attachmentInput");
 const attachmentListEl = document.getElementById("attachmentList");
@@ -963,6 +965,44 @@ function indexBoardTabs(boardList) {
         for (const tab of board.tabs || []) {
             boardTabMap[tab.id] = { ...tab, parent_board_id: board.id };
         }
+    }
+}
+
+function populatePostBoardMoveSelect(selectedBoardId) {
+    if (!postBoardMoveSelectEl) return;
+    postBoardMoveSelectEl.innerHTML = "";
+    for (const board of boards) {
+        if (!board.is_active) continue;
+        if (board.tabs?.length) {
+            for (const tab of board.tabs) {
+                if (!tab.is_active) continue;
+                const option = document.createElement("option");
+                option.value = String(tab.id);
+                const tabLabel = (tab.tab_label || tab.name || "").trim();
+                option.textContent = board.tabs.length > 1 ? `${board.name} · ${tabLabel}` : tabLabel || board.name;
+                postBoardMoveSelectEl.appendChild(option);
+            }
+            continue;
+        }
+        const option = document.createElement("option");
+        option.value = String(board.id);
+        option.textContent = board.name;
+        postBoardMoveSelectEl.appendChild(option);
+    }
+    if (selectedBoardId != null) {
+        postBoardMoveSelectEl.value = String(selectedBoardId);
+    }
+}
+
+function showPostBoardMove(boardId) {
+    populatePostBoardMoveSelect(boardId);
+    postBoardMoveWrapEl?.classList.remove("hidden");
+}
+
+function hidePostBoardMove() {
+    postBoardMoveWrapEl?.classList.add("hidden");
+    if (postBoardMoveSelectEl) {
+        postBoardMoveSelectEl.innerHTML = "";
     }
 }
 
@@ -1986,6 +2026,7 @@ async function openPostEditor(postId = null) {
         const detail = await secureFetch(`/api/boards/posts/${postId}?with_view_count=false`);
         editingPostId = postId;
         postModalTitleEl.textContent = "게시글 수정";
+        showPostBoardMove(detail.post.board_id);
         postTitleInputEl.value = detail.post.title || "";
         postPinnedInputEl.checked = !!detail.post.is_pinned;
         initEditor(detail.post.body_html || "");
@@ -1998,6 +2039,7 @@ async function openPostEditor(postId = null) {
         });
         editingPostId = draft.id;
         postModalTitleEl.textContent = "게시글 작성";
+        hidePostBoardMove();
         postTitleInputEl.value = "";
         postPinnedInputEl.checked = false;
         initEditor("");
@@ -2012,6 +2054,7 @@ async function openPostEditor(postId = null) {
 
 function closePostModal() {
     teardownEditorImageControls();
+    hidePostBoardMove();
     postModalEl.classList.add("hidden");
     resetPostModalPosition();
     unlockBodyScroll();
@@ -2025,11 +2068,19 @@ async function savePost(status) {
         is_pinned: postPinnedInputEl.checked,
         status,
     };
+    let movedBoardId = null;
+    if (!postBoardMoveWrapEl?.classList.contains("hidden") && postBoardMoveSelectEl?.value) {
+        movedBoardId = Number(postBoardMoveSelectEl.value);
+        payload.board_id = movedBoardId;
+    }
     await secureFetch(`/api/boards/posts/${editingPostId}`, {
         method: "PATCH",
         body: JSON.stringify(payload),
     });
     closePostModal();
+    if (movedBoardId) {
+        currentBoardId = movedBoardId;
+    }
     if (status === "published") {
         currentPage = 1;
         currentQuery = "";

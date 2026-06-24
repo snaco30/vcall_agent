@@ -59,11 +59,19 @@
             height: 100dvh;
             max-height: 100dvh;
         }
+        #incomingCallsModal .incoming-sheet {
+            height: 100dvh;
+            max-height: 100dvh;
+        }
         @media (min-width: 640px) {
-            #aspMerchantModal .asp-sheet {
+            #aspMerchantModal .asp-sheet,
+            #incomingCallsModal .incoming-sheet {
                 height: auto;
                 max-height: 92vh;
             }
+        }
+        .nav-action-btn {
+            min-height: 2.25rem;
         }
         #aspCopyToast {
             transition: opacity 0.2s ease, transform 0.2s ease;
@@ -125,26 +133,27 @@
 <!-- Dashboard -->
 <div id="mainDashboard" class="hidden min-h-screen">
     <nav class="bg-white/80 backdrop-blur-md sticky top-0 z-40 border-b border-zinc-200/80">
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 py-3.5 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="bg-indigo-600 w-9 h-9 rounded-lg text-white font-bold text-sm flex items-center justify-center shadow-sm">V</div>
-                <div>
-                    <h1 class="text-base sm:text-lg font-bold text-zinc-900 tracking-tight">가맹점 마스터 정보 조회</h1>
-                    <p class="text-xs text-zinc-500 hidden sm:block">V-CALL 관리 콘솔</p>
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 py-3">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <div class="bg-indigo-600 w-8 h-8 sm:w-9 sm:h-9 rounded-lg text-white font-bold text-sm flex items-center justify-center shadow-sm shrink-0">V</div>
+                <div class="min-w-0 flex-1">
+                    <h1 class="text-sm sm:text-lg font-bold text-zinc-900 tracking-tight leading-tight truncate">가맹점 마스터 정보 조회</h1>
+                    <p class="text-[10px] sm:text-xs text-zinc-500 hidden sm:block">V-CALL 관리 콘솔</p>
                 </div>
+                <div id="userInfo" class="hidden sm:flex items-center gap-2 text-xs font-medium text-zinc-600 bg-zinc-50 px-3 py-1.5 rounded-lg ring-1 ring-zinc-200/80 shrink-0"></div>
             </div>
-            <div class="flex items-center gap-2 sm:gap-3">
-                <button type="button" onclick="openBoardPage()" class="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg shadow-sm transition-all">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h8M8 11h8m-8 4h5M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                    게시판
+            <div class="mt-2.5 grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end gap-1.5 sm:gap-2">
+                <div id="userInfoMobile" class="sm:hidden col-span-2 flex items-center gap-2 text-[11px] font-medium text-zinc-600 bg-zinc-50 px-2.5 py-1.5 rounded-lg ring-1 ring-zinc-200/80 min-w-0"></div>
+                <button type="button" onclick="openBoardPage()" class="nav-action-btn col-span-1 inline-flex items-center justify-center gap-1.5 text-[11px] sm:text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-2.5 sm:px-3 py-2 rounded-lg shadow-sm transition-all">
+                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h8M8 11h8m-8 4h5M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                    <span>게시판</span>
                 </button>
-                <button type="button" onclick="openAspMerchant()" class="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 rounded-lg shadow-sm transition-all">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                    ASP가맹점
+                <button type="button" onclick="openAspMerchant()" class="nav-action-btn col-span-1 inline-flex items-center justify-center gap-1.5 text-[11px] sm:text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-2.5 sm:px-3 py-2 rounded-lg shadow-sm transition-all">
+                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                    <span>ASP가맹점</span>
                 </button>
-                <div id="userInfo" class="flex items-center gap-2 text-xs font-medium text-zinc-600 bg-zinc-50 px-3 py-1.5 rounded-lg ring-1 ring-zinc-200/80"></div>
-                <button type="button" id="appVersionBtn" class="text-[11px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg ring-1 ring-indigo-100 transition-all" title="업데이트 내역">V1.0.003</button>
-                <button onclick="handleLogout()" class="text-xs text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 font-medium px-3 py-1.5 rounded-lg transition-all">로그아웃</button>
+                <button type="button" id="appVersionBtn" class="nav-action-btn col-span-1 inline-flex items-center justify-center text-[10px] sm:text-[11px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-2 rounded-lg ring-1 ring-indigo-100 transition-all" title="업데이트 내역">V1.0.003</button>
+                <button type="button" onclick="handleLogout()" class="nav-action-btn col-span-1 inline-flex items-center justify-center text-[11px] sm:text-xs text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 font-medium px-2.5 py-2 rounded-lg ring-1 ring-zinc-200 sm:ring-0 transition-all">로그아웃</button>
             </div>
         </div>
     </nav>
@@ -161,10 +170,10 @@
         </div>
     </div>
 
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
         <!-- Search Panel -->
-        <div class="bg-white rounded-xl ring-1 ring-zinc-200/60 shadow-sm p-5 sm:p-6 mb-6 fade-in-up">
-            <div class="mb-5 flex items-start gap-3">
+        <div class="bg-white rounded-xl ring-1 ring-zinc-200/60 shadow-sm p-4 sm:p-6 mb-4 sm:mb-6 fade-in-up">
+            <div class="mb-4 sm:mb-5 flex items-start gap-3">
                 <div class="flex-shrink-0 w-9 h-9 bg-indigo-50 rounded-lg flex items-center justify-center ring-1 ring-indigo-100">
                     <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 </div>
@@ -191,8 +200,8 @@
                     </button>
                 </div>
             </form>
-            <div class="mt-4 flex flex-wrap items-center gap-2">
-                <span class="text-[11px] font-medium text-zinc-400">빠른 검색</span>
+            <div class="mt-3 sm:mt-4 flex flex-wrap items-center gap-2">
+                <span class="text-[11px] font-medium text-zinc-400 w-full sm:w-auto">빠른 검색</span>
                 <button type="button" onclick="quickSearch('010')" class="search-chip inline-flex items-center px-3 py-1 rounded-full text-[11px] font-medium bg-zinc-50 text-zinc-600 ring-1 ring-zinc-200 hover:bg-indigo-50 hover:text-indigo-700 hover:ring-indigo-200">010</button>
                 <button type="button" onclick="quickSearch('카페')" class="search-chip inline-flex items-center px-3 py-1 rounded-full text-[11px] font-medium bg-zinc-50 text-zinc-600 ring-1 ring-zinc-200 hover:bg-indigo-50 hover:text-indigo-700 hover:ring-indigo-200">카페</button>
                 <button type="button" onclick="quickSearch('대표')" class="search-chip inline-flex items-center px-3 py-1 rounded-full text-[11px] font-medium bg-zinc-50 text-zinc-600 ring-1 ring-zinc-200 hover:bg-indigo-50 hover:text-indigo-700 hover:ring-indigo-200">대표</button>
@@ -201,7 +210,7 @@
         </div>
 
         <!-- Incoming Calls (below search) -->
-        <div id="incomingCallsCard" class="mb-6 fade-in-up"></div>
+        <div id="incomingCallsCard" class="mb-4 sm:mb-6 fade-in-up"></div>
 
         <!-- Results -->
         <div id="merchantResultsPanel" class="bg-white rounded-xl ring-1 ring-zinc-200/60 shadow-sm overflow-hidden fade-in-up">
@@ -264,7 +273,10 @@
 <div id="aspMerchantModal" class="fixed inset-0 z-[62] hidden bg-zinc-900/50 backdrop-blur-sm sm:p-4 sm:p-6" role="dialog" aria-modal="true" aria-label="ASP 가맹점 목록" onclick="closeAspMerchant()">
     <div class="asp-sheet bg-white sm:rounded-2xl shadow-2xl shadow-zinc-900/10 w-full max-w-2xl sm:max-w-3xl mx-auto ring-0 sm:ring-1 ring-zinc-200/60 overflow-hidden flex flex-col" onclick="event.stopPropagation()">
         <div class="shrink-0 bg-white border-b border-zinc-200">
-            <div class="px-4 sm:px-6 pt-4 pb-3 flex items-start justify-between gap-3">
+            <div class="sm:hidden flex justify-center pt-2.5 pb-0.5">
+                <span class="w-10 h-1 rounded-full bg-zinc-300" aria-hidden="true"></span>
+            </div>
+            <div class="px-4 sm:px-6 pt-2 sm:pt-4 pb-3 flex items-start justify-between gap-3">
                 <div class="min-w-0">
                     <h3 class="text-lg font-bold text-zinc-900 tracking-tight">ASP 가맹점</h3>
                     <p class="text-xs text-zinc-500 mt-0.5">거래처 상호 · ASP ID · 신청일자</p>
@@ -273,29 +285,29 @@
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
-            <div class="px-4 sm:px-6 pb-4 space-y-3">
+            <div class="px-4 sm:px-6 pb-3 sm:pb-4 space-y-2.5">
                 <div class="relative">
                     <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     <input
                         id="aspMerchantSearchInput"
                         type="search"
                         oninput="filterAspMerchantList()"
-                        class="w-full text-sm bg-zinc-50 ring-1 ring-zinc-200 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:bg-white transition-all"
+                        class="w-full text-sm bg-zinc-50 ring-1 ring-zinc-200 rounded-xl pl-10 pr-4 py-2.5 sm:py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:bg-white transition-all"
                         placeholder="상호 또는 ASP ID 검색"
                         autocomplete="off"
                     >
                 </div>
                 <div class="flex items-center justify-between gap-2">
-                    <span id="aspMerchantCount" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 ring-1 ring-emerald-100">0건</span>
-                    <button type="button" onclick="exportAspMerchantExcel()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 active:scale-[0.98] transition-all">
+                    <span id="aspMerchantCount" class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-emerald-50 text-emerald-800 ring-1 ring-emerald-100">0건</span>
+                    <button type="button" onclick="exportAspMerchantExcel()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] sm:text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 active:scale-[0.98] transition-all">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                        엑셀변환
+                        엑셀
                     </button>
                 </div>
             </div>
         </div>
-        <div class="flex-1 overflow-y-auto custom-scrollbar bg-zinc-50/90 px-4 py-4 sm:px-6 sm:py-5">
-            <div id="aspMerchantList" class="space-y-3 max-w-2xl mx-auto w-full"></div>
+        <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-zinc-50/90 px-3 py-3 sm:px-6 sm:py-5 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <div id="aspMerchantList" class="space-y-2 sm:space-y-3 max-w-2xl mx-auto w-full"></div>
             <div id="aspMerchantEmpty" class="hidden max-w-2xl mx-auto w-full text-center py-16 px-4">
                 <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-zinc-100 text-zinc-400 mb-3">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -381,27 +393,36 @@
 </div>
 
 <!-- Incoming Calls Modal -->
-<div id="incomingCallsModal" class="fixed inset-0 z-50 hidden bg-zinc-900/40 backdrop-blur-sm flex justify-center items-center p-4 sm:p-6">
-    <div class="bg-white rounded-xl shadow-2xl shadow-zinc-900/10 w-full h-full flex flex-col overflow-hidden max-w-3xl ring-1 ring-zinc-200/60">
-        <div class="bg-white px-5 sm:px-6 py-4 flex justify-between items-center border-b border-zinc-200">
-            <div>
-                <h3 class="text-base font-bold text-zinc-900" id="incomingCallsModalTitle">수신 통화</h3>
-                <p class="text-xs text-zinc-500 mt-0.5">날짜별 수신(인입) 통화 목록</p>
+<div id="incomingCallsModal" class="fixed inset-0 z-50 hidden bg-zinc-900/40 backdrop-blur-sm sm:p-4 sm:p-6 flex justify-center items-stretch sm:items-center" onclick="closeIncomingModal()">
+    <div class="incoming-sheet bg-white sm:rounded-xl shadow-2xl shadow-zinc-900/10 w-full flex flex-col overflow-hidden max-w-3xl ring-0 sm:ring-1 ring-zinc-200/60" onclick="event.stopPropagation()">
+        <div class="shrink-0 bg-white border-b border-zinc-200">
+            <div class="sm:hidden flex justify-center pt-2.5 pb-0.5">
+                <span class="w-10 h-1 rounded-full bg-zinc-300" aria-hidden="true"></span>
             </div>
-            <button onclick="closeIncomingModal()" class="text-zinc-400 hover:text-zinc-700 p-2 rounded-full hover:bg-zinc-100 transition-all">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
+            <div class="px-4 sm:px-6 pt-2 sm:pt-3 pb-2 sm:pb-3 flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <h3 class="text-base sm:text-lg font-bold text-zinc-900" id="incomingCallsModalTitle">수신 통화</h3>
+                    <p class="text-[11px] sm:text-xs text-zinc-500 mt-0.5">날짜별 수신(인입) 통화 목록</p>
+                </div>
+                <button type="button" onclick="closeIncomingModal()" class="shrink-0 text-zinc-400 hover:text-zinc-700 p-2 -mr-1 rounded-full hover:bg-zinc-100 transition-all" aria-label="닫기">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="px-4 sm:px-6 pb-3 sm:pb-3 border-t border-zinc-100 sm:border-0 bg-zinc-50/80 sm:bg-transparent space-y-2">
+                <div class="grid grid-cols-[auto_1fr_auto] gap-1.5 items-center pt-2 sm:pt-0">
+                    <button type="button" onclick="shiftIncomingDate(-1)" class="inline-flex items-center justify-center px-2.5 py-2 rounded-lg text-xs font-medium bg-white text-zinc-700 ring-1 ring-zinc-200 hover:bg-indigo-50 hover:text-indigo-700 transition-all">&lt;</button>
+                    <input type="date" id="incomingDateInput" onchange="onIncomingDateInputChange()" class="w-full min-w-0 text-xs font-medium bg-white ring-1 ring-zinc-200 rounded-lg px-2.5 py-2 text-zinc-800 text-center focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
+                    <button type="button" id="incomingNextDayBtn" onclick="shiftIncomingDate(1)" class="inline-flex items-center justify-center px-2.5 py-2 rounded-lg text-xs font-medium bg-white text-zinc-700 ring-1 ring-zinc-200 hover:bg-indigo-50 hover:text-indigo-700 transition-all">&gt;</button>
+                </div>
+                <div class="flex flex-wrap items-center gap-1.5">
+                    <button type="button" onclick="goIncomingToday()" class="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-all">오늘</button>
+                    <button type="button" id="showOnlyIncomingContentBtn" onclick="toggleShowOnlyIncomingContent()" class="flex-1 min-w-0 sm:flex-none bg-white text-zinc-600 ring-1 ring-zinc-200 px-2.5 py-1.5 rounded-full text-[10px] sm:text-[11px] hover:bg-zinc-50 transition-all truncate">통화내용 있는 카드만</button>
+                    <span id="incomingCallsCount" class="ml-auto shrink-0 text-[10px] sm:text-xs font-medium text-zinc-600 bg-zinc-100 px-2 py-1 rounded-full">0건</span>
+                </div>
+            </div>
         </div>
-        <div class="px-5 sm:px-6 py-3 border-b border-zinc-100 bg-zinc-50/80 flex flex-wrap items-center gap-2">
-            <button type="button" onclick="shiftIncomingDate(-1)" class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-zinc-700 ring-1 ring-zinc-200 hover:bg-indigo-50 hover:text-indigo-700 transition-all">&lt; 이전</button>
-            <input type="date" id="incomingDateInput" onchange="onIncomingDateInputChange()" class="text-xs font-medium bg-white ring-1 ring-zinc-200 rounded-lg px-3 py-1.5 text-zinc-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
-            <button type="button" id="incomingNextDayBtn" onclick="shiftIncomingDate(1)" class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-zinc-700 ring-1 ring-zinc-200 hover:bg-indigo-50 hover:text-indigo-700 transition-all">다음 &gt;</button>
-            <button type="button" onclick="goIncomingToday()" class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-all">오늘</button>
-            <button type="button" id="showOnlyIncomingContentBtn" onclick="toggleShowOnlyIncomingContent()" class="bg-white text-zinc-600 ring-1 ring-zinc-200 px-3 py-1.5 rounded-full text-[11px] hover:bg-zinc-50 transition-all">통화내용이 있는 카드만 보기</button>
-            <span id="incomingCallsCount" class="ml-auto text-xs font-medium text-zinc-600 bg-zinc-100 px-2.5 py-1 rounded-full">0건</span>
-        </div>
-        <div class="flex-1 overflow-auto p-4 sm:p-6 bg-zinc-50/50 custom-scrollbar">
-            <div id="incomingCallsCardList" class="space-y-3 max-w-2xl mx-auto w-full"></div>
+        <div class="flex-1 min-h-0 overflow-y-auto p-3 sm:p-6 bg-zinc-50/50 custom-scrollbar pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <div id="incomingCallsCardList" class="space-y-2 sm:space-y-3 max-w-2xl mx-auto w-full"></div>
         </div>
     </div>
 </div>
@@ -628,26 +649,26 @@ GIANT(자이언트)천안	giant	2017-03-02
             ? `<p class="mt-3 text-xs text-zinc-600 leading-relaxed bg-zinc-50 rounded-lg px-3 py-2 ring-1 ring-zinc-100"><span class="font-medium text-zinc-400">비고</span> ${escapeHtml(note)}</p>`
             : '';
         const aspIdBlock = aspIdRaw
-            ? `<button type="button" onclick="copyAspMerchantId(this)" data-asp-id=${JSON.stringify(aspIdRaw)} class="asp-id-copy group inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white text-sm sm:text-[15px] font-bold font-mono tracking-wide shadow-md shadow-emerald-600/30 hover:from-emerald-700 hover:to-emerald-600 active:scale-[0.97] transition-all" title="탭하여 ASP ID 복사" aria-label="ASP ID ${aspId} 복사">
+            ? `<button type="button" onclick="copyAspMerchantId(this)" data-asp-id=${JSON.stringify(aspIdRaw)} class="asp-id-copy group w-full sm:w-auto inline-flex items-center justify-center sm:justify-start gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white text-sm font-bold font-mono tracking-wide shadow-md shadow-emerald-600/30 hover:from-emerald-700 hover:to-emerald-600 active:scale-[0.97] transition-all" title="탭하여 ASP ID 복사" aria-label="ASP ID ${aspId} 복사">
                     <span class="text-[10px] font-sans font-bold uppercase tracking-widest text-emerald-100/90 shrink-0">ASP</span>
-                    <span class="break-all">${aspId}</span>
-                    <svg class="w-4 h-4 text-emerald-100/80 group-hover:text-white shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                    <span class="break-all text-left">${aspId}</span>
+                    <svg class="w-4 h-4 text-emerald-100/80 group-hover:text-white shrink-0 ml-auto sm:ml-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                </button>`
-            : `<span class="inline-flex items-center px-3 py-2 rounded-xl bg-zinc-100 text-zinc-400 text-sm font-mono ring-1 ring-zinc-200">${aspId}</span>`;
+            : `<span class="inline-flex w-full sm:w-auto items-center justify-center px-3 py-2 rounded-xl bg-zinc-100 text-zinc-400 text-sm font-mono ring-1 ring-zinc-200">${aspId}</span>`;
 
         return `
-            <article class="bg-white rounded-2xl ring-1 ring-zinc-200/70 shadow-sm p-4 sm:p-5">
+            <article class="bg-white rounded-xl sm:rounded-2xl ring-1 ring-zinc-200/70 shadow-sm p-3.5 sm:p-5">
                 <div class="min-w-0">
-                    <h4 class="text-[15px] sm:text-base font-bold text-zinc-900 leading-snug break-words">${name}</h4>
-                    <div class="mt-3 flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2.5">
+                    <h4 class="text-sm sm:text-base font-bold text-zinc-900 leading-snug break-words">${name}</h4>
+                    <div class="mt-2.5 sm:mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2.5">
                         ${aspIdBlock}
                         ${dateLabel}
                     </div>
                     ${noteBlock}
-                    <div class="mt-2.5 flex justify-end items-center gap-1">
-                        <button type="button" onclick="openAspMerchantEdit(${item.__idx})" class="px-2 py-0.5 rounded text-[11px] font-medium text-zinc-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">수정</button>
+                    <div class="mt-2 flex justify-end items-center gap-1">
+                        <button type="button" onclick="openAspMerchantEdit(${item.__idx})" class="px-2.5 py-1 rounded-lg text-[11px] font-medium text-zinc-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">수정</button>
                         <span class="text-zinc-200 text-[10px] select-none" aria-hidden="true">|</span>
-                        <button type="button" onclick="deleteAspMerchant(${item.__idx})" class="px-2 py-0.5 rounded text-[11px] font-medium text-zinc-500 hover:text-rose-600 hover:bg-rose-50 transition-colors">삭제</button>
+                        <button type="button" onclick="deleteAspMerchant(${item.__idx})" class="px-2.5 py-1 rounded-lg text-[11px] font-medium text-zinc-500 hover:text-rose-600 hover:bg-rose-50 transition-colors">삭제</button>
                     </div>
                 </div>
             </article>
@@ -848,11 +869,15 @@ GIANT(자이언트)천안	giant	2017-03-02
     }
 
     function renderUserInfo(username) {
-        const el = document.getElementById('userInfo');
-        el.innerHTML = `
-            <span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold flex items-center justify-center">${getUserInitial(username)}</span>
-            <span>${username}</span>
+        const initial = getUserInitial(username);
+        const desktop = document.getElementById('userInfo');
+        const mobile = document.getElementById('userInfoMobile');
+        const chip = `
+            <span class="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-indigo-100 text-indigo-700 text-[10px] sm:text-[10px] font-bold flex items-center justify-center shrink-0">${initial}</span>
+            <span class="truncate">${escapeHtml(username)}</span>
         `;
+        if (desktop) desktop.innerHTML = chip;
+        if (mobile) mobile.innerHTML = chip;
     }
 
     function withAuthUrl(path) {
@@ -1111,23 +1136,18 @@ GIANT(자이언트)천안	giant	2017-03-02
         const el = document.getElementById('incomingCallsCard');
         if (!el) return;
         el.innerHTML = `
-            <div class="bg-white rounded-xl ring-1 ring-zinc-200/60 shadow-sm p-5 sm:p-6">
-                <div class="flex flex-col sm:flex-row sm:items-center gap-4">
-                    <div class="flex items-start gap-3 flex-1 min-w-0">
-                        <div class="flex-shrink-0 w-9 h-9 bg-emerald-50 rounded-lg flex items-center justify-center ring-1 ring-emerald-100">
-                            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-                        </div>
-                        <div>
-                            <h2 class="text-base font-bold text-zinc-900">수신 통화 목록</h2>
-                            <p class="text-xs text-zinc-500 mt-1">날짜별 수신(인입) 통화를 조회하고 가맹점과 매핑합니다.</p>
-                        </div>
+            <button type="button" onclick="openIncomingCalls()" class="w-full text-left bg-white rounded-xl ring-1 ring-zinc-200/60 shadow-sm p-3.5 sm:p-5 hover:ring-indigo-200 hover:shadow-md transition-all active:scale-[0.99]">
+                <div class="flex items-center gap-3">
+                    <div class="flex-shrink-0 w-9 h-9 bg-emerald-50 rounded-lg flex items-center justify-center ring-1 ring-emerald-100">
+                        <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
                     </div>
-                    <button type="button" onclick="openIncomingCalls()" class="w-full sm:w-auto sm:flex-shrink-0 inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm px-5 py-3 rounded-lg shadow-md shadow-indigo-600/15 transition-all active:scale-[0.98]">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-                        수신 통화 목록 보기
-                    </button>
+                    <div class="min-w-0 flex-1">
+                        <h2 class="text-sm sm:text-base font-bold text-zinc-900">수신 통화 목록</h2>
+                        <p class="text-[11px] sm:text-xs text-zinc-500 mt-0.5 truncate">날짜별 수신 통화 조회 · 가맹점 매핑</p>
+                    </div>
+                    <svg class="w-5 h-5 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                 </div>
-            </div>
+            </button>
         `;
     }
 
@@ -1700,19 +1720,19 @@ GIANT(자이언트)천안	giant	2017-03-02
             : '';
         const actionLabel = canSearchByTel ? '가맹점 조회' : '통화 이력';
         return `
-            <div class="bg-white rounded-xl ring-1 ring-zinc-200/60 shadow-sm p-4 sm:p-5 ${interactiveClass}" data-saup="${escapeHtml(item.saup_no || '')}" data-tel="${escapeHtml(item.tel_no || '')}" data-name="${escapeHtml(item.mer_name || '')}">
-                <div class="flex items-start justify-between gap-3 mb-2">
-                    <p class="text-[11px] font-medium text-indigo-600 font-mono">${escapeHtml(item.regi_time || item.regi_date || '-')}</p>
+            <div class="bg-white rounded-xl ring-1 ring-zinc-200/60 shadow-sm p-3 sm:p-5 ${interactiveClass}" data-saup="${escapeHtml(item.saup_no || '')}" data-tel="${escapeHtml(item.tel_no || '')}" data-name="${escapeHtml(item.mer_name || '')}">
+                <div class="flex items-start justify-between gap-2 sm:gap-3 mb-1.5 sm:mb-2">
+                    <p class="text-[10px] sm:text-[11px] font-medium text-indigo-600 font-mono">${escapeHtml(item.regi_time || item.regi_date || '-')}</p>
                     ${isInteractive ? `
-                        <div class="flex items-center gap-1 text-xs font-medium text-indigo-500 flex-shrink-0">
+                        <div class="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs font-medium text-indigo-500 flex-shrink-0">
                             <span>${actionLabel}</span>
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                            <svg class="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                         </div>
                     ` : ''}
                 </div>
-                <h4 class="text-base font-bold text-zinc-900 mb-2 break-words">${escapeHtml(item.mer_name || '-')}</h4>
-                <p class="text-sm text-zinc-700 whitespace-pre-wrap break-words">${escapeHtml(item.content || '-')}</p>
-                ${item.tel_no ? `<p class="text-xs text-zinc-400 mt-2 font-mono">${escapeHtml(item.tel_no)}</p>` : ''}
+                <h4 class="text-sm sm:text-base font-bold text-zinc-900 mb-1 sm:mb-2 break-words leading-snug">${escapeHtml(item.mer_name || '-')}</h4>
+                <p class="text-xs sm:text-sm text-zinc-700 whitespace-pre-wrap break-words max-h-[3.75rem] overflow-hidden sm:max-h-none sm:overflow-visible">${escapeHtml(item.content || '-')}</p>
+                ${item.tel_no ? `<p class="text-[10px] sm:text-xs text-zinc-400 mt-1.5 sm:mt-2 font-mono">${escapeHtml(item.tel_no)}</p>` : ''}
             </div>
         `;
     }
@@ -1726,9 +1746,12 @@ GIANT(자이언트)천안	giant	2017-03-02
     function updateShowOnlyIncomingContentButton() {
         const btn = document.getElementById('showOnlyIncomingContentBtn');
         if (!btn) return;
+        const activeLabel = '내용 있는 카드만';
+        const idleLabel = '내용 있는 카드만';
+        btn.textContent = showOnlyIncomingWithContent ? activeLabel : idleLabel;
         btn.className = showOnlyIncomingWithContent
-            ? 'bg-indigo-600 text-white px-3 py-1.5 rounded-full text-[11px] font-semibold shadow-sm transition-all'
-            : 'bg-white text-zinc-600 ring-1 ring-zinc-200 px-3 py-1.5 rounded-full text-[11px] hover:bg-zinc-50 transition-all';
+            ? 'flex-1 min-w-0 sm:flex-none bg-indigo-600 text-white px-2.5 py-1.5 rounded-full text-[10px] sm:text-[11px] font-semibold shadow-sm transition-all truncate'
+            : 'flex-1 min-w-0 sm:flex-none bg-white text-zinc-600 ring-1 ring-zinc-200 px-2.5 py-1.5 rounded-full text-[10px] sm:text-[11px] hover:bg-zinc-50 transition-all truncate';
     }
 
     function renderIncomingCallsCount(displayCount, hiddenCount) {

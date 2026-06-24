@@ -17,6 +17,8 @@ let imageResizeState = null;
 let editorImageScrollHandler = null;
 let editorImageWindowResizeHandler = null;
 let editorImageOutsideClickHandler = null;
+let editorImagePasteHandler = null;
+let editorImagePasteTarget = null;
 
 const PAGE_SIZE = 20;
 
@@ -112,12 +114,88 @@ const commentListEl = document.getElementById("commentList");
 const commentInputEl = document.getElementById("commentInput");
 const commentSubmitBtnEl = document.getElementById("commentSubmitBtn");
 const postModalBodyEl = document.getElementById("postModalBody");
+const postModalPanelEl = document.getElementById("postModalPanel");
+const postModalDragHandleEl = document.getElementById("postModalDragHandle");
 const detailScrollAreaEl = document.getElementById("detailScrollArea");
 const backupModalEl = document.getElementById("backupModal");
 const backupStatusBoxEl = document.getElementById("backupStatusBox");
 const backupResultMsgEl = document.getElementById("backupResultMsg");
 const restoreFileInputEl = document.getElementById("restoreFileInput");
 const restoreModeSelectEl = document.getElementById("restoreModeSelect");
+
+let postModalDragOffset = { x: 0, y: 0 };
+let postModalDragState = null;
+
+function isPostModalMovable() {
+    return window.matchMedia("(min-width: 640px)").matches;
+}
+
+function applyPostModalPosition() {
+    if (!postModalPanelEl) return;
+    if (!isPostModalMovable()) {
+        postModalPanelEl.style.transform = "";
+        return;
+    }
+    const { x, y } = postModalDragOffset;
+    postModalPanelEl.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+}
+
+function resetPostModalPosition() {
+    postModalDragOffset = { x: 0, y: 0 };
+    applyPostModalPosition();
+}
+
+function initPostModalDrag() {
+    if (!postModalDragHandleEl || !postModalPanelEl) return;
+
+    const onPointerMove = (event) => {
+        if (!postModalDragState) return;
+        postModalDragOffset = {
+            x: postModalDragState.originX + (event.clientX - postModalDragState.startX),
+            y: postModalDragState.originY + (event.clientY - postModalDragState.startY),
+        };
+        applyPostModalPosition();
+    };
+
+    const endDrag = () => {
+        postModalDragState = null;
+        document.body.classList.remove("post-modal-dragging");
+        window.removeEventListener("pointermove", onPointerMove);
+        window.removeEventListener("pointerup", endDrag);
+        window.removeEventListener("pointercancel", endDrag);
+    };
+
+    postModalDragHandleEl.addEventListener("pointerdown", (event) => {
+        if (!isPostModalMovable()) return;
+        if (event.target.closest("#postModalCloseBtn")) return;
+        if (event.button !== 0) return;
+        event.preventDefault();
+        postModalDragState = {
+            startX: event.clientX,
+            startY: event.clientY,
+            originX: postModalDragOffset.x,
+            originY: postModalDragOffset.y,
+        };
+        document.body.classList.add("post-modal-dragging");
+        window.addEventListener("pointermove", onPointerMove);
+        window.addEventListener("pointerup", endDrag);
+        window.addEventListener("pointercancel", endDrag);
+    });
+
+    postModalDragHandleEl.addEventListener("dblclick", (event) => {
+        if (!isPostModalMovable()) return;
+        if (event.target.closest("#postModalCloseBtn")) return;
+        resetPostModalPosition();
+    });
+
+    window.addEventListener("resize", () => {
+        if (postModalEl.classList.contains("hidden")) {
+            if (!isPostModalMovable()) resetPostModalPosition();
+            return;
+        }
+        applyPostModalPosition();
+    });
+}
 
 function escapeHtml(value) {
     return (value ?? "")
@@ -422,6 +500,90 @@ function syncEditorHtmlFromDom() {
     deselectEditorImage();
 }
 
+function getEditorMaxImageWidth() {
+    const ww = getEditorWwContentEl();
+    return Math.max(120, (ww?.clientWidth || 640) - 24);
+}
+
+function getEditorImageDisplayWidth(img) {
+    if (!img) return 0;
+    const attrWidth = Number.parseInt(img.getAttribute("width") || "", 10);
+    if (Number.isFinite(attrWidth) && attrWidth > 0) return attrWidth;
+    const styleWidth = Number.parseFloat(img.style.width || "");
+    if (Number.isFinite(styleWidth) && styleWidth > 0) return styleWidth;
+    return img.getBoundingClientRect().width || 0;
+}
+
+function normalizeInsertedEditorImage(img) {
+    if (!img) return;
+    const maxWidth = getEditorMaxImageWidth();
+    const natural = img.naturalWidth || maxWidth;
+    const current = getEditorImageDisplayWidth(img);
+    if (!current || current > maxWidth) {
+        applyImageDimensions(img, Math.min(natural, maxWidth));
+        return;
+    }
+    if (!img.getAttribute("width") && !img.style.width) {
+        applyImageDimensions(img, Math.min(natural, maxWidth));
+    }
+}
+
+function finalizeInsertedEditorImage(img) {
+    if (!img) return;
+    const onReady = () => {
+        normalizeInsertedEditorImage(img);
+        syncEditorHtmlFromDom();
+        selectEditorImage(img, true);
+    };
+    if (img.complete && img.naturalWidth > 0) {
+        onReady();
+        return;
+    }
+    img.addEventListener("load", onReady, { once: true });
+    img.addEventListener("error", () => selectEditorImage(img, true), { once: true });
+}
+
+function focusInsertedEditorImage(imageUrl = "") {
+    const pickImage = () => {
+        if (imageUrl) return findEditorImageBySrc(imageUrl);
+        const ww = getEditorWwContentEl();
+        const imgs = ww?.querySelectorAll("img");
+        return imgs?.[imgs.length - 1] || null;
+    };
+    [0, 80, 200].forEach((delay) => {
+        window.setTimeout(() => finalizeInsertedEditorImage(pickImage()), delay);
+    });
+}
+
+function updateImageWidthLabel() {
+    if (!imageAlignToolbar || !selectedEditorImage) return;
+    const label = imageAlignToolbar.querySelector("[data-image-width-label]");
+    const slider = imageAlignToolbar.querySelector("[data-image-width-range]");
+    const width = Math.round(getEditorImageDisplayWidth(selectedEditorImage));
+    if (label) label.textContent = width > 0 ? `${width}px` : "-";
+    if (slider) {
+        slider.max = String(getEditorMaxImageWidth());
+        slider.value = String(Math.max(50, width || 50));
+    }
+}
+
+function nudgeEditorImageWidth(delta) {
+    if (!selectedEditorImage) return;
+    const next = getEditorImageDisplayWidth(selectedEditorImage) + delta;
+    applyImageDimensions(selectedEditorImage, Math.min(getEditorMaxImageWidth(), next));
+    updateImageControlOverlay();
+    updateImageWidthLabel();
+    syncEditorHtmlFromDom();
+}
+
+function setEditorImageWidth(widthPx) {
+    if (!selectedEditorImage) return;
+    applyImageDimensions(selectedEditorImage, Math.min(getEditorMaxImageWidth(), widthPx));
+    updateImageControlOverlay();
+    updateImageWidthLabel();
+    syncEditorHtmlFromDom();
+}
+
 function applyImageDimensions(img, widthPx) {
     const width = Math.max(50, Math.round(widthPx));
     img.style.width = `${width}px`;
@@ -465,6 +627,10 @@ function updateImageControlOverlay() {
     if (!selectedEditorImage || !imageControlOverlay || !imageAlignToolbar) return;
     const rect = selectedEditorImage.getBoundingClientRect();
     if (!rect.width) {
+        if (!selectedEditorImage.complete) {
+            selectedEditorImage.addEventListener("load", () => updateImageControlOverlay(), { once: true });
+            return;
+        }
         deselectEditorImage();
         return;
     }
@@ -478,9 +644,13 @@ function updateImageControlOverlay() {
     imageAlignToolbar.style.left = `${rect.left}px`;
     imageAlignToolbar.style.top = `${toolbarTop}px`;
     updateAlignToolbarState(getImageAlignment(selectedEditorImage));
+    updateImageWidthLabel();
 }
 
 function deselectEditorImage() {
+    if (selectedEditorImage) {
+        selectedEditorImage.classList.remove("board-img-selected");
+    }
     selectedEditorImage = null;
     selectedEditorImageSrc = "";
     imageControlOverlay?.classList.add("hidden");
@@ -489,8 +659,12 @@ function deselectEditorImage() {
 
 function selectEditorImage(img, scrollIntoView = false) {
     if (!img || img.tagName !== "IMG") return;
+    if (selectedEditorImage && selectedEditorImage !== img) {
+        selectedEditorImage.classList.remove("board-img-selected");
+    }
     selectedEditorImage = img;
     selectedEditorImageSrc = img.getAttribute("src") || "";
+    img.classList.add("board-img-selected");
     updateImageControlOverlay();
     if (scrollIntoView) {
         img.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -499,6 +673,7 @@ function selectEditorImage(img, scrollIntoView = false) {
 
 function onImageResizeMove(event) {
     if (!imageResizeState) return;
+    if (event.cancelable) event.preventDefault();
     const { img, handle, startX, startY, startWidth, startHeight, aspect } = imageResizeState;
     const dx = event.clientX - startX;
     const dy = event.clientY - startY;
@@ -524,13 +699,15 @@ function onImageResizeMove(event) {
         applyImageDimensions(img, Math.max(newWidth, newHeight * aspect));
     }
     updateImageControlOverlay();
+    updateImageWidthLabel();
 }
 
 function onImageResizeEnd() {
     if (!imageResizeState) return;
     imageResizeState = null;
-    document.removeEventListener("mousemove", onImageResizeMove);
-    document.removeEventListener("mouseup", onImageResizeEnd);
+    document.removeEventListener("pointermove", onImageResizeMove);
+    document.removeEventListener("pointerup", onImageResizeEnd);
+    document.removeEventListener("pointercancel", onImageResizeEnd);
     syncEditorHtmlFromDom();
 }
 
@@ -548,8 +725,9 @@ function startImageResize(event, handle) {
         startHeight: rect.height,
         aspect: rect.width / Math.max(rect.height, 1),
     };
-    document.addEventListener("mousemove", onImageResizeMove);
-    document.addEventListener("mouseup", onImageResizeEnd);
+    document.addEventListener("pointermove", onImageResizeMove);
+    document.addEventListener("pointerup", onImageResizeEnd);
+    document.addEventListener("pointercancel", onImageResizeEnd);
 }
 
 function teardownEditorImageControls() {
@@ -566,6 +744,11 @@ function teardownEditorImageControls() {
     if (editorImageOutsideClickHandler) {
         document.removeEventListener("mousedown", editorImageOutsideClickHandler);
         editorImageOutsideClickHandler = null;
+    }
+    if (editorImagePasteHandler && editorImagePasteTarget) {
+        editorImagePasteTarget.removeEventListener("paste", editorImagePasteHandler, true);
+        editorImagePasteHandler = null;
+        editorImagePasteTarget = null;
     }
     imageControlOverlay?.remove();
     imageAlignToolbar?.remove();
@@ -596,11 +779,20 @@ function setupEditorImageControls() {
         <button type="button" data-align="left">왼쪽</button>
         <button type="button" data-align="center">가운데</button>
         <button type="button" data-align="right">오른쪽</button>
+        <div class="board-editor-img-size">
+            <button type="button" data-size-action="smaller" title="축소">−</button>
+            <input type="range" data-image-width-range min="50" max="800" value="320" aria-label="이미지 너비">
+            <span data-image-width-label>320px</span>
+            <button type="button" data-size-action="larger" title="확대">+</button>
+        </div>
     `;
     document.body.appendChild(imageAlignToolbar);
 
     imageControlOverlay.querySelectorAll(".board-editor-img-handle").forEach((handleEl) => {
-        handleEl.addEventListener("mousedown", (event) => {
+        handleEl.addEventListener("pointerdown", (event) => {
+            if (handleEl.setPointerCapture && event.pointerId != null) {
+                handleEl.setPointerCapture(event.pointerId);
+            }
             startImageResize(event, handleEl.dataset.handle);
         });
     });
@@ -615,23 +807,49 @@ function setupEditorImageControls() {
         });
     });
 
+    imageAlignToolbar.querySelector("[data-size-action='smaller']")?.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        nudgeEditorImageWidth(-40);
+    });
+    imageAlignToolbar.querySelector("[data-size-action='larger']")?.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        nudgeEditorImageWidth(40);
+    });
+    imageAlignToolbar.querySelector("[data-image-width-range]")?.addEventListener("input", (event) => {
+        setEditorImageWidth(Number(event.target.value));
+    });
+
     const ww = getEditorWwContentEl();
     if (!ww) return;
 
-    ww.addEventListener("click", (event) => {
-        if (event.target.tagName === "IMG") {
-            event.preventDefault();
-            event.stopPropagation();
-            selectEditorImage(event.target);
-            return;
-        }
-        if (
-            !imageControlOverlay.contains(event.target) &&
-            !imageAlignToolbar.contains(event.target)
-        ) {
-            deselectEditorImage();
-        }
-    });
+    editorImagePasteTarget = ww;
+    editorImagePasteHandler = (event) => {
+        handleEditorClipboardPaste(event).catch((error) => {
+            alert(error.message || "이미지 붙여넣기에 실패했습니다.");
+        });
+    };
+    editorImagePasteTarget.addEventListener("paste", editorImagePasteHandler, true);
+
+    ww.addEventListener(
+        "click",
+        (event) => {
+            if (event.target.tagName === "IMG") {
+                event.preventDefault();
+                event.stopPropagation();
+                finalizeInsertedEditorImage(event.target);
+                return;
+            }
+            if (
+                !imageControlOverlay.contains(event.target) &&
+                !imageAlignToolbar.contains(event.target)
+            ) {
+                deselectEditorImage();
+            }
+        },
+        true
+    );
 
     editorImageScrollHandler = () => updateImageControlOverlay();
     editorImageWindowResizeHandler = () => updateImageControlOverlay();
@@ -659,6 +877,63 @@ async function uploadInlineImage(blob) {
     });
 }
 
+function getClipboardImageFiles(clipboardData) {
+    if (!clipboardData) return [];
+    const files = [];
+    if (clipboardData.items?.length) {
+        for (const item of clipboardData.items) {
+            if (item.kind === "file" && item.type.startsWith("image/")) {
+                const file = item.getAsFile();
+                if (file) files.push(file);
+            }
+        }
+    }
+    if (!files.length && clipboardData.files?.length) {
+        for (const file of clipboardData.files) {
+            if (file.type?.startsWith("image/")) files.push(file);
+        }
+    }
+    return files;
+}
+
+async function insertEditorImageBlob(blob, hookCallback = null) {
+    if (!editingPostId) {
+        throw new Error("게시글을 먼저 준비해 주세요.");
+    }
+    const result = await uploadInlineImage(blob);
+    const imageUrl = `${result.url}?token=${encodeURIComponent(authToken)}`;
+    const altText = blob.name || "inline-image";
+
+    if (hookCallback) {
+        hookCallback(imageUrl, altText);
+    } else if (editor?.exec) {
+        editor.exec("addImage", { imageUrl, altText });
+    } else {
+        const ww = getEditorWwContentEl();
+        if (!ww) throw new Error("에디터를 찾을 수 없습니다.");
+        const block = document.createElement("p");
+        const img = document.createElement("img");
+        img.src = imageUrl;
+        img.alt = altText;
+        block.appendChild(img);
+        ww.appendChild(block);
+        syncEditorHtmlFromDom();
+    }
+
+    focusInsertedEditorImage(imageUrl);
+}
+
+async function handleEditorClipboardPaste(event) {
+    if (!editor || !editingPostId) return;
+    const files = getClipboardImageFiles(event.clipboardData);
+    if (!files.length) return;
+    event.preventDefault();
+    event.stopPropagation();
+    for (const file of files) {
+        await insertEditorImageBlob(file);
+    }
+}
+
 function initEditor(initialHtml = "") {
     editorRootEl.innerHTML = "";
     editor = new toastui.Editor({
@@ -671,15 +946,7 @@ function initEditor(initialHtml = "") {
             addImageBlobHook: async (blob, callback) => {
                 if (!editingPostId) return;
                 try {
-                    const result = await uploadInlineImage(blob);
-                    const imageUrl = `${result.url}?token=${encodeURIComponent(authToken)}`;
-                    callback(imageUrl, blob.name || "inline-image");
-                    window.setTimeout(() => {
-                        const ww = getEditorWwContentEl();
-                        const imgs = ww?.querySelectorAll("img");
-                        const img = imgs?.[imgs.length - 1];
-                        if (img) selectEditorImage(img);
-                    }, 80);
+                    await insertEditorImageBlob(blob, callback);
                 } catch (error) {
                     alert(error.message || "이미지 업로드에 실패했습니다.");
                 }
@@ -1738,6 +2005,7 @@ async function openPostEditor(postId = null) {
         renderEditorAttachmentList([]);
     }
     postModalEl.classList.remove("hidden");
+    resetPostModalPosition();
     lockBodyScroll();
     resetScrollArea(postModalBodyEl);
 }
@@ -1745,6 +2013,7 @@ async function openPostEditor(postId = null) {
 function closePostModal() {
     teardownEditorImageControls();
     postModalEl.classList.add("hidden");
+    resetPostModalPosition();
     unlockBodyScroll();
 }
 
@@ -2113,6 +2382,7 @@ function bindEvents() {
             });
     });
     document.getElementById("postModalCloseBtn").addEventListener("click", closePostModal);
+    initPostModalDrag();
     document.getElementById("postSaveDraftBtn").addEventListener("click", () => {
         savePost("draft").catch((error) => alert(error.message));
     });

@@ -746,12 +746,13 @@ function syncBoardSidebarState() {
 
         const hasChildren = board.tabs?.length > 1;
         const expanded = hasChildren && board.id === expandedParentId;
+        groupEl.classList.toggle("has-expanded-children", expanded);
         groupEl.querySelector(".board-group-children")?.classList.toggle("is-expanded", expanded);
         setBoardCardRing(groupEl.querySelector(".board-card"), sidebarActiveBoardId(board) === board.id);
 
         const hint = groupEl.querySelector("[data-board-tab-hint]");
         if (hint && hasChildren) {
-            hint.textContent = `${expanded ? "▾" : "▸"} 하위 탭 ${board.tabs.length - 1}개`;
+            hint.textContent = `하위 탭 ${board.tabs.length - 1}개`;
         }
 
         groupEl.querySelectorAll(".board-tab-child-card").forEach((childEl) => {
@@ -817,14 +818,14 @@ function renderBoardGroup(board) {
     const childHtml = hasChildren
         ? board.tabs
               .slice(1)
-              .map((tab, index, arr) => renderChildTabRow(board, tab, index === arr.length - 1))
+              .map((tab) => renderChildTabRow(board, tab))
               .join("")
         : "";
     const childrenBlock = hasChildren
-        ? `<div class="board-group-children${expanded ? " is-expanded" : ""}"><div class="board-group-children-inner space-y-1.5 pointer-events-auto">${childHtml}</div></div>`
+        ? `<div class="board-group-children${expanded ? " is-expanded" : ""}"><div class="board-group-children-inner pointer-events-auto">${childHtml}</div></div>`
         : "";
     return `
-        <div class="board-group space-y-1.5" data-board-group-id="${board.id}">
+        <div class="board-group${expanded ? " has-expanded-children" : ""}" data-board-group-id="${board.id}">
             ${renderParentBoardCard(board, { hasChildren, expanded })}
             ${childrenBlock}
         </div>
@@ -836,9 +837,9 @@ function renderParentBoardCard(board, { hasChildren = false, expanded = false } 
     const activeClass = boardCardRingClass(isActive);
     const tabHint =
         board.tabs?.length <= 1 && board.description
-            ? `<p class="text-[10px] text-zinc-400 mt-1 line-clamp-2 pointer-events-none">${escapeHtml(board.description)}</p>`
+            ? `<p class="board-card-meta mt-1 line-clamp-2 pointer-events-none">${escapeHtml(board.description)}</p>`
             : hasChildren
-              ? `<p class="text-[10px] text-indigo-500 mt-1 pl-0 pointer-events-none" data-board-tab-hint>${expanded ? "▾" : "▸"} 하위 탭 ${board.tabs.length - 1}개</p>`
+              ? `<p class="board-tab-hint pointer-events-none" data-board-tab-hint>하위 탭 ${board.tabs.length - 1}개</p>`
               : "";
     const inactiveLabel = board.is_active ? "" : `<span class="text-[9px] text-rose-600 shrink-0">OFF</span>`;
     const newPostDot =
@@ -846,17 +847,17 @@ function renderParentBoardCard(board, { hasChildren = false, expanded = false } 
             ? `<span class="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" title="최근 15일 이내 새 글 ${board.new_post_count}건"></span>`
             : "";
     return `
-        <div class="board-card rounded-lg ring-1 ${activeClass} px-2 py-2 sm:px-2.5 sm:py-2.5 cursor-pointer transition-all select-none touch-none" data-board-id="${board.id}" role="button" tabindex="0">
-            <div class="flex items-start gap-1.5 min-w-0">
-                <span class="text-[10px] text-zinc-300 shrink-0 mt-0.5" aria-hidden="true">⠿</span>
-                <span class="text-sm shrink-0 leading-none">${escapeHtml(board.icon || "📋")}</span>
+        <div class="board-card rounded-lg ring-1 ${activeClass} cursor-pointer transition-all select-none touch-none" data-board-id="${board.id}" role="button" tabindex="0">
+            <div class="flex items-start gap-2 min-w-0">
+                <span class="board-drag-handle" aria-hidden="true"></span>
+                <span class="text-sm shrink-0 leading-none mt-0.5">${escapeHtml(board.icon || "📋")}</span>
                 <div class="min-w-0 flex-1">
-                    <div class="flex items-center gap-0.5 min-w-0">
-                        <span class="text-xs font-semibold text-zinc-900 truncate">${escapeHtml(board.name)}</span>
-                        <button type="button" data-board-edit-id="${board.id}" class="board-edit-btn shrink-0 p-0.5 rounded text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100/80" title="게시판 설정" aria-label="게시판 설정">${BOARD_SETTINGS_ICON}</button>
+                    <div class="flex items-center gap-1 min-w-0">
+                        <span class="board-card-title truncate">${escapeHtml(board.name)}</span>
+                        <button type="button" data-board-edit-id="${board.id}" class="board-edit-btn shrink-0 p-0.5 rounded text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100/80" title="게시판 설정" aria-label="게시판 설정">${BOARD_SETTINGS_ICON}</button>
                         <span class="ml-auto shrink-0 flex items-center gap-1">
                             ${newPostDot}
-                            <span class="text-[10px] text-indigo-600">${board.post_count || 0}</span>
+                            <span class="board-card-count">${board.post_count || 0}</span>
                             ${inactiveLabel}
                         </span>
                     </div>
@@ -867,10 +868,9 @@ function renderParentBoardCard(board, { hasChildren = false, expanded = false } 
     `;
 }
 
-function renderChildTabRow(board, tab, isLast) {
+function renderChildTabRow(board, tab) {
     const isActive = currentBoardId === tab.id;
     const activeClass = boardCardRingClass(isActive);
-    const branch = isLast ? "└" : "├";
     const inactiveLabel = tab.is_active ? "" : `<span class="text-[9px] text-rose-600 shrink-0">OFF</span>`;
     const newPostDot =
         (tab.new_post_count || 0) > 0
@@ -878,18 +878,17 @@ function renderChildTabRow(board, tab, isLast) {
             : "";
     return `
         <div
-            class="board-tab-child-card rounded-lg ring-1 ${activeClass} ml-2 sm:ml-3 pl-2 pr-1.5 sm:pl-2.5 sm:pr-2 py-2 sm:py-2.5 min-h-[2.75rem] sm:min-h-[3rem] cursor-pointer transition-all border-l-2 border-indigo-100"
+            class="board-tab-child-card ring-1 ${activeClass} cursor-pointer transition-all"
             data-board-tab-id="${tab.id}"
             data-parent-board-id="${board.id}"
             role="button"
             tabindex="0"
         >
-            <div class="flex items-start gap-1.5 min-w-0">
-                <span class="text-[10px] text-zinc-400 shrink-0 font-mono mt-0.5">${branch}</span>
-                <span class="text-xs font-medium text-zinc-800 leading-snug line-clamp-2">${escapeHtml(tab.tab_label || tab.name)}</span>
+            <div class="flex items-center gap-1.5 min-w-0">
+                <span class="board-tab-child-title flex-1 min-w-0 line-clamp-2">${escapeHtml(tab.tab_label || tab.name)}</span>
                 <span class="ml-auto shrink-0 flex items-center gap-1">
                     ${newPostDot}
-                    <span class="text-[10px] text-indigo-600">${tab.post_count || 0}</span>
+                    <span class="board-tab-child-count">${tab.post_count || 0}</span>
                 </span>
                 ${inactiveLabel}
             </div>

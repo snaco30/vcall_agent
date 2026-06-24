@@ -51,12 +51,58 @@ def _matches_incoming_keyword(value: str) -> bool:
     return any(keyword in value_lower for keyword in _incoming_keywords())
 
 
+def _looks_like_tcall_header(row: list[str]) -> bool:
+    if not row:
+        return False
+    first = clean_text(row[0]).lstrip("\ufeff").upper()
+    return first in ("UNIQNO", "ID")
+
+
+def _iter_tcall_data_rows(csv_text: str):
+    f = io.StringIO(csv_text.strip())
+    reader = csv.reader(f)
+    first = next(reader, None)
+    if first is None:
+        return
+    if _looks_like_tcall_header(first):
+        yield from reader
+        return
+    yield first
+    yield from reader
+
+
+def _row_regi_time(row: list[str]) -> str:
+    regi_time = format_datetime(clean_text(row[11]))
+    if regi_time and regi_time != "-":
+        return regi_time
+    if len(row) > 13:
+        churi_time = format_datetime(clean_text(row[13]))
+        if churi_time and churi_time != "-":
+            return churi_time
+    return regi_time
+
+
+def _regi_time_sort_key(regi_time: str) -> str:
+    if not regi_time or regi_time == "-":
+        return ""
+    if len(regi_time) >= 19 and regi_time[4] == "-" and regi_time[7] == "-":
+        return regi_time
+    if len(regi_time) == 10 and regi_time[4] == "-" and regi_time[7] == "-":
+        return f"{regi_time} 00:00:00"
+    return regi_time
+
+
 def _is_incoming_call_row(row: list[str]) -> bool:
     if len(row) < 19:
         return False
     after_det = clean_text(row[18])
     upmu_type = clean_text(row[4])
-    return _matches_incoming_keyword(after_det) or _matches_incoming_keyword(upmu_type)
+    proc_type = clean_text(row[5])
+    return (
+        _matches_incoming_keyword(after_det)
+        or _matches_incoming_keyword(upmu_type)
+        or _matches_incoming_keyword(proc_type)
+    )
 
 
 @router.get("/incoming")
@@ -73,20 +119,16 @@ def get_incoming_calls(
     if err or not tcall_csv:
         return {"date": target.isoformat(), "count": 0, "items": []}
 
-    f = io.StringIO(tcall_csv.strip())
-    reader = csv.reader(f)
-    next(reader, None)
-
     items = []
-    for row in reader:
+    for row in _iter_tcall_data_rows(tcall_csv):
         try:
-            if len(row) < 21:
+            if len(row) < 19:
                 continue
 
             if not _is_incoming_call_row(row):
                 continue
 
-            regi_time = format_datetime(clean_text(row[11]))
+            regi_time = _row_regi_time(row)
             if not _is_on_date(regi_time, target):
                 continue
 
@@ -102,7 +144,7 @@ def get_incoming_calls(
         except Exception:
             continue
 
-    items.reverse()
+    items.sort(key=lambda item: _regi_time_sort_key(item.get("regi_time", "")), reverse=True)
     return {"date": target.isoformat(), "count": len(items), "items": items}
 
 

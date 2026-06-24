@@ -807,10 +807,25 @@ GIANT(자이언트)천안	giant	2017-03-02
         return !hasHistoryText(item.content);
     }
 
+    function regiTimeSortValue(item) {
+        const raw = (item?.regi_time || item?.regi_date || '').toString().trim();
+        if (!raw || raw === '-') return '';
+        const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?: (\d{1,2}):(\d{2}):(\d{2}))?/);
+        if (!match) return raw;
+        const [, year, month, day, hour = '0', minute = '0', second = '0'] = match;
+        return `${year}${month}${day}${hour.padStart(2, '0')}${minute.padStart(2, '0')}${second.padStart(2, '0')}`;
+    }
+
     function compareRegiTimeDesc(a, b) {
-        const ta = (a.regi_time || a.regi_date || '').toString();
-        const tb = (b.regi_time || b.regi_date || '').toString();
+        const tb = regiTimeSortValue(b);
+        const ta = regiTimeSortValue(a);
         return tb.localeCompare(ta);
+    }
+
+    function resetIncomingCallsScroll() {
+        const cardList = document.getElementById('incomingCallsCardList');
+        const scrollEl = cardList?.parentElement;
+        if (scrollEl) scrollEl.scrollTop = 0;
     }
 
     function getYearFromRegiTime(regi_time) {
@@ -1685,9 +1700,9 @@ GIANT(자이언트)천안	giant	2017-03-02
             : '';
         const actionLabel = canSearchByTel ? '가맹점 조회' : '통화 이력';
         return `
-            <div class="bg-white rounded-xl ring-1 ring-zinc-200/60 shadow-sm p-4 sm:p-5 ${interactiveClass}" data-saup="${item.saup_no || ''}" data-tel="${item.tel_no || ''}" data-name="${item.mer_name || ''}">
+            <div class="bg-white rounded-xl ring-1 ring-zinc-200/60 shadow-sm p-4 sm:p-5 ${interactiveClass}" data-saup="${escapeHtml(item.saup_no || '')}" data-tel="${escapeHtml(item.tel_no || '')}" data-name="${escapeHtml(item.mer_name || '')}">
                 <div class="flex items-start justify-between gap-3 mb-2">
-                    <p class="text-[11px] font-medium text-indigo-600 font-mono">${item.regi_time || item.regi_date || '-'}</p>
+                    <p class="text-[11px] font-medium text-indigo-600 font-mono">${escapeHtml(item.regi_time || item.regi_date || '-')}</p>
                     ${isInteractive ? `
                         <div class="flex items-center gap-1 text-xs font-medium text-indigo-500 flex-shrink-0">
                             <span>${actionLabel}</span>
@@ -1695,9 +1710,9 @@ GIANT(자이언트)천안	giant	2017-03-02
                         </div>
                     ` : ''}
                 </div>
-                <h4 class="text-base font-bold text-zinc-900 mb-2 break-words">${item.mer_name || '-'}</h4>
-                <p class="text-sm text-zinc-700 whitespace-pre-wrap break-words">${item.content || '-'}</p>
-                ${item.tel_no ? `<p class="text-xs text-zinc-400 mt-2 font-mono">${item.tel_no}</p>` : ''}
+                <h4 class="text-base font-bold text-zinc-900 mb-2 break-words">${escapeHtml(item.mer_name || '-')}</h4>
+                <p class="text-sm text-zinc-700 whitespace-pre-wrap break-words">${escapeHtml(item.content || '-')}</p>
+                ${item.tel_no ? `<p class="text-xs text-zinc-400 mt-2 font-mono">${escapeHtml(item.tel_no)}</p>` : ''}
             </div>
         `;
     }
@@ -1750,6 +1765,7 @@ GIANT(자이언트)천안	giant	2017-03-02
                 '수신 통화가 없습니다',
                 `${dateLabel} 날짜의 수신(인입) 통화가 확인되지 않습니다.`
             );
+            resetIncomingCallsScroll();
             return;
         }
 
@@ -1759,12 +1775,14 @@ GIANT(자이언트)천안	giant	2017-03-02
                 '표시할 수신 통화가 없습니다',
                 '통화내용이 있는 카드만 보기를 해제해 보세요.'
             );
+            resetIncomingCallsScroll();
             return;
         }
 
         renderIncomingCallsCount(items.length, hiddenCount);
         cardList.innerHTML = items.map(buildIncomingCallCard).join('');
         attachIncomingCallCardListeners(cardList);
+        resetIncomingCallsScroll();
     }
 
     function renderIncomingCalls(data) {

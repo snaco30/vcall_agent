@@ -1,12 +1,18 @@
 """애플리케이션 버전 및 업데이트 내역."""
 
-APP_VERSION = "V1.0.002"
-APP_VERSION_CODE = "1.0.002"
-RELEASED_AT = "2026-06-23"
+APP_VERSION = "V1.0.003"
+APP_VERSION_CODE = "1.0.003"
+RELEASED_AT = "2026-06-24"
 
 CHANGELOG: list[dict] = [
     {
-        "version": "V1.0.002",
+        "version": "V1.0.003",
+        "date": "2026-06-24",
+        "summary": "게시판 첨부파일 용량 확대",
+        "items": [
+            "게시판 첨부파일 파일당 최대 용량 300MB → 1GB",
+        ],
+    },
         "date": "2026-06-23",
         "summary": "게시판 하위 탭·스크랩·사이드바 UX 및 백업 복구 개선",
         "items": [

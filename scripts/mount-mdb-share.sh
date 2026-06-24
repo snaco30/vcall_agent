@@ -27,7 +27,7 @@ SMB MDB 공유 마운트
 환경변수:
   MDB_SMB_SERVER  원격 서버 (기본: posbankserver)
   MDB_SMB_SHARE   공유 이름 (기본: vcallmanager1)
-  MDB_MOUNT_DIR   로컬 마운트 경로 (기본: \$PROJECT_DIR/data/mnt/vcallmanager1)
+  MDB_MOUNT_DIR   로컬 마운트 경로 (기본: \$PROJECT_DIR/mnt/vcallmanager1)
   MDB_SMB_USER    SMB 계정 (필수, --check 제외)
   MDB_SMB_PASS    SMB 비밀번호 (필수, --check 제외)
   MDB_SMB_VERS    SMB 버전 (기본: 3.0, Synology 권장)

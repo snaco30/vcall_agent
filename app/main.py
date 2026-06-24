@@ -26,7 +26,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="보안 가맹점 마스터 및 이력 관리 시스템",
-    version="1.0.001",
+    version="1.0.002",
     lifespan=lifespan,
 )
 

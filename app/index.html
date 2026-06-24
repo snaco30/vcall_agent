@@ -117,7 +117,7 @@
             </button>
         </form>
         <p class="text-center mt-6">
-            <button type="button" id="loginVersionBtn" class="text-[11px] font-medium text-zinc-400 hover:text-indigo-600 transition-colors">V1.0.001 · 업데이트 내역</button>
+            <button type="button" id="loginVersionBtn" class="text-[11px] font-medium text-zinc-400 hover:text-indigo-600 transition-colors">V1.0.002 · 업데이트 내역</button>
         </p>
     </div>
 </div>
@@ -143,7 +143,7 @@
                     ASP가맹점
                 </button>
                 <div id="userInfo" class="flex items-center gap-2 text-xs font-medium text-zinc-600 bg-zinc-50 px-3 py-1.5 rounded-lg ring-1 ring-zinc-200/80"></div>
-                <button type="button" id="appVersionBtn" class="text-[11px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg ring-1 ring-indigo-100 transition-all" title="업데이트 내역">V1.0.001</button>
+                <button type="button" id="appVersionBtn" class="text-[11px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg ring-1 ring-indigo-100 transition-all" title="업데이트 내역">V1.0.002</button>
                 <button onclick="handleLogout()" class="text-xs text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 font-medium px-3 py-1.5 rounded-lg transition-all">로그아웃</button>
             </div>
         </div>
@@ -1343,7 +1343,8 @@ GIANT(자이언트)천안	giant	2017-03-02
         if (!data.mount_available) {
             bar.classList.add('bg-amber-50', 'border-amber-200/80');
             if (data.mount_stale) {
-                warnEl.textContent = '원본 서버 마운트 끊김 — 호스트에서 자동 복구 중(최대 10분), 잠시 후 다시 동기화하세요';
+                const dir = data.mount_dir ? ` (${data.mount_dir})` : '';
+                warnEl.textContent = `원본 SMB 마운트 끊김${dir} — 호스트에서 mount-mdb-share.sh --check 후 deploy.sh 재실행`;
             } else {
                 warnEl.textContent = '원본 서버 연결 불가 — 최종 복사본 사용 중';
             }

@@ -91,9 +91,9 @@ recover_mount_if_stale() {
     fi
 }
 
-# 구형 mnt/vcallmanager1 에만 MDB가 있는 경우 자동 인식
+# 구형 data/mnt/vcallmanager1 에만 MDB가 있는 경우 자동 인식
 if [ -z "${MDB_MOUNT_DIR:-}" ] && ! has_mdb_in_dir "$MOUNT_DIR" && has_mdb_in_dir "$ALT_MOUNT_DIR"; then
-    log "MDB가 mnt/vcallmanager1 에 있음 — 해당 경로 사용"
+    log "MDB가 data/mnt/vcallmanager1 에 있음 — 해당 경로 사용"
     MOUNT_DIR="$ALT_MOUNT_DIR"
 fi
 

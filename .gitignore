@@ -9,6 +9,7 @@ data/board.db
 data/board_files/
 data/*.tmp
 data/mnt/
+mnt/
 data/cute_animal_cache/
 
 __pycache__/

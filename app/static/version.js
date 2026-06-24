@@ -5,7 +5,7 @@ async function loadAppVersionBadge(buttonId = "appVersionBtn", summaryId = "appV
         const res = await fetch("/api/version");
         if (!res.ok) return;
         const data = await res.json();
-        btn.textContent = data.version || "V1.0.001";
+        btn.textContent = data.version || "V1.0.002";
         btn.title = data.summary || "업데이트 내역 보기";
         const summaryEl = document.getElementById(summaryId);
         if (summaryEl && data.summary) {
@@ -13,7 +13,7 @@ async function loadAppVersionBadge(buttonId = "appVersionBtn", summaryId = "appV
         }
         window.__appVersionInfo = data;
     } catch {
-        btn.textContent = "V1.0.001";
+        btn.textContent = "V1.0.002";
     }
 }
 

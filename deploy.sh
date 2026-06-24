@@ -61,7 +61,7 @@ chmod 750 "$PROJECT_DIR/data/board_files" 2>/dev/null || true
 [ -f "$PROJECT_DIR/data/vanpro97_call.mdb" ] && chmod 640 "$PROJECT_DIR/data/vanpro97_call.mdb"
 [ -f "$PROJECT_DIR/data/mdb_sync.meta" ] && chmod 640 "$PROJECT_DIR/data/mdb_sync.meta"
 
-# 2-4. SMB 마운트 지점 (기본: data/mnt/vcallmanager1)
+# 2-4. SMB 마운트 지점 (기본: mnt/vcallmanager1)
 # shellcheck source=scripts/lib/is-mounted.sh
 source "$PROJECT_DIR/scripts/lib/is-mounted.sh"
 # shellcheck source=scripts/lib/mount-paths.sh
@@ -72,7 +72,7 @@ ALT_MOUNT_HOST="$(legacy_mount_dir)"
 ensure_mount_dir "$MOUNT_HOST" || echo "⚠️  마운트 디렉터리 준비 실패 ($MOUNT_HOST) — SMB 볼륨은 생략될 수 있습니다"
 ensure_mount_dir "$ALT_MOUNT_HOST" 2>/dev/null || true
 if ! is_accessible "$MOUNT_HOST" && is_accessible "$ALT_MOUNT_HOST"; then
-    echo "⚠️  기본 경로 접근 불가 — legacy mnt/vcallmanager1 사용"
+    echo "⚠️  기본 경로 접근 불가 — legacy data/mnt/vcallmanager1 사용"
     MOUNT_HOST="$ALT_MOUNT_HOST"
 elif ! is_accessible "$MOUNT_HOST" && ! is_accessible "$ALT_MOUNT_HOST"; then
     echo "⚠️  SMB 마운트 경로에 접근할 수 없습니다 (서버 다운 또는 끊김). 로컬 MDB 복사본으로 서비스합니다."
@@ -87,29 +87,25 @@ docker build -t vcall-manager-web .
 # 4. 리눅스 환경 볼륨 마운트 기준 도커 컨테이너 실행 (MDB 읽기 전용)
 echo "🌐 7002번 포트로 서비스를 구동합니다 (컨테이너명: vcall-web-service)..."
 DOCKER_VOLUMES=(
-  -v "$PROJECT_DIR/data":/data
   -v "$PROJECT_DIR/app":/code/app
 )
-case "$MOUNT_HOST" in
-    "$PROJECT_DIR/data"/*)
-        if ! is_accessible "$MOUNT_HOST"; then
-            echo "⚠️  SMB 마운트 경로 접근 불가 ($MOUNT_HOST) — /data 볼륨만 사용"
-        fi
-        ;;
-    *)
-        if is_accessible "$MOUNT_HOST"; then
-            DOCKER_VOLUMES+=(-v "$MOUNT_HOST":/mnt/vcallmanager1:ro)
-        else
-            echo "⚠️  SMB 볼륨 마운트 생략 ($MOUNT_HOST 접근 불가)"
-        fi
-        ;;
-esac
+if is_accessible "$MOUNT_HOST"; then
+    if has_mdb_in_mount "$MOUNT_HOST"; then
+        echo "✅ SMB 마운트 확인 ($MOUNT_HOST) — 컨테이너에 직접 연결: $CONTAINER_MDB_MOUNT"
+        DOCKER_VOLUMES+=(-v "$MOUNT_HOST":"$CONTAINER_MDB_MOUNT":ro)
+    else
+        echo "⚠️  SMB 경로 접근 가능하나 MDB 없음 ($MOUNT_HOST) — /data 볼륨만 사용"
+    fi
+else
+    echo "⚠️  SMB 볼륨 마운트 생략 ($MOUNT_HOST 접근 불가)"
+fi
 
 docker run -d \
   --name vcall-web-service \
   -p 7002:7002 \
   --env-file "$PROJECT_DIR/.env" \
   -e MDB_MOUNT_DIR="$CONTAINER_MDB_MOUNT" \
+  --mount type=bind,source="$PROJECT_DIR/data",target=/data \
   "${DOCKER_VOLUMES[@]}" \
   --restart always \
   vcall-manager-web
@@ -121,9 +117,9 @@ echo ""
 echo "📋 MDB 10분 주기 동기화 (호스트에서 1회 설정):"
 echo ""
 echo "   1) SMB 마운트 (DSM File Station 권장, 또는 SSH):"
-echo "      mkdir -p $PROJECT_DIR/data/mnt/vcallmanager1"
+echo "      mkdir -p $PROJECT_DIR/mnt/vcallmanager1"
 echo "      # File Station → 도구 → 원격 폴더 마운트 → CIFS"
-echo "      #   \\\\posbankserver\\vcallmanager1 → $PROJECT_DIR/data/mnt/vcallmanager1"
+echo "      #   \\\\posbankserver\\vcallmanager1 → $PROJECT_DIR/mnt/vcallmanager1"
 echo "      # 또는:"
 echo "      MDB_SMB_USER=계정 MDB_SMB_PASS=비밀번호 $PROJECT_DIR/scripts/mount-mdb-share.sh"
 echo "      $PROJECT_DIR/scripts/mount-mdb-share.sh --check"

@@ -12,7 +12,18 @@ router = APIRouter(prefix="/api/sync", tags=["Sync"])
 
 META_PATH = os.getenv("MDB_META_PATH", "/data/mdb_sync.meta")
 MDB_PATH = os.getenv("MDB_PATH", "/data/vanpro97_call.mdb")
-MOUNT_DIR = os.getenv("MDB_MOUNT_DIR", "/data/mnt/vcallmanager1")
+MOUNT_DIR = os.getenv("MDB_MOUNT_DIR", "/mnt/vcallmanager1")
+MOUNT_DIR_CANDIDATES = tuple(
+    dict.fromkeys(
+        path
+        for path in (
+            MOUNT_DIR,
+            "/mnt/vcallmanager1",
+            "/data/mnt/vcallmanager1",
+        )
+        if path
+    )
+)
 STALE_MINUTES = int(os.getenv("MDB_SYNC_STALE_MINUTES", "60"))
 
 MDB_CANDIDATES = (
@@ -64,20 +75,54 @@ def _is_accessible(path: str) -> bool:
 
 
 def _mount_is_stale() -> bool:
-    if not _is_mounted(MOUNT_DIR):
+    active = _active_mount_dir()
+    if not active:
         return False
-    if not _is_accessible(MOUNT_DIR):
-        return True
-    return _resolve_src_mdb() is None
+    info = _inspect_mount(active)
+    return info["mount_stale"]
 
 
-def _resolve_src_mdb() -> str | None:
-    for name in MDB_CANDIDATES:
-        path = os.path.join(MOUNT_DIR, name)
-        if os.path.isfile(path):
-            return path
-    matches = glob.glob(os.path.join(MOUNT_DIR, "[Vv][Aa][Nn][Pp][Rr][Oo]97_call.mdb"))
-    return matches[0] if matches else None
+def _resolve_src_mdb(mount_dir: str | None = None) -> str | None:
+    search_dirs = (mount_dir,) if mount_dir else MOUNT_DIR_CANDIDATES
+    for base in search_dirs:
+        for name in MDB_CANDIDATES:
+            path = os.path.join(base, name)
+            if os.path.isfile(path):
+                return path
+        matches = glob.glob(os.path.join(base, "[Vv][Aa][Nn][Pp][Rr][Oo]97_call.mdb"))
+        if matches:
+            return matches[0]
+    return None
+
+
+def _active_mount_dir() -> str | None:
+    for mount_dir in MOUNT_DIR_CANDIDATES:
+        if not _is_mounted(mount_dir) and not _is_accessible(mount_dir):
+            continue
+        if _resolve_src_mdb(mount_dir):
+            return mount_dir
+    for mount_dir in MOUNT_DIR_CANDIDATES:
+        if _is_mounted(mount_dir) or _is_accessible(mount_dir):
+            return mount_dir
+    return MOUNT_DIR_CANDIDATES[0] if MOUNT_DIR_CANDIDATES else MOUNT_DIR
+
+
+def _inspect_mount(mount_dir: str) -> dict:
+    mount_listed = _is_mounted(mount_dir)
+    mount_accessible = mount_listed and _is_accessible(mount_dir)
+    if not mount_listed and _is_accessible(mount_dir):
+        mount_accessible = True
+    src_available = bool(_resolve_src_mdb(mount_dir)) if mount_accessible else False
+    mount_stale = mount_listed and (not mount_accessible or not src_available)
+    mount_available = mount_accessible and src_available
+    return {
+        "mount_dir": mount_dir,
+        "mount_listed": mount_listed,
+        "mount_accessible": mount_accessible,
+        "src_available": src_available,
+        "mount_stale": mount_stale,
+        "mount_available": mount_available,
+    }
 
 
 def _verify_mdb(path: str) -> bool:
@@ -156,11 +201,11 @@ def _build_status_payload() -> dict:
         age = datetime.now(timezone.utc) - parsed.astimezone(timezone.utc)
         is_stale = age.total_seconds() > STALE_MINUTES * 60
 
-    mount_listed = _is_mounted(MOUNT_DIR)
-    mount_accessible = mount_listed and _is_accessible(MOUNT_DIR)
-    src_available = bool(_resolve_src_mdb()) if mount_accessible else False
-    mount_stale = mount_listed and (not mount_accessible or not src_available)
-    mount_available = mount_accessible and src_available
+    mount_dir = _active_mount_dir() or MOUNT_DIR
+    mount_info = _inspect_mount(mount_dir)
+    mount_available = mount_info["mount_available"]
+    mount_stale = mount_info["mount_stale"]
+    src_available = mount_info["src_available"]
     using_local_fallback = mdb_exists and not mount_available
 
     return {
@@ -170,6 +215,7 @@ def _build_status_payload() -> dict:
         "is_stale": is_stale if has_sync_history else True,
         "mdb_available": mdb_exists,
         "stale_threshold_minutes": STALE_MINUTES,
+        "mount_dir": mount_dir,
         "mount_available": mount_available,
         "mount_stale": mount_stale,
         "src_available": src_available,
@@ -178,19 +224,25 @@ def _build_status_payload() -> dict:
 
 
 def run_mdb_sync() -> dict:
-    if not _is_mounted(MOUNT_DIR):
-        return _sync_failure_response(f"SMB 마운트 없음 ({MOUNT_DIR})")
+    mount_dir = _active_mount_dir() or MOUNT_DIR
+    mount_info = _inspect_mount(mount_dir)
 
-    if not _is_accessible(MOUNT_DIR):
+    if not mount_info["mount_listed"] and not mount_info["mount_accessible"]:
+        return _sync_failure_response(f"SMB 마운트 없음 ({mount_dir})")
+
+    if mount_info["mount_listed"] and not mount_info["mount_accessible"]:
         return _sync_failure_response(
-            f"SMB 마운트 끊김 ({MOUNT_DIR}) — 호스트에서 sync-mdb.sh 가 자동 복구 시도"
+            f"SMB 마운트 끊김 ({mount_dir}) — 호스트에서 sync-mdb.sh 가 자동 복구 시도"
         )
 
-    src = _resolve_src_mdb()
+    src = _resolve_src_mdb(mount_dir)
     if not src:
+        hint = (
+            "Docker가 SMB 하위 마운트를 못 볼 수 있습니다. "
+            "호스트에서 ./deploy.sh 재실행 또는 scripts/mount-mdb-share.sh --check"
+        )
         return _sync_failure_response(
-            f"SMB 마운트 비정상 ({MOUNT_DIR}) — 원격 서버 재부팅 후 stale 마운트. "
-            "호스트에서 sudo systemctl start vcall-mdb-sync.service 실행 또는 DSM 재마운트"
+            f"SMB 마운트 비정상 ({mount_dir}) — MDB 파일 없음. {hint}"
         )
 
     dst_dir = os.path.dirname(MDB_PATH)

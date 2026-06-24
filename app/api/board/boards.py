@@ -416,7 +416,8 @@ def list_posts(
     params.extend([page_size, offset])
     rows = fetch_all(
         f"""
-        SELECT id, board_id, title, author_username, is_pinned, view_count, status, created_at, updated_at
+        SELECT id, board_id, title, author_username, is_pinned, view_count, status, created_at, updated_at,
+               (SELECT COUNT(1) FROM post_files WHERE post_id = posts.id AND kind = 'attachment') AS attachment_count
         FROM posts
         {where}
         ORDER BY is_pinned DESC, created_at DESC
@@ -427,6 +428,7 @@ def list_posts(
     for row in rows:
         row["is_pinned"] = bool(row.get("is_pinned", 0))
         row["view_count"] = int(row.get("view_count", 0) or 0)
+        row["attachment_count"] = int(row.get("attachment_count", 0) or 0)
     return {"items": rows, "total": total, "page": page, "page_size": page_size}
 
 

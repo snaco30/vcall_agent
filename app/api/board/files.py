@@ -34,7 +34,7 @@ def upload_attachment(post_id: int, file: UploadFile = File(...), current_user: 
     filename = os.path.basename(file.filename or "").strip()
     extension = Path(filename).suffix.lower()
     if extension not in ALLOWED_ATTACHMENT_EXTENSIONS:
-        raise HTTPException(status_code=400, detail="첨부파일은 .zip, .txt, .png만 가능합니다.")
+        raise HTTPException(status_code=400, detail="첨부파일은 .zip, .txt, .png, .pdf만 가능합니다.")
 
     mime_type = (file.content_type or "").lower()
     if mime_type and mime_type not in ALLOWED_ATTACHMENT_MIME.get(extension, set()):

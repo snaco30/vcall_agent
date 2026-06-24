@@ -77,6 +77,15 @@ const BOARD_DRAG_MOVE_CANCEL_PX = 10;
 const BOARD_SETTINGS_ICON =
     '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>';
 
+const POST_ATTACHMENT_ICON =
+    '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>';
+
+function renderPostAttachmentBadge(count) {
+    const attachmentCount = Number(count) || 0;
+    if (attachmentCount <= 0) return "";
+    return `<span class="inline-flex items-center gap-0.5 px-1.5 py-1 rounded-md bg-zinc-100 text-zinc-500" title="첨부파일 ${attachmentCount}개">${POST_ATTACHMENT_ICON}<span class="text-[11px] font-semibold tabular-nums">${attachmentCount}</span></span>`;
+}
+
 const postModalEl = document.getElementById("postModal");
 const postModalTitleEl = document.getElementById("postModalTitle");
 const postTitleInputEl = document.getElementById("postTitleInput");
@@ -1392,13 +1401,16 @@ async function loadPosts(page = currentPage) {
                 (post) => `
                 <article class="bg-white rounded-xl ring-1 ring-zinc-200 shadow-sm p-4">
                     <div class="flex items-start justify-between gap-3">
-                        <div class="min-w-0">
-                            <button class="post-detail-btn text-left" data-post-id="${post.id}">
+                        <div class="min-w-0 flex-1">
+                            <button class="post-detail-btn text-left w-full" data-post-id="${post.id}">
                                 <h3 class="text-base font-bold text-zinc-900 break-words">${post.is_pinned ? "📌 " : ""}${escapeHtml(post.title || "(제목 없음)")}</h3>
                                 <p class="text-xs text-zinc-500 mt-1">작성자 ${escapeHtml(post.author_username)} · ${formatDateTime(post.created_at)} · 조회 ${post.view_count}</p>
                             </button>
                         </div>
-                        <button class="post-edit-btn text-[11px] px-2 py-1 rounded bg-zinc-100 text-zinc-600 hover:bg-zinc-200" data-post-id="${post.id}">수정</button>
+                        <div class="flex items-center gap-2 shrink-0">
+                            ${renderPostAttachmentBadge(post.attachment_count)}
+                            <button class="post-edit-btn text-[11px] px-2 py-1 rounded bg-zinc-100 text-zinc-600 hover:bg-zinc-200" data-post-id="${post.id}">수정</button>
+                        </div>
                     </div>
                 </article>
             `

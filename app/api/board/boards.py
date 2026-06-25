@@ -420,7 +420,7 @@ def list_posts(
                (SELECT COUNT(1) FROM post_files WHERE post_id = posts.id AND kind = 'attachment') AS attachment_count
         FROM posts
         {where}
-        ORDER BY is_pinned DESC, created_at DESC
+        ORDER BY is_pinned DESC, created_at DESC, id DESC
         LIMIT ? OFFSET ?
         """,
         tuple(params),

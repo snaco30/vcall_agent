@@ -31,6 +31,7 @@ mkdir -p "$PROJECT_DIR/data/board_files"
 # 2-1. 동기화·마운트·timer 설치 스크립트 실행 권한
 chmod +x "$PROJECT_DIR/scripts/sync-mdb.sh" \
          "$PROJECT_DIR/scripts/mount-mdb-share.sh" \
+         "$PROJECT_DIR/scripts/run-mdb-sync-daily.sh" \
          "$PROJECT_DIR/scripts/install-mdb-sync-timer.sh" 2>/dev/null || true
 
 # 2-2. stale SMB 마운트 복구 후 MDB 동기화
@@ -124,8 +125,10 @@ echo "      # 또는:"
 echo "      MDB_SMB_USER=계정 MDB_SMB_PASS=비밀번호 $PROJECT_DIR/scripts/mount-mdb-share.sh"
 echo "      $PROJECT_DIR/scripts/mount-mdb-share.sh --check"
 echo ""
-echo "   2) systemd timer 설치 (구형 DSM: enable --now 미지원):"
+echo "   2) systemd timer 설치 (10분 주기 + 매일 09:00 자동 동기화):"
 echo "      sudo $PROJECT_DIR/scripts/install-mdb-sync-timer.sh"
+echo "      # Synology에서 timer 미동작 시 cron:"
+echo "      sudo $PROJECT_DIR/scripts/install-mdb-sync-daily-cron.sh"
 echo ""
 echo "   3) 동기화 테스트:"
 echo "      sudo systemctl start vcall-mdb-sync.service"

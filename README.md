@@ -128,13 +128,29 @@ SECRET_KEY=your-random-secret-key
 - `data/` → `/data`, SMB 마운트 → `/mnt/vcallmanager1` (읽기 전용) 볼륨 연결
 - `app/` 소스를 볼륨으로 마운트해 UI 수정 시 재빌드 없이 반영
 
-### 10분 주기 자동 동기화 (systemd)
+### 자동 동기화 (systemd / cron)
+
+**10분 주기 + 매일 오전 9시** SMB 연결 확인·복사:
 
 ```bash
 sudo ./scripts/install-mdb-sync-timer.sh
-sudo systemctl start vcall-mdb-sync.service   # 수동 1회 테스트
-ls -la data/vanpro97_call.mdb
+systemctl list-timers vcall-mdb-sync*    # 다음 09:00 실행 시각 확인
+sudo systemctl start vcall-mdb-sync-daily.service   # 즉시 1회 테스트
+tail -30 data/mdb-sync.log
 ```
+
+Synology에서 systemd timer가 동작하지 않으면 **cron(매일 09:00)**:
+
+```bash
+sudo ./scripts/install-mdb-sync-daily-cron.sh
+```
+
+DSM **제어판 → 작업 스케줄러** 수동 등록 시:
+- 스크립트: `.../scripts/run-mdb-sync-daily.sh`
+- 일정: 매일 09:00
+- 로그: `data/mdb-sync.log`
+
+`.mdb-smb.env`에 SMB 계정이 있으면 9시 작업 시 stale 마운트 자동 해제·재마운트를 시도합니다. DSM File Station 자동 마운트만 쓰는 경우에도 연결 확인 후 복사는 동작합니다.
 
 ### 웹 UI에서 동기화
 

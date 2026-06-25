@@ -1,0 +1,9 @@
+[Unit]
+Description=V-CALL MDB sync daily at 09:00 (connection check + copy)
+
+[Timer]
+OnCalendar=*-*-* 09:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

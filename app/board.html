@@ -16,6 +16,53 @@
         #detailViewer div[style*="text-align: center"] { text-align: center; }
         #detailViewer p[style*="text-align: right"],
         #detailViewer div[style*="text-align: right"] { text-align: right; }
+        .board-pdf-block {
+            margin: 1.25rem 0;
+            border: 1px solid #e4e4e7;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            background: #fafafa;
+        }
+        .board-pdf-caption {
+            margin: 0;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+            color: #52525b;
+            background: #f4f4f5;
+            border-bottom: 1px solid #e4e4e7;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .board-pdf-caption a {
+            color: #4f46e5;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .board-pdf-caption a:hover { text-decoration: underline; }
+        .board-pdf-embed {
+            display: block;
+            width: 100%;
+            min-height: min(70vh, 720px);
+            height: 70vh;
+            max-height: 720px;
+            border: 0;
+            background: #fff;
+        }
+        .toastui-editor-contents .board-pdf-embed,
+        #detailViewer .board-pdf-embed {
+            min-height: min(60vh, 640px);
+            height: 60vh;
+        }
+        @media (max-width: 639px) {
+            .board-pdf-embed,
+            .toastui-editor-contents .board-pdf-embed,
+            #detailViewer .board-pdf-embed {
+                min-height: 50vh;
+                height: 50vh;
+            }
+        }
         .board-editor-img-overlay {
             position: fixed;
             z-index: 89;
@@ -386,7 +433,7 @@
             <div id="editorRoot" class="ring-1 ring-zinc-200 rounded-xl overflow-hidden"></div>
             <div>
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2">
-                    <p class="text-[10px] sm:text-xs font-semibold text-zinc-600 leading-snug">첨부파일 (최대 5개, 파일당 1GB, .zip/.txt/.png/.pdf)</p>
+                    <p class="text-[10px] sm:text-xs font-semibold text-zinc-600 leading-snug">첨부파일 (최대 5개, 파일당 1GB, .zip/.txt/.png/.pdf · PDF는 본문에 표시)</p>
                     <input id="attachmentInput" type="file" accept=".zip,.txt,.png,.pdf" multiple class="text-[10px] sm:text-xs w-full sm:w-auto">
                 </div>
                 <div id="attachmentList" class="space-y-2"></div>

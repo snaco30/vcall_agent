@@ -1,10 +1,24 @@
 """애플리케이션 버전 및 업데이트 내역."""
 
-APP_VERSION = "V1.0.003"
-APP_VERSION_CODE = "1.0.003"
-RELEASED_AT = "2026-06-24"
+APP_VERSION = "V1.0.004"
+APP_VERSION_CODE = "1.0.004"
+RELEASED_AT = "2026-06-25"
 
 CHANGELOG: list[dict] = [
+    {
+        "version": "V1.0.004",
+        "date": "2026-06-25",
+        "summary": "게시판 PDF 본문 표시·게시판 이동·MDB 자동 동기화",
+        "items": [
+            "게시판 PDF 첨부 시 글 본문에 인라인 뷰어로 바로 표시",
+            "게시글 수정 시 다른 게시판으로 이동(트리 선택 UI)",
+            "매일 09:00 MDB 자동 연결 확인·복사(DSM 작업 스케줄러·systemd)",
+            "Synology DSM File Station 마운트 환경에서 MDB 동기화 인식 개선",
+            "게시글 작성 모달 드래그·클립보드 이미지 붙여넣기·이미지 크기 조절",
+            "게시글 목록 번호 표시, 모바일 네비·수신통화 목록 UX 개선",
+            "수신통화목록 최신 기록 정렬·누락 수정",
+        ],
+    },
     {
         "version": "V1.0.003",
         "date": "2026-06-24",

@@ -32,17 +32,20 @@ ALLOWED_HTML_TAGS = bleach.sanitizer.ALLOWED_TAGS.union(
         "pre",
         "code",
         "blockquote",
+        "iframe",
     }
 )
 ALLOWED_HTML_ATTRS = {
     **bleach.sanitizer.ALLOWED_ATTRIBUTES,
     "a": ["href", "title", "target", "rel"],
     "img": ["src", "alt", "title", "width", "height"],
+    "iframe": ["src", "title", "class", "style", "loading", "data-file-id"],
     "td": ["colspan", "rowspan"],
     "th": ["colspan", "rowspan"],
-    "p": ["style"],
-    "span": ["style"],
-    "div": ["style"],
+    "p": ["style", "class"],
+    "span": ["style", "class"],
+    "div": ["style", "class", "data-file-id", "contenteditable"],
+    "strong": ["class"],
 }
 ALLOWED_HTML_PROTOCOLS = {"http", "https", "data"}
 

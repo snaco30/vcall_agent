@@ -2152,7 +2152,7 @@ async function openPostEditor(postId = null) {
         showPostBoardMove(detail.post.board_id);
         postTitleInputEl.value = detail.post.title || "";
         postPinnedInputEl.checked = !!detail.post.is_pinned;
-        initEditor(detail.post.body_html || "");
+        initEditor(injectMediaToken(mergePdfEmbedsIntoBody(detail.post.body_html || "", detail.files)));
         postDeleteBtnEl.classList.remove("hidden");
         renderEditorAttachmentList(detail.files);
     } else {
@@ -2187,10 +2187,14 @@ async function savePost(status) {
     if (!editingPostId || !editor) return;
     const payload = {
         title: postTitleInputEl.value.trim(),
-        body_html: editor.getHTML(),
+        body_html: "",
         is_pinned: postPinnedInputEl.checked,
         status,
     };
+    const editDetail = await secureFetch(`/api/boards/posts/${editingPostId}?with_view_count=false`);
+    payload.body_html = stripMediaToken(
+        mergePdfEmbedsIntoBody(editor.getHTML(), editDetail.files || [])
+    );
     let movedBoardId = null;
     if (!postBoardMoveWrapEl?.classList.contains("hidden") && editingPostBoardId != null) {
         movedBoardId = Number(editingPostBoardId);
@@ -2234,12 +2238,18 @@ function renderEditorAttachmentList(files) {
     }
     attachmentListEl.innerHTML = attachmentFiles
         .map(
-            (file) => `
-            <div class="flex items-center justify-between text-xs bg-zinc-50 rounded-lg ring-1 ring-zinc-200 px-3 py-2">
-                <span class="truncate">${escapeHtml(file.original_name)} (${Math.ceil((file.size_bytes || 0) / 1024)}KB)</span>
-                <button class="file-delete-btn px-2 py-1 rounded bg-rose-50 text-rose-700" data-file-id="${file.id}">삭제</button>
+            (file) => {
+                const pdfNote = isPdfAttachment(file)
+                    ? `<span class="shrink-0 text-[10px] font-semibold text-indigo-600">본문 표시</span>`
+                    : "";
+                return `
+            <div class="flex items-center justify-between gap-2 text-xs bg-zinc-50 rounded-lg ring-1 ring-zinc-200 px-3 py-2">
+                <span class="truncate min-w-0">${escapeHtml(file.original_name)} (${Math.ceil((file.size_bytes || 0) / 1024)}KB)</span>
+                ${pdfNote}
+                <button class="file-delete-btn shrink-0 px-2 py-1 rounded bg-rose-50 text-rose-700" data-file-id="${file.id}">삭제</button>
             </div>
-        `
+        `;
+            }
         )
         .join("");
 }
@@ -2256,15 +2266,76 @@ async function uploadAttachments(files) {
     for (const file of queue) {
         const form = new FormData();
         form.append("file", file);
-        await secureFetch(`/api/boards/posts/${editingPostId}/attachments`, { method: "POST", body: form });
+        const uploaded = await secureFetch(`/api/boards/posts/${editingPostId}/attachments`, {
+            method: "POST",
+            body: form,
+        });
+        if (isPdfAttachment(uploaded) || isPdfAttachment(file)) {
+            insertPdfEmbedIntoEditor(uploaded.id, uploaded.original_name || file.name);
+        }
     }
     await refreshEditingAttachments();
 }
 
 async function deleteAttachment(fileId) {
     if (!confirm("첨부파일을 삭제할까요?")) return;
+    if (editor) {
+        const nextHtml = removePdfEmbedFromHtml(stripMediaToken(editor.getHTML() || ""), fileId);
+        editor.setHTML(injectMediaToken(nextHtml));
+    }
     await secureFetch(`/api/boards/files/${fileId}`, { method: "DELETE" });
     await refreshEditingAttachments();
+}
+
+function isPdfAttachment(file) {
+    const name = (file?.original_name || file?.name || "").toLowerCase();
+    const mime = (file?.mime_type || file?.type || "").toLowerCase();
+    return name.endsWith(".pdf") || mime === "application/pdf";
+}
+
+function buildPdfEmbedHtml(fileId, fileName) {
+    const safeName = escapeHtml(fileName || "PDF");
+    const src = `/api/boards/media/${fileId}`;
+    return `<div class="board-pdf-block" data-file-id="${fileId}" contenteditable="false"><p class="board-pdf-caption"><strong>${safeName}</strong> <a href="${src}" target="_blank" rel="noopener noreferrer">새 탭에서 열기</a></p><iframe class="board-pdf-embed" src="${src}" title="${safeName}" loading="lazy"></iframe></div>`;
+}
+
+function mergePdfEmbedsIntoBody(html, files) {
+    let result = html || "";
+    const pdfFiles = (files || []).filter((file) => file.kind === "attachment" && isPdfAttachment(file));
+    for (const file of pdfFiles) {
+        if (result.includes(`/api/boards/media/${file.id}`)) {
+            continue;
+        }
+        result += buildPdfEmbedHtml(file.id, file.original_name);
+    }
+    return result;
+}
+
+function removePdfEmbedFromHtml(html, fileId) {
+    if (!html) return "";
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = html;
+    wrapper.querySelectorAll(`.board-pdf-block[data-file-id="${fileId}"]`).forEach((node) => node.remove());
+    return wrapper.innerHTML;
+}
+
+function stripMediaToken(html) {
+    if (!html) return "";
+    return html.replace(/(\/api\/boards\/media\/\d+)\?token=[^"'>\s]*/g, "$1");
+}
+
+function insertPdfEmbedIntoEditor(fileId, fileName) {
+    if (!editor) return;
+    const html = stripMediaToken(editor.getHTML() || "");
+    if (html.includes(`/api/boards/media/${fileId}`)) {
+        return;
+    }
+    editor.setHTML(html + buildPdfEmbedHtml(fileId, fileName));
+    window.setTimeout(() => {
+        if (editor) {
+            editor.setHTML(injectMediaToken(stripMediaToken(editor.getHTML() || "")));
+        }
+    }, 0);
 }
 
 function injectMediaToken(html) {
@@ -2288,7 +2359,7 @@ async function openPostDetail(postId) {
     viewerInstance = toastui.Editor.factory({
         el: detailViewerEl,
         viewer: true,
-        initialValue: injectMediaToken(post.body_html || ""),
+        initialValue: injectMediaToken(mergePdfEmbedsIntoBody(post.body_html || "", detail.files || [])),
     });
     renderDetailAttachments(detail.files || []);
     renderComments(detail.comments || []);
@@ -2303,9 +2374,13 @@ function closeDetailModal() {
 }
 
 function renderDetailAttachments(files) {
-    const attachmentFiles = (files || []).filter((file) => file.kind === "attachment");
+    const allAttachments = (files || []).filter((file) => file.kind === "attachment");
+    const attachmentFiles = allAttachments.filter((file) => !isPdfAttachment(file));
     if (!attachmentFiles.length) {
-        detailAttachmentsEl.innerHTML = `<p class="text-xs text-zinc-500">첨부파일 없음</p>`;
+        const hasPdf = allAttachments.some((file) => isPdfAttachment(file));
+        detailAttachmentsEl.innerHTML = hasPdf
+            ? `<p class="text-xs text-zinc-500">PDF 첨부는 본문에서 바로 볼 수 있습니다.</p>`
+            : `<p class="text-xs text-zinc-500">첨부파일 없음</p>`;
         return;
     }
     detailAttachmentsEl.innerHTML = attachmentFiles

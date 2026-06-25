@@ -128,10 +128,14 @@ def read_media(file_id: int, current_user: str = Depends(get_current_user_for_me
     file_path = BOARD_FILES_ROOT / str(post["id"]) / file_row["stored_name"]
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="파일이 존재하지 않습니다.")
+    mime_type = file_row["mime_type"] or "application/octet-stream"
+    original_name = file_row["original_name"] or file_row["stored_name"]
+    inline = mime_type.startswith("application/pdf") or str(original_name).lower().endswith(".pdf")
     return FileResponse(
         str(file_path),
-        media_type=file_row["mime_type"] or "application/octet-stream",
-        filename=file_row["original_name"],
+        media_type=mime_type,
+        filename=original_name,
+        content_disposition_type="inline" if inline else "attachment",
     )
 
 

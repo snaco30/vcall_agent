@@ -103,11 +103,18 @@ if [ "$MOUNT_DIR" != "$ALT_MOUNT_DIR" ]; then
 fi
 
 # 마운트·소스 없음 → 기존 복사본 유지
-if ! is_mounted "$MOUNT_DIR" || ! is_accessible "$MOUNT_DIR"; then
-    if is_mounted "$MOUNT_DIR" && ! is_accessible "$MOUNT_DIR"; then
+# DSM File Station 원격 폴더는 /proc/mounts 에 없어도 접근 가능한 경우가 많음 → 접근·MDB 기준으로 판단
+if is_stale_mount "$MOUNT_DIR"; then
+    log "SMB 마운트 끊김 ($MOUNT_DIR) — 기존 복사본 유지"
+    ensure_local_copy_meta
+    exit 0
+fi
+
+if ! is_accessible "$MOUNT_DIR"; then
+    if is_mounted "$MOUNT_DIR"; then
         log "SMB 마운트 끊김 ($MOUNT_DIR) — 기존 복사본 유지"
     else
-        log "SMB 마운트 없음 ($MOUNT_DIR) — 기존 복사본 유지"
+        log "SMB 원본 경로 접근 불가 ($MOUNT_DIR) — 기존 복사본 유지"
     fi
     ensure_local_copy_meta
     exit 0

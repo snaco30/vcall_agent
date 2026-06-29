@@ -59,16 +59,39 @@
             height: 100dvh;
             max-height: 100dvh;
         }
-        #incomingCallsModal .incoming-sheet {
+        #incomingCallsModal .incoming-sheet,
+        #incomingMerchantModal .merchant-sheet {
             height: 100dvh;
             max-height: 100dvh;
         }
         @media (min-width: 640px) {
             #aspMerchantModal .asp-sheet,
-            #incomingCallsModal .incoming-sheet {
+            #incomingCallsModal .incoming-sheet,
+            #incomingMerchantModal .merchant-sheet {
                 height: auto;
                 max-height: 92vh;
             }
+        }
+        .incoming-card-zone {
+            transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .incoming-card-merchant:hover {
+            background-color: rgba(238, 242, 255, 0.85);
+        }
+        .incoming-card-content:hover {
+            background-color: rgba(250, 250, 250, 0.95);
+        }
+        .incoming-card-zone:active {
+            transform: scale(0.995);
+        }
+        .copy-field-row {
+            transition: background-color 0.15s ease, box-shadow 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .copy-field-row.copied {
+            box-shadow: inset 0 0 0 2px rgba(52, 211, 153, 0.55);
+            background-color: rgba(236, 253, 245, 0.6);
         }
         .nav-action-btn {
             min-height: 2.25rem;
@@ -319,10 +342,10 @@
     </div>
 </div>
 
-<div id="aspCopyToast" class="fixed bottom-6 left-1/2 z-[70] hidden pointer-events-none px-4 py-2.5 rounded-xl bg-zinc-900/95 text-white text-sm font-medium shadow-xl shadow-zinc-900/20 ring-1 ring-white/10" role="status" aria-live="polite">
-    <span class="text-emerald-300 font-semibold">복사됨</span>
+<div id="aspCopyToast" class="fixed bottom-6 left-1/2 z-[70] hidden pointer-events-none px-4 py-2.5 rounded-xl bg-zinc-900/95 text-white text-sm font-medium shadow-xl shadow-zinc-900/20 ring-1 ring-white/10 max-w-[min(100vw-2rem,28rem)]" role="status" aria-live="polite">
+    <span id="aspCopyToastLabel" class="text-emerald-300 font-semibold">복사됨</span>
     <span class="mx-1.5 text-zinc-500">·</span>
-    <span id="aspCopyToastText" class="font-mono text-emerald-50"></span>
+    <span id="aspCopyToastText" class="font-mono text-emerald-50 break-all"></span>
 </div>
 
 <!-- ASP Merchant Edit Modal -->
@@ -363,9 +386,32 @@
     </div>
 </div>
 
+<!-- Incoming Merchant Info Modal -->
+<div id="incomingMerchantModal" class="fixed inset-0 z-[55] hidden bg-zinc-900/45 backdrop-blur-sm sm:p-4 sm:p-6 flex justify-center items-stretch sm:items-center" onclick="closeIncomingMerchantModal()">
+    <div class="merchant-sheet bg-white sm:rounded-xl shadow-2xl shadow-zinc-900/10 w-full flex flex-col overflow-hidden max-w-lg ring-0 sm:ring-1 ring-zinc-200/60" onclick="event.stopPropagation()">
+        <div class="shrink-0 bg-white border-b border-zinc-200">
+            <div class="sm:hidden flex justify-center pt-2.5 pb-0.5">
+                <span class="w-10 h-1 rounded-full bg-zinc-300" aria-hidden="true"></span>
+            </div>
+            <div class="px-4 sm:px-6 pt-2 sm:pt-4 pb-3 flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <h3 class="text-base sm:text-lg font-bold text-zinc-900" id="incomingMerchantModalTitle">가맹점 정보</h3>
+                    <p class="text-[11px] sm:text-xs text-zinc-500 mt-0.5">탭하여 클립보드에 복사</p>
+                </div>
+                <button type="button" onclick="closeIncomingMerchantModal()" class="shrink-0 text-zinc-400 hover:text-zinc-700 p-2 -mr-1 rounded-full hover:bg-zinc-100 transition-all" aria-label="닫기">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+        </div>
+        <div class="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 bg-zinc-50/50 custom-scrollbar pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <div id="incomingMerchantBody" class="max-w-md mx-auto w-full space-y-2"></div>
+        </div>
+    </div>
+</div>
+
 <!-- History Modal -->
-<div id="historyModal" class="fixed inset-0 z-50 hidden bg-zinc-900/40 backdrop-blur-sm flex justify-center items-center p-4 sm:p-6">
-    <div class="bg-white rounded-xl shadow-2xl shadow-zinc-900/10 w-full h-full flex flex-col overflow-hidden max-w-5xl ring-1 ring-zinc-200/60">
+<div id="historyModal" class="fixed inset-0 z-[56] hidden bg-zinc-900/40 backdrop-blur-sm flex justify-center items-center p-4 sm:p-6" onclick="closeModal()">
+    <div class="bg-white rounded-xl shadow-2xl shadow-zinc-900/10 w-full h-full flex flex-col overflow-hidden max-w-5xl ring-1 ring-zinc-200/60" onclick="event.stopPropagation()">
         <div class="bg-white px-5 sm:px-6 py-4 flex justify-between items-center border-b border-zinc-200">
             <div>
                 <h3 class="text-base font-bold text-zinc-900" id="historyModalTitle">가맹점 최근 통화내역</h3>
@@ -430,6 +476,7 @@
 <script>
     const modalEl = document.getElementById('historyModal');
     const incomingModalEl = document.getElementById('incomingCallsModal');
+    const incomingMerchantModalEl = document.getElementById('incomingMerchantModal');
     const aspMerchantModalEl = document.getElementById('aspMerchantModal');
     const aspMerchantEditModalEl = document.getElementById('aspMerchantEditModal');
     const aspMerchantListEl = document.getElementById('aspMerchantList');
@@ -597,18 +644,21 @@ GIANT(자이언트)천안	giant	2017-03-02
 
     let aspCopyToastTimer = null;
 
-    async function copyAspMerchantId(buttonEl) {
-        const aspId = (buttonEl?.dataset?.aspId || '').trim();
-        if (!aspId) return;
+    const CHEVRON_RIGHT_SVG = '<svg class="w-3.5 h-3.5 shrink-0 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>';
+    const COPY_ICON_SVG = '<svg class="w-4 h-4 text-zinc-300 group-hover:text-indigo-500 shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>';
+
+    async function copyToClipboard(text) {
+        const value = (text ?? '').toString().trim();
+        if (!value || value === '-') return false;
         try {
             if (navigator.clipboard?.writeText) {
-                await navigator.clipboard.writeText(aspId);
+                await navigator.clipboard.writeText(value);
             } else {
                 throw new Error('clipboard unavailable');
             }
         } catch {
             const textarea = document.createElement('textarea');
-            textarea.value = aspId;
+            textarea.value = value;
             textarea.setAttribute('readonly', '');
             textarea.style.position = 'fixed';
             textarea.style.left = '-9999px';
@@ -617,16 +667,16 @@ GIANT(자이언트)천안	giant	2017-03-02
             document.execCommand('copy');
             document.body.removeChild(textarea);
         }
-        buttonEl.classList.add('asp-id-copied');
-        setTimeout(() => buttonEl.classList.remove('asp-id-copied'), 1200);
-        showAspCopyToast(aspId);
+        return true;
     }
 
-    function showAspCopyToast(aspId) {
+    function showCopyToast(text, label) {
         const toast = document.getElementById('aspCopyToast');
-        const text = document.getElementById('aspCopyToastText');
-        if (!toast || !text) return;
-        text.textContent = aspId;
+        const labelEl = document.getElementById('aspCopyToastLabel');
+        const textEl = document.getElementById('aspCopyToastText');
+        if (!toast || !textEl) return;
+        if (labelEl) labelEl.textContent = label ? `${label} 복사됨` : '복사됨';
+        textEl.textContent = text;
         toast.classList.remove('hidden');
         toast.classList.add('asp-copy-toast-show');
         if (aspCopyToastTimer) clearTimeout(aspCopyToastTimer);
@@ -634,6 +684,27 @@ GIANT(자이언트)천안	giant	2017-03-02
             toast.classList.add('hidden');
             toast.classList.remove('asp-copy-toast-show');
         }, 2000);
+    }
+
+    async function copyFromFieldRow(rowEl) {
+        if (!rowEl || rowEl.dataset.copyable !== 'true') return;
+        const value = rowEl.dataset.copyValue || '';
+        const label = rowEl.dataset.copyLabel || '';
+        const copied = await copyToClipboard(value);
+        if (!copied) return;
+        rowEl.classList.add('copied');
+        setTimeout(() => rowEl.classList.remove('copied'), 1200);
+        showCopyToast(value, label);
+    }
+
+    async function copyAspMerchantId(buttonEl) {
+        const aspId = (buttonEl?.dataset?.aspId || '').trim();
+        if (!aspId) return;
+        const copied = await copyToClipboard(aspId);
+        if (!copied) return;
+        buttonEl.classList.add('asp-id-copied');
+        setTimeout(() => buttonEl.classList.remove('asp-id-copied'), 1200);
+        showCopyToast(aspId, 'ASP ID');
     }
 
     function renderAspMerchantCard(item) {
@@ -1631,13 +1702,19 @@ GIANT(자이언트)천안	giant	2017-03-02
 
     function openHistory(saupNo, telNo, merName) {
         const cardList = document.getElementById('historyCardList');
-        document.getElementById('historyModalTitle').innerHTML = `<span class="text-indigo-600">${merName}</span> <span class="text-zinc-400 font-normal">통화내역</span>`;
+        const safeName = escapeHtml(merName || '-');
+        document.getElementById('historyModalTitle').innerHTML = `<span class="text-indigo-600">${safeName}</span> <span class="text-zinc-400 font-normal">통화내역</span>`;
         document.getElementById('historyFilterSummary').innerText = '0건';
         document.getElementById('historyYearFilters').innerHTML = '';
         skipEmptyHistory = false;
         updateSkipEmptyHistoryButton();
         cardList.innerHTML = loadingStateHtml('통화 히스토리를 조회 중입니다...');
         modalEl.classList.remove('hidden');
+
+        if (!hasHistoryText(saupNo) && !hasHistoryText(telNo)) {
+            cardList.innerHTML = emptyStateHtml('통화 이력을 조회할 수 없습니다', '사업자번호 또는 전화번호 정보가 없습니다.');
+            return;
+        }
 
         secureFetch(`/api/history?saup_no=${encodeURIComponent(saupNo)}&tel_no=${encodeURIComponent(telNo)}`)
             .then(data => {
@@ -1655,6 +1732,106 @@ GIANT(자이언트)천안	giant	2017-03-02
     }
 
     function closeModal() { modalEl.classList.add('hidden'); }
+
+    function buildCopyableFieldRow(label, value) {
+        const raw = (value ?? '').toString().trim();
+        const display = raw || '-';
+        const copyable = raw && raw !== '-';
+        const valueClass = label === '사업자' ? 'font-mono' : '';
+        if (!copyable) {
+            return `
+                <div class="copy-field-row rounded-xl bg-zinc-50/80 ring-1 ring-zinc-200/60 px-4 py-3 opacity-70">
+                    <p class="text-[10px] font-semibold uppercase tracking-wide text-zinc-400 mb-1">${escapeHtml(label)}</p>
+                    <p class="text-sm text-zinc-500 break-words ${valueClass}">${escapeHtml(display)}</p>
+                </div>
+            `;
+        }
+        return `
+            <button type="button" onclick="copyFromFieldRow(this)" data-copyable="true" data-copy-label=${JSON.stringify(label)} data-copy-value=${JSON.stringify(raw)} class="copy-field-row group w-full text-left rounded-xl bg-white ring-1 ring-zinc-200/60 px-4 py-3 hover:bg-indigo-50/80 hover:ring-indigo-200/80 active:scale-[0.99] transition-all">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-[10px] font-semibold uppercase tracking-wide text-indigo-500 mb-1">${escapeHtml(label)}</p>
+                        <p class="text-sm text-zinc-800 break-words leading-relaxed ${valueClass}">${escapeHtml(display)}</p>
+                    </div>
+                    ${COPY_ICON_SVG}
+                </div>
+            </button>
+        `;
+    }
+
+    function renderIncomingMerchantFields(merchant, options = {}) {
+        const { unregistered = false, telFallback = '' } = options;
+        const rows = [];
+        if (unregistered) {
+            rows.push(`
+                <div class="rounded-xl bg-amber-50 ring-1 ring-amber-200/80 px-4 py-3 mb-3">
+                    <p class="text-xs font-semibold text-amber-800">미등록 가맹점</p>
+                    <p class="text-[11px] text-amber-700/90 mt-1 leading-relaxed">마스터에 등록되지 않은 번호입니다. 전화번호만 복사할 수 있습니다.</p>
+                </div>
+            `);
+            rows.push(buildCopyableFieldRow('핸드폰번호', telFallback));
+            return rows.join('');
+        }
+        rows.push(buildCopyableFieldRow('사업자', merchant.saup_no));
+        rows.push(buildCopyableFieldRow('핸드폰번호', merchant.tel_no || telFallback));
+        rows.push(buildCopyableFieldRow('대표자', merchant.presi_name));
+        rows.push(buildCopyableFieldRow('주소', merchant.addr));
+        rows.push(buildCopyableFieldRow('비고', merchant.bigo));
+        return rows.join('');
+    }
+
+    function findMerchantFromResults(data, saupNo, telNo) {
+        if (!data || !data.length) return null;
+        if (hasHistoryText(saupNo)) {
+            const exact = data.find(m => m.saup_no === saupNo);
+            if (exact) return exact;
+        }
+        if (hasHistoryText(telNo)) {
+            const telDigits = telNo.replace(/-/g, '');
+            const byTel = data.find(m => (m.tel_no || '').replace(/-/g, '') === telDigits);
+            if (byTel) return byTel;
+        }
+        return data[0];
+    }
+
+    function openIncomingMerchantInfo(saupNo, telNo, merName) {
+        const titleEl = document.getElementById('incomingMerchantModalTitle');
+        const bodyEl = document.getElementById('incomingMerchantBody');
+        if (!bodyEl || !incomingMerchantModalEl) return;
+
+        const displayName = (merName || '').trim() || '-';
+        if (titleEl) titleEl.innerHTML = `<span class="text-indigo-600">${escapeHtml(displayName)}</span>`;
+        bodyEl.innerHTML = loadingStateHtml('가맹점 정보를 조회 중입니다...');
+        incomingMerchantModalEl.classList.remove('hidden');
+
+        if (isUnregisteredIncomingName(merName)) {
+            bodyEl.innerHTML = renderIncomingMerchantFields(null, { unregistered: true, telFallback: telNo });
+            return;
+        }
+
+        const searchKey = (saupNo || telNo || '').trim();
+        if (!searchKey) {
+            bodyEl.innerHTML = emptyStateHtml('가맹점 정보가 없습니다', '사업자번호 또는 전화번호가 확인되지 않습니다.');
+            return;
+        }
+
+        secureFetch(`/api/merchants?search=${encodeURIComponent(searchKey)}`)
+            .then(data => {
+                const merchant = findMerchantFromResults(data, saupNo, telNo);
+                if (!merchant) {
+                    bodyEl.innerHTML = emptyStateHtml('마스터 데이터 없음', '등록된 가맹점 정보를 찾을 수 없습니다.');
+                    return;
+                }
+                bodyEl.innerHTML = renderIncomingMerchantFields(merchant, { telFallback: telNo });
+            })
+            .catch(() => {
+                bodyEl.innerHTML = errorStateHtml('가맹점 정보 로드에 실패했습니다.');
+            });
+    }
+
+    function closeIncomingMerchantModal() {
+        if (incomingMerchantModalEl) incomingMerchantModalEl.classList.add('hidden');
+    }
 
     function todayKst() {
         const parts = new Intl.DateTimeFormat('en-CA', {
@@ -1691,55 +1868,62 @@ GIANT(자이언트)천안	giant	2017-03-02
         return (name || '').trim().includes('미등록');
     }
 
-    function handleIncomingCallCardClick(card) {
-        const saup = card.dataset.saup || '';
-        const tel = card.dataset.tel || '';
-        const name = card.dataset.name || '';
-
-        closeIncomingModal();
-
-        if (isUnregisteredIncomingName(name) && hasHistoryText(tel)) {
-            document.getElementById('searchInput').value = tel;
-            loadData(tel);
-            document.getElementById('merchantResultsPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
-            return;
-        }
-
-        if (hasHistoryText(saup) || hasHistoryText(tel)) {
-            openHistory(saup, tel, name);
-        }
-    }
-
     function buildIncomingCallCard(item) {
-        const isUnregistered = isUnregisteredIncomingName(item.mer_name);
-        const canOpenHistory = !isUnregistered && (hasHistoryText(item.saup_no) || hasHistoryText(item.tel_no));
-        const canSearchByTel = isUnregistered && hasHistoryText(item.tel_no);
-        const isInteractive = canOpenHistory || canSearchByTel;
-        const interactiveClass = isInteractive
-            ? 'incoming-call-card cursor-pointer hover:ring-indigo-300 hover:shadow-md transition-all active:scale-[0.99]'
-            : '';
-        const actionLabel = canSearchByTel ? '가맹점 조회' : '통화 이력';
+        const merName = item.mer_name || '-';
+        const contentRaw = (item.content || '').trim();
+        const hasContent = hasHistoryText(contentRaw);
+        const contentDisplay = hasContent ? contentRaw : '내용 없음';
+        const contentMutedClass = hasContent ? 'text-zinc-700' : 'text-zinc-400 italic';
+        const timeLabel = escapeHtml(item.regi_time || item.regi_date || '-');
+
         return `
-            <div class="bg-white rounded-xl ring-1 ring-zinc-200/60 shadow-sm p-3 sm:p-5 ${interactiveClass}" data-saup="${escapeHtml(item.saup_no || '')}" data-tel="${escapeHtml(item.tel_no || '')}" data-name="${escapeHtml(item.mer_name || '')}">
-                <div class="flex items-start justify-between gap-2 sm:gap-3 mb-1.5 sm:mb-2">
-                    <p class="text-[10px] sm:text-[11px] font-medium text-indigo-600 font-mono">${escapeHtml(item.regi_time || item.regi_date || '-')}</p>
-                    ${isInteractive ? `
-                        <div class="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs font-medium text-indigo-500 flex-shrink-0">
-                            <span>${actionLabel}</span>
-                            <svg class="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                        </div>
-                    ` : ''}
+            <article class="incoming-call-item bg-white rounded-xl ring-1 ring-zinc-200/60 shadow-sm overflow-hidden" data-saup="${escapeHtml(item.saup_no || '')}" data-tel="${escapeHtml(item.tel_no || '')}" data-name="${escapeHtml(item.mer_name || '')}">
+                <div class="px-3 sm:px-4 py-2 bg-zinc-50/80 border-b border-zinc-100">
+                    <p class="text-[10px] sm:text-[11px] font-medium text-indigo-600 font-mono">${timeLabel}</p>
                 </div>
-                <h4 class="text-sm sm:text-base font-bold text-zinc-900 mb-1 sm:mb-2 break-words leading-snug">${escapeHtml(item.mer_name || '-')}</h4>
-                <p class="text-xs sm:text-sm text-zinc-700 whitespace-pre-wrap break-words max-h-[3.75rem] overflow-hidden sm:max-h-none sm:overflow-visible">${escapeHtml(item.content || '-')}</p>
-                ${item.tel_no ? `<p class="text-[10px] sm:text-xs text-zinc-400 mt-1.5 sm:mt-2 font-mono">${escapeHtml(item.tel_no)}</p>` : ''}
-            </div>
+                <button type="button" class="incoming-card-zone incoming-card-merchant w-full text-left px-3 sm:px-4 py-3 sm:py-3.5 bg-indigo-50/50 border-b border-zinc-100/80 flex items-center justify-between gap-3 cursor-pointer group">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-[10px] font-semibold uppercase tracking-wide text-indigo-500/80 mb-0.5">상호</p>
+                        <h4 class="text-sm sm:text-base font-bold text-zinc-900 break-words leading-snug">${escapeHtml(merName)}</h4>
+                    </div>
+                    <div class="flex items-center gap-1 text-[10px] sm:text-xs font-medium text-indigo-500 shrink-0">
+                        <span class="hidden sm:inline">정보</span>
+                        ${CHEVRON_RIGHT_SVG}
+                    </div>
+                </button>
+                <button type="button" class="incoming-card-zone incoming-card-content w-full text-left px-3 sm:px-4 py-3 sm:py-3.5 bg-white flex items-start justify-between gap-3 cursor-pointer group">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-[10px] font-semibold uppercase tracking-wide text-zinc-400 mb-0.5">통화내용</p>
+                        <p class="text-xs sm:text-sm ${contentMutedClass} whitespace-pre-wrap break-words line-clamp-3 sm:line-clamp-none leading-relaxed">${escapeHtml(contentDisplay)}</p>
+                    </div>
+                    <div class="flex items-center gap-1 text-[10px] sm:text-xs font-medium text-zinc-500 shrink-0 mt-0.5">
+                        <span class="hidden sm:inline">이력</span>
+                        ${CHEVRON_RIGHT_SVG}
+                    </div>
+                </button>
+            </article>
         `;
     }
 
     function attachIncomingCallCardListeners(container) {
-        container.querySelectorAll('.incoming-call-card').forEach(card => {
-            card.addEventListener('click', () => handleIncomingCallCardClick(card));
+        container.querySelectorAll('.incoming-call-item').forEach(card => {
+            const saup = card.dataset.saup || '';
+            const tel = card.dataset.tel || '';
+            const name = card.dataset.name || '';
+            const merchantBtn = card.querySelector('.incoming-card-merchant');
+            const contentBtn = card.querySelector('.incoming-card-content');
+            if (merchantBtn) {
+                merchantBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openIncomingMerchantInfo(saup, tel, name);
+                });
+            }
+            if (contentBtn) {
+                contentBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openHistory(saup, tel, name);
+                });
+            }
         });
     }
 

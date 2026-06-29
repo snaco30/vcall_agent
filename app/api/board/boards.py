@@ -8,7 +8,7 @@ from app.api.auth import get_current_user
 from app.api.board.common import ensure_board, ensure_post, normalize_post, sanitize_slug
 from app.api.board.config import NEW_POST_DAYS, POSTS_PER_PAGE_DEFAULT
 from app.api.board.schemas import BoardCreate, BoardReorder, BoardTabCreate, BoardTabUpdate, BoardUpdate, PostCreate
-from app.api.board_db import execute, fetch_all, fetch_one, utc_now_iso
+from app.api.board_db import POST_LIST_ORDER_SQL, execute, fetch_all, fetch_one, utc_now_iso
 
 router = APIRouter(tags=["Boards"])
 
@@ -420,7 +420,7 @@ def list_posts(
                (SELECT COUNT(1) FROM post_files WHERE post_id = posts.id AND kind = 'attachment') AS attachment_count
         FROM posts
         {where}
-        ORDER BY is_pinned DESC, created_at DESC, id DESC
+        ORDER BY {POST_LIST_ORDER_SQL}
         LIMIT ? OFFSET ?
         """,
         tuple(params),

@@ -73,13 +73,16 @@ def update_post(post_id: int, payload: PostUpdate, current_user: str = Depends(g
                 raise HTTPException(status_code=400, detail="비활성 게시판으로는 이동할 수 없습니다.")
             board_id = target_board_id
 
+    now = utc_now_iso()
+    was_draft = (post.get("status") or "").strip().lower() == "draft"
+    created_at = now if was_draft and status == "published" else post["created_at"]
     execute(
         """
         UPDATE posts
-        SET board_id = ?, title = ?, body_html = ?, is_pinned = ?, status = ?, updated_at = ?
+        SET board_id = ?, title = ?, body_html = ?, is_pinned = ?, status = ?, updated_at = ?, created_at = ?
         WHERE id = ?
         """,
-        (board_id, title, body_html, 1 if payload.is_pinned else 0, status, utc_now_iso(), post_id),
+        (board_id, title, body_html, 1 if payload.is_pinned else 0, status, now, created_at, post_id),
     )
     return normalize_post(ensure_post(post_id))
 

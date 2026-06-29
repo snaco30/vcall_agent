@@ -15,6 +15,11 @@ def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+# ISO8601 혼합 형식(타임존 유무·마이크로초)을 datetime()으로 통일해 정렬
+POST_SORT_DATETIME_SQL = "datetime(replace(substr(created_at, 1, 19), 'T', ' '))"
+POST_LIST_ORDER_SQL = f"is_pinned DESC, {POST_SORT_DATETIME_SQL} DESC, id DESC"
+
+
 def slugify(value: str) -> str:
     lowered = (value or "").strip().lower()
     lowered = re.sub(r"[^a-z0-9가-힣]+", "-", lowered)

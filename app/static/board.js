@@ -1829,10 +1829,13 @@ async function loadPosts(page = currentPage) {
             .map(
                 (post, index) => {
                     const listNo = result.total - (result.page - 1) * result.page_size - index;
+                    const listLabel = post.is_pinned
+                        ? `<span class="text-indigo-600 font-bold">공지</span>`
+                        : String(listNo);
                     return `
                 <article class="bg-white rounded-xl ring-1 ring-zinc-200 shadow-sm p-3 sm:p-4 w-full min-w-0">
                     <div class="flex gap-2 sm:gap-3">
-                        <span class="shrink-0 w-7 sm:w-9 pt-0.5 text-right text-[10px] sm:text-xs text-zinc-400 tabular-nums font-semibold leading-snug" aria-hidden="true">${listNo}</span>
+                        <span class="shrink-0 w-7 sm:w-9 pt-0.5 text-right text-[10px] sm:text-xs text-zinc-400 tabular-nums font-semibold leading-snug" aria-hidden="true">${listLabel}</span>
                         <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3 min-w-0 flex-1">
                         <div class="min-w-0 flex-1 w-full">
                             <button class="post-detail-btn text-left w-full min-w-0" data-post-id="${post.id}">

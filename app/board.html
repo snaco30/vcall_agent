@@ -237,14 +237,20 @@
     <nav class="bg-white/95 backdrop-blur border-b border-zinc-200 sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3">
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div class="flex items-center gap-2 sm:gap-3 min-w-0">
-                    <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-indigo-600 text-white font-bold flex items-center justify-center shrink-0">V</div>
-                    <div class="min-w-0">
-                        <h1 class="text-sm sm:text-base font-bold text-zinc-900 truncate">게시판 센터</h1>
-                        <p class="text-[10px] sm:text-xs text-zinc-500 hidden sm:block">Toast UI Editor 기반 운영 게시판</p>
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 min-w-0 flex-1">
+                    <div class="flex items-center gap-2 sm:gap-3 min-w-0 shrink-0">
+                        <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-indigo-600 text-white font-bold flex items-center justify-center shrink-0">V</div>
+                        <div class="min-w-0">
+                            <h1 class="text-sm sm:text-base font-bold text-zinc-900 truncate">게시판 센터</h1>
+                            <p class="text-[10px] sm:text-xs text-zinc-500 hidden sm:block">Toast UI Editor 기반 운영 게시판</p>
+                        </div>
                     </div>
+                    <form id="globalPostSearchForm" class="flex items-center gap-1.5 w-full sm:flex-1 sm:min-w-0 sm:max-w-md">
+                        <input id="globalPostSearchInput" type="search" placeholder="전체 게시판 검색" class="flex-1 min-w-0 px-3 py-1.5 sm:py-2 text-sm rounded-lg bg-zinc-50 ring-1 ring-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
+                        <button type="submit" class="board-nav-btn shrink-0 px-2.5 py-1.5 sm:px-3 sm:py-2 text-[10px] sm:text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">검색</button>
+                    </form>
                 </div>
-                <div class="flex flex-wrap items-center gap-1 sm:gap-2 w-full sm:w-auto sm:justify-end">
+                <div class="flex flex-wrap items-center gap-1 sm:gap-2 w-full sm:w-auto sm:justify-end shrink-0">
                     <button id="boardBackupBtn" class="board-nav-btn flex-1 sm:flex-none px-2 py-1.5 text-[10px] sm:px-3 sm:py-2 sm:text-xs font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700"><span class="sm:hidden">백업</span><span class="hidden sm:inline">백업/복구</span></button>
                     <button id="boardCreateBtn" class="board-nav-btn flex-1 sm:flex-none px-2 py-1.5 text-[10px] sm:px-3 sm:py-2 sm:text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"><span class="sm:hidden">생성</span><span class="hidden sm:inline">게시판 생성</span></button>
                     <button id="goHomeBtn" class="board-nav-btn flex-1 sm:flex-none px-2 py-1.5 text-[10px] sm:px-3 sm:py-2 sm:text-xs font-semibold rounded-lg bg-zinc-100 text-zinc-700 hover:bg-zinc-200">메인</button>

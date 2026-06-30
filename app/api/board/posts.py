@@ -4,10 +4,62 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.auth import get_current_user
 from app.api.board.common import ensure_board, ensure_post, normalize_post, sanitize_html
+from app.api.board.config import POSTS_PER_PAGE_DEFAULT
 from app.api.board.schemas import PostUpdate
-from app.api.board_db import execute, fetch_all, fetch_one, utc_now_iso
+from app.api.board_db import POST_SORT_DATETIME_SQL, execute, fetch_all, fetch_one, utc_now_iso
 
 router = APIRouter(tags=["Board Posts"])
+
+GLOBAL_POST_ORDER_SQL = f"p.is_pinned DESC, {POST_SORT_DATETIME_SQL.replace('created_at', 'p.created_at')} DESC, p.id DESC"
+
+
+@router.get("/posts/search")
+def search_posts_global(
+    q: str = Query("", max_length=120),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(POSTS_PER_PAGE_DEFAULT, ge=1, le=100),
+    current_user: str = Depends(get_current_user),
+):
+    keyword = q.strip()
+    if not keyword:
+        raise HTTPException(status_code=400, detail="검색어를 입력해 주세요.")
+
+    where = "WHERE p.deleted_at IS NULL AND p.status = 'published' AND b.is_active = 1"
+    like = f"%{keyword}%"
+    params: list[object] = [like, like]
+    where += " AND (p.title LIKE ? OR p.body_html LIKE ?)"
+
+    total_row = fetch_one(
+        f"""
+        SELECT COUNT(1) AS count
+        FROM posts p
+        INNER JOIN boards b ON b.id = p.board_id
+        {where}
+        """,
+        tuple(params),
+    )
+    total = int((total_row or {}).get("count", 0) or 0)
+    offset = (page - 1) * page_size
+    query_params = list(params) + [page_size, offset]
+    rows = fetch_all(
+        f"""
+        SELECT
+            p.id, p.board_id, p.title, p.author_username, p.is_pinned, p.view_count,
+            p.status, p.created_at, p.updated_at,
+            (SELECT COUNT(1) FROM post_files WHERE post_id = p.id AND kind = 'attachment') AS attachment_count
+        FROM posts p
+        INNER JOIN boards b ON b.id = p.board_id
+        {where}
+        ORDER BY {GLOBAL_POST_ORDER_SQL}
+        LIMIT ? OFFSET ?
+        """,
+        tuple(query_params),
+    )
+    for row in rows:
+        row["is_pinned"] = bool(row.get("is_pinned", 0))
+        row["view_count"] = int(row.get("view_count", 0) or 0)
+        row["attachment_count"] = int(row.get("attachment_count", 0) or 0)
+    return {"items": rows, "total": total, "page": page, "page_size": page_size}
 
 
 @router.get("/posts/{post_id}")

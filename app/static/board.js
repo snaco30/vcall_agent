@@ -5,6 +5,9 @@ let boardTabMap = {};
 let currentBoardId = null;
 let currentPage = 1;
 let currentQuery = "";
+let isGlobalSearchMode = false;
+let globalSearchQuery = "";
+let globalSearchPage = 1;
 let editor = null;
 let editingPostId = null;
 let editingPostBoardId = null;
@@ -31,6 +34,8 @@ const currentBoardMetaEl = document.getElementById("currentBoardMeta");
 const postListEl = document.getElementById("postList");
 const postPaginationEl = document.getElementById("postPagination");
 const postSearchInputEl = document.getElementById("postSearchInput");
+const globalPostSearchFormEl = document.getElementById("globalPostSearchForm");
+const globalPostSearchInputEl = document.getElementById("globalPostSearchInput");
 const postCreateBtnEl = document.getElementById("postCreateBtn");
 const postExcelBtnEl = document.getElementById("postExcelBtn");
 const excelImportModalEl = document.getElementById("excelImportModal");
@@ -1166,6 +1171,7 @@ function renderBoardTabs() {
 }
 
 function selectBoardTab(boardId) {
+    exitGlobalSearchMode();
     currentBoardId = Number(boardId);
     currentPage = 1;
     currentQuery = "";
@@ -1425,6 +1431,7 @@ function bindBoardListDrag() {
 }
 
 function selectBoard(boardId) {
+    exitGlobalSearchMode();
     const board = boards.find((item) => item.id === Number(boardId));
     let targetId = Number(boardId);
     if (board?.tabs?.length > 1) {
@@ -1610,7 +1617,93 @@ async function downloadPostExcelTemplate() {
     URL.revokeObjectURL(url);
 }
 
+function exitGlobalSearchMode() {
+    if (!isGlobalSearchMode) return;
+    isGlobalSearchMode = false;
+    globalSearchQuery = "";
+    globalSearchPage = 1;
+    if (globalPostSearchInputEl) {
+        globalPostSearchInputEl.value = "";
+    }
+}
+
+function renderPostListItem(post, index, result, { showBoardLabel = false } = {}) {
+    const listNo = result.total - (result.page - 1) * result.page_size - index;
+    const listLabel = post.is_pinned
+        ? `<span class="text-indigo-600 font-bold">공지</span>`
+        : String(listNo);
+    const boardPrefix = showBoardLabel ? `${escapeHtml(getPostBoardLabel(post.board_id))} · ` : "";
+    return `
+                <article class="bg-white rounded-xl ring-1 ring-zinc-200 shadow-sm p-3 sm:p-4 w-full min-w-0">
+                    <div class="flex gap-2 sm:gap-3">
+                        <span class="shrink-0 w-7 sm:w-9 pt-0.5 text-right text-[10px] sm:text-xs text-zinc-400 tabular-nums font-semibold leading-snug" aria-hidden="true">${listLabel}</span>
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3 min-w-0 flex-1">
+                        <div class="min-w-0 flex-1 w-full">
+                            <button class="post-detail-btn text-left w-full min-w-0" data-post-id="${post.id}">
+                                <h3 class="text-sm sm:text-base font-bold text-zinc-900 break-words leading-snug">${post.is_pinned ? "📌 " : ""}${escapeHtml(post.title || "(제목 없음)")}</h3>
+                                <p class="text-[10px] sm:text-xs text-zinc-500 mt-1 break-words leading-relaxed">${boardPrefix}${formatDateTime(post.created_at)} · ${escapeHtml(post.author_username)} · 조회 ${post.view_count}</p>
+                            </button>
+                        </div>
+                        <div class="flex items-center justify-end gap-1.5 sm:gap-2 shrink-0 self-end sm:self-start">
+                            ${renderPostAttachmentBadge(post.attachment_count)}
+                            <button class="post-edit-btn text-[10px] sm:text-[11px] px-2 py-1 rounded bg-zinc-100 text-zinc-600 hover:bg-zinc-200" data-post-id="${post.id}">수정</button>
+                        </div>
+                        </div>
+                    </div>
+                </article>
+            `;
+}
+
+function renderGlobalSearchResults(result) {
+    const banner = `
+        <div class="bg-indigo-50 rounded-xl ring-1 ring-indigo-100 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <p class="text-xs sm:text-sm font-semibold text-indigo-700">전체 검색: ${escapeHtml(globalSearchQuery)} · 총 ${result.total}건</p>
+            <button type="button" id="globalSearchExitBtn" class="text-[11px] sm:text-xs font-semibold px-3 py-1.5 rounded-lg bg-white text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-100">검색 종료</button>
+        </div>
+    `;
+    if (!result.items.length) {
+        postListEl.innerHTML = `${banner}<div class="bg-white rounded-xl ring-1 ring-zinc-200 p-6 sm:p-8 text-center text-xs sm:text-sm text-zinc-500">검색 결과가 없습니다.</div>`;
+        return;
+    }
+    postListEl.innerHTML =
+        banner +
+        result.items.map((post, index) => renderPostListItem(post, index, result, { showBoardLabel: true })).join("");
+}
+
+async function runGlobalSearch(page = 1) {
+    const query = (globalPostSearchInputEl?.value || globalSearchQuery || "").trim();
+    if (!query) {
+        alert("검색어를 입력해 주세요.");
+        return;
+    }
+    isGlobalSearchMode = true;
+    globalSearchQuery = query;
+    globalSearchPage = page;
+    if (globalPostSearchInputEl) {
+        globalPostSearchInputEl.value = query;
+    }
+
+    currentBoardTitleEl.textContent = "전체 게시판 검색";
+    currentBoardMetaEl.textContent = `「${query}」 검색 결과`;
+    postCreateBtnEl.classList.add("hidden");
+    postExcelBtnEl.classList.add("hidden");
+    boardTabBarEl.classList.add("hidden");
+    boardTabBarEl.innerHTML = "";
+
+    const searchParams = new URLSearchParams({
+        q: query,
+        page: String(page),
+        page_size: String(PAGE_SIZE),
+    });
+    const result = await secureFetch(`/api/boards/posts/search?${searchParams.toString()}`);
+    renderGlobalSearchResults(result);
+    renderPagination(result.total, result.page, result.page_size);
+}
+
 async function loadPosts(page = currentPage) {
+    if (isGlobalSearchMode) {
+        exitGlobalSearchMode();
+    }
     const board = currentBoard();
     if (!board) return;
     currentPage = page;
@@ -1633,33 +1726,7 @@ async function loadPosts(page = currentPage) {
         postListEl.innerHTML = `<div class="bg-white rounded-xl ring-1 ring-zinc-200 p-6 sm:p-8 text-center text-xs sm:text-sm text-zinc-500">게시글이 없습니다.</div>`;
     } else {
         postListEl.innerHTML = result.items
-            .map(
-                (post, index) => {
-                    const listNo = result.total - (result.page - 1) * result.page_size - index;
-                    const listLabel = post.is_pinned
-                        ? `<span class="text-indigo-600 font-bold">공지</span>`
-                        : String(listNo);
-                    return `
-                <article class="bg-white rounded-xl ring-1 ring-zinc-200 shadow-sm p-3 sm:p-4 w-full min-w-0">
-                    <div class="flex gap-2 sm:gap-3">
-                        <span class="shrink-0 w-7 sm:w-9 pt-0.5 text-right text-[10px] sm:text-xs text-zinc-400 tabular-nums font-semibold leading-snug" aria-hidden="true">${listLabel}</span>
-                        <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3 min-w-0 flex-1">
-                        <div class="min-w-0 flex-1 w-full">
-                            <button class="post-detail-btn text-left w-full min-w-0" data-post-id="${post.id}">
-                                <h3 class="text-sm sm:text-base font-bold text-zinc-900 break-words leading-snug">${post.is_pinned ? "📌 " : ""}${escapeHtml(post.title || "(제목 없음)")}</h3>
-                                <p class="text-[10px] sm:text-xs text-zinc-500 mt-1 break-words leading-relaxed">${formatDateTime(post.created_at)} · ${escapeHtml(post.author_username)} · 조회 ${post.view_count}</p>
-                            </button>
-                        </div>
-                        <div class="flex items-center justify-end gap-1.5 sm:gap-2 shrink-0 self-end sm:self-start">
-                            ${renderPostAttachmentBadge(post.attachment_count)}
-                            <button class="post-edit-btn text-[10px] sm:text-[11px] px-2 py-1 rounded bg-zinc-100 text-zinc-600 hover:bg-zinc-200" data-post-id="${post.id}">수정</button>
-                        </div>
-                        </div>
-                    </div>
-                </article>
-            `;
-                }
-            )
+            .map((post, index) => renderPostListItem(post, index, result))
             .join("");
     }
     renderPagination(result.total, result.page, result.page_size);
@@ -2644,6 +2711,11 @@ function bindEvents() {
         }
     });
 
+    globalPostSearchFormEl?.addEventListener("submit", (event) => {
+        event.preventDefault();
+        runGlobalSearch(1).catch((error) => alert(error.message));
+    });
+
     boardListEl.addEventListener("click", (event) => {
         if (boardDragSuppressClick) {
             return;
@@ -2690,6 +2762,11 @@ function bindEvents() {
 
     postListEl.addEventListener("click", (event) => {
         const target = event.target;
+        if (target.closest("#globalSearchExitBtn")) {
+            exitGlobalSearchMode();
+            loadPosts(1).catch((error) => alert(error.message));
+            return;
+        }
         const detailBtn = target.closest(".post-detail-btn");
         if (detailBtn) {
             openPostDetail(Number(detailBtn.dataset.postId)).catch((error) => alert(error.message));
@@ -2729,7 +2806,8 @@ function bindEvents() {
         const pageBtn = target.closest(".page-btn");
         if (!pageBtn || pageBtn.disabled) return;
         const page = Number(pageBtn.dataset.page || "1");
-        loadPosts(page)
+        const loadPromise = isGlobalSearchMode ? runGlobalSearch(page) : loadPosts(page);
+        loadPromise
             .then(() => {
                 postListEl.scrollIntoView({ behavior: "smooth", block: "start" });
             })

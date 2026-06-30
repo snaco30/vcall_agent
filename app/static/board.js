@@ -41,19 +41,9 @@ const postExcelInputEl = document.getElementById("postExcelInput");
 const excelValidationErrorsEl = document.getElementById("excelValidationErrors");
 const excelImportResultMsgEl = document.getElementById("excelImportResultMsg");
 const excelSaveBtnEl = document.getElementById("excelSaveBtn");
-const scrapeImportModalEl = document.getElementById("scrapeImportModal");
-const scrapeImportBoardLabelEl = document.getElementById("scrapeImportBoardLabel");
-const scrapeSourceUrlInputEl = document.getElementById("scrapeSourceUrlInput");
-const scrapeMirrorImagesInputEl = document.getElementById("scrapeMirrorImagesInput");
-const scrapePreviewBoxEl = document.getElementById("scrapePreviewBox");
-const scrapeImportResultMsgEl = document.getElementById("scrapeImportResultMsg");
-const scrapePreviewBtnEl = document.getElementById("scrapePreviewBtn");
-const scrapeImportBtnEl = document.getElementById("scrapeImportBtn");
-const postScrapeBtnEl = document.getElementById("postScrapeBtn");
 const boardTabBarEl = document.getElementById("boardTabBar");
 let pendingExcelFile = null;
 let excelImportValidated = false;
-let scrapePreviewReady = false;
 
 const boardModalEl = document.getElementById("boardModal");
 const boardFormEl = document.getElementById("boardForm");
@@ -125,6 +115,9 @@ const commentListEl = document.getElementById("commentList");
 const commentInputEl = document.getElementById("commentInput");
 const commentSubmitBtnEl = document.getElementById("commentSubmitBtn");
 const postModalBodyEl = document.getElementById("postModalBody");
+const postDraftLoadWrapEl = document.getElementById("postDraftLoadWrap");
+const postLoadDraftBtnEl = document.getElementById("postLoadDraftBtn");
+const postDraftPickerEl = document.getElementById("postDraftPicker");
 const detailScrollAreaEl = document.getElementById("detailScrollArea");
 const backupModalEl = document.getElementById("backupModal");
 const backupStatusBoxEl = document.getElementById("backupStatusBox");
@@ -133,6 +126,8 @@ const restoreFileInputEl = document.getElementById("restoreFileInput");
 const restoreModeSelectEl = document.getElementById("restoreModeSelect");
 
 const postBoardMoveExpanded = new Set();
+let boardDraftsCache = [];
+let isNewPostEditor = false;
 function escapeHtml(value) {
     return (value ?? "")
         .toString()
@@ -399,8 +394,7 @@ function unlockBodyScroll() {
     if (
         !postModalEl.classList.contains("hidden") ||
         !detailModalEl.classList.contains("hidden") ||
-        !excelImportModalEl.classList.contains("hidden") ||
-        !scrapeImportModalEl.classList.contains("hidden")
+        !excelImportModalEl.classList.contains("hidden")
     ) {
         return;
     }
@@ -872,7 +866,8 @@ async function handleEditorClipboardPaste(event) {
 
 function initEditor(initialHtml = "") {
     editorRootEl.innerHTML = "";
-    editor = new toastui.Editor({
+    const colorSyntax = toastui?.Editor?.plugin?.colorSyntax;
+    const editorOptions = {
         el: editorRootEl,
         height: "460px",
         initialEditType: "wysiwyg",
@@ -888,7 +883,11 @@ function initEditor(initialHtml = "") {
                 }
             },
         },
-    });
+    };
+    if (colorSyntax) {
+        editorOptions.plugins = [colorSyntax];
+    }
+    editor = new toastui.Editor(editorOptions);
     window.setTimeout(setupEditorImageControls, 0);
 }
 
@@ -1457,7 +1456,6 @@ async function loadBoards() {
         currentBoardMetaEl.textContent = "";
         postCreateBtnEl.classList.add("hidden");
         postExcelBtnEl.classList.add("hidden");
-        postScrapeBtnEl.classList.add("hidden");
     }
 }
 
@@ -1583,126 +1581,6 @@ function closeExcelImportModal() {
     unlockBodyScroll();
 }
 
-function setScrapeImportEnabled(enabled) {
-    scrapePreviewReady = enabled;
-    scrapeImportBtnEl.disabled = !enabled;
-}
-
-function showScrapeImportResult(message, isError = false) {
-    scrapeImportResultMsgEl.textContent = message;
-    scrapeImportResultMsgEl.classList.remove("hidden", "bg-emerald-50", "text-emerald-800", "bg-rose-50", "text-rose-800");
-    scrapeImportResultMsgEl.classList.add(isError ? "bg-rose-50" : "bg-emerald-50", isError ? "text-rose-800" : "text-emerald-800");
-}
-
-function resetScrapeImportModal() {
-    scrapePreviewReady = false;
-    scrapePreviewBoxEl.classList.add("hidden");
-    scrapePreviewBoxEl.innerHTML = "";
-    scrapeImportResultMsgEl.classList.add("hidden");
-    setScrapeImportEnabled(false);
-    scrapePreviewBtnEl.disabled = false;
-    scrapeImportBtnEl.textContent = "가져오기";
-}
-
-function openScrapeImportModal() {
-    const board = currentBoard();
-    if (!board) return;
-    resetScrapeImportModal();
-    scrapeImportBoardLabelEl.textContent = `대상 게시판: ${board.tab_label || board.name}`;
-    if (board.slug === "easypos-tableorder" || board.tab_label === "테이블오더") {
-        scrapeSourceUrlInputEl.value = "http://jaypos.com/zb41pl8/bbs/zboard.php?id=tableorder";
-    } else if (/이지포스/i.test(board.name) || board.slug === "easypos-board" || board.tab_label === "KICCPOS") {
-        scrapeSourceUrlInputEl.value = "http://jaypos.com/zb41pl8/bbs/zboard.php?id=KICCPOS";
-    }
-    scrapeImportModalEl.classList.remove("hidden");
-    resetDraggableModal(scrapeImportModalEl);
-    lockBodyScroll();
-}
-
-function closeScrapeImportModal() {
-    scrapeImportModalEl.classList.add("hidden");
-    resetDraggableModal(scrapeImportModalEl);
-    resetScrapeImportModal();
-    unlockBodyScroll();
-}
-
-function renderScrapePreview(data) {
-    const samples = (data.sample_titles || []).map((title) => `<li class="truncate">${title}</li>`).join("");
-    scrapePreviewBoxEl.innerHTML = `
-        <p><span class="font-semibold">원본 게시판:</span> ${data.board_id || "-"}</p>
-        <p><span class="font-semibold">총 글 수:</span> ${data.total_posts || 0}건 (고정 ${data.pinned_count || 0}건)</p>
-        ${samples ? `<p class="font-semibold pt-1">미리보기 제목</p><ul class="list-disc pl-4 space-y-0.5">${samples}</ul>` : ""}
-    `;
-    scrapePreviewBoxEl.classList.remove("hidden");
-}
-
-async function previewBoardScrape() {
-    const board = currentBoard();
-    if (!board) return;
-    const sourceUrl = scrapeSourceUrlInputEl.value.trim();
-    if (!sourceUrl) {
-        showScrapeImportResult("원본 URL을 입력해 주세요.", true);
-        return;
-    }
-    scrapePreviewBtnEl.disabled = true;
-    scrapeImportResultMsgEl.classList.add("hidden");
-    try {
-        const data = await secureFetch(`/api/boards/${board.id}/scrape/preview`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ source_url: sourceUrl }),
-        });
-        renderScrapePreview(data);
-        setScrapeImportEnabled(true);
-        showScrapeImportResult(`미리보기 완료: ${data.total_posts}건을 가져올 수 있습니다.`);
-    } catch (error) {
-        setScrapeImportEnabled(false);
-        showScrapeImportResult(error.message, true);
-    } finally {
-        scrapePreviewBtnEl.disabled = false;
-    }
-}
-
-async function importBoardScrape() {
-    const board = currentBoard();
-    if (!board || !scrapePreviewReady) return;
-    const sourceUrl = scrapeSourceUrlInputEl.value.trim();
-    if (!sourceUrl) {
-        showScrapeImportResult("원본 URL을 입력해 주세요.", true);
-        return;
-    }
-    if (!confirm(`총 ${scrapePreviewBoxEl.textContent.includes("총 글 수") ? "미리보기" : ""} 글을 '${board.name}' 게시판으로 가져올까요?\n이미 가져온 글은 건너뜁니다.`)) {
-        return;
-    }
-    scrapeImportBtnEl.disabled = true;
-    scrapeImportBtnEl.textContent = "가져오는 중...";
-    try {
-        const data = await secureFetch(`/api/boards/${board.id}/scrape/import`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                source_url: sourceUrl,
-                skip_existing: true,
-                mirror_images: scrapeMirrorImagesInputEl.checked,
-                dry_run: false,
-            }),
-        });
-        const errSuffix = data.failed ? `, 실패 ${data.failed}건` : "";
-        showScrapeImportResult(`가져오기 완료: 성공 ${data.imported}건, 건너뜀 ${data.skipped}건${errSuffix}`, (data.failed || 0) > 0);
-        if (data.imported > 0) {
-            await loadPosts(1);
-        }
-        if ((data.failed || 0) === 0 && data.imported > 0) {
-            setTimeout(() => closeScrapeImportModal(), 1200);
-        }
-    } catch (error) {
-        showScrapeImportResult(error.message, true);
-        setScrapeImportEnabled(true);
-    } finally {
-        scrapeImportBtnEl.textContent = "가져오기";
-    }
-}
-
 async function downloadPostExcelTemplate() {
     const board = currentBoard();
     if (!board) return;
@@ -1742,7 +1620,6 @@ async function loadPosts(page = currentPage) {
     currentBoardMetaEl.textContent = `${groupLabel}${board.slug} · ${board.description || "설명 없음"}`;
     postCreateBtnEl.classList.remove("hidden");
     postExcelBtnEl.classList.remove("hidden");
-    postScrapeBtnEl.classList.remove("hidden");
     renderBoardTabs();
 
     const query = new URLSearchParams({
@@ -2061,6 +1938,101 @@ async function saveBoard(event) {
     await loadBoards();
 }
 
+function isPostEditorEmpty() {
+    const title = postTitleInputEl.value.trim();
+    const bodyHtml = editor ? stripMediaToken(editor.getHTML() || "") : "";
+    const bodyText = bodyHtml.replace(/<[^>]+>/g, " ").replace(/&nbsp;/gi, " ").trim();
+    return !title && !bodyText;
+}
+
+function hidePostDraftPicker() {
+    postDraftPickerEl?.classList.add("hidden");
+}
+
+function getLoadableDrafts(drafts = boardDraftsCache) {
+    return (drafts || []).filter((draft) => {
+        const hasContent = (draft.title || "").trim() || (draft.preview || "").trim();
+        return hasContent;
+    });
+}
+
+function renderPostDraftPicker(drafts) {
+    if (!postDraftPickerEl) return;
+    if (!drafts.length) {
+        postDraftPickerEl.innerHTML = `<p class="px-3 py-2 text-[11px] text-zinc-500">불러올 임시저장 글이 없습니다.</p>`;
+        return;
+    }
+    postDraftPickerEl.innerHTML = drafts
+        .map((draft) => {
+            const title = (draft.title || "").trim() || "(제목 없음)";
+            const preview = (draft.preview || "").trim();
+            const currentMark = draft.id === editingPostId ? `<span class="text-indigo-600 font-semibold"> · 편집 중</span>` : "";
+            return `
+                <button type="button" class="post-draft-pick-btn w-full text-left px-3 py-2 hover:bg-violet-50 border-b border-zinc-100 last:border-0" data-draft-id="${draft.id}">
+                    <p class="text-xs font-semibold text-zinc-900 truncate">${escapeHtml(title)}${currentMark}</p>
+                    <p class="text-[10px] text-zinc-500 mt-0.5">${escapeHtml(formatDateTime(draft.updated_at))}</p>
+                    ${preview ? `<p class="text-[10px] text-zinc-600 mt-1 line-clamp-2">${escapeHtml(preview)}</p>` : ""}
+                </button>
+            `;
+        })
+        .join("");
+}
+
+async function refreshPostDraftLoadUi() {
+    if (!postDraftLoadWrapEl || postModalEl.classList.contains("hidden")) return;
+    const board = currentBoard();
+    if (!board) {
+        postDraftLoadWrapEl.classList.add("hidden");
+        hidePostDraftPicker();
+        return;
+    }
+    try {
+        const data = await secureFetch(`/api/boards/${board.id}/posts/drafts`);
+        boardDraftsCache = data.items || [];
+    } catch {
+        boardDraftsCache = [];
+    }
+    const loadable = getLoadableDrafts();
+    if (loadable.length) {
+        postDraftLoadWrapEl.classList.remove("hidden");
+        postLoadDraftBtnEl.textContent = `임시저장 불러오기 (${loadable.length})`;
+        renderPostDraftPicker(loadable);
+    } else {
+        postDraftLoadWrapEl.classList.add("hidden");
+        hidePostDraftPicker();
+    }
+}
+
+async function loadDraftIntoEditor(draftId) {
+    if (!draftId || draftId === editingPostId) {
+        hidePostDraftPicker();
+        return;
+    }
+    if (!isPostEditorEmpty() && !confirm("현재 작성 중인 내용을 버리고 선택한 임시저장 글을 불러올까요?")) {
+        return;
+    }
+    const discardEmptyId = isPostEditorEmpty() ? editingPostId : null;
+    const detail = await secureFetch(`/api/boards/posts/${draftId}?with_view_count=false`);
+    editingPostId = draftId;
+    isNewPostEditor = false;
+    postModalTitleEl.textContent = "게시글 작성";
+    showPostBoardMove(detail.post.board_id);
+    postTitleInputEl.value = detail.post.title || "";
+    postPinnedInputEl.checked = !!detail.post.is_pinned;
+    initEditor(injectMediaToken(mergePdfEmbedsIntoBody(detail.post.body_html || "", detail.files)));
+    renderEditorAttachmentList(detail.files);
+    postDeleteBtnEl.classList.remove("hidden");
+    hidePostDraftPicker();
+    if (discardEmptyId && discardEmptyId !== draftId) {
+        try {
+            await secureFetch(`/api/boards/posts/${discardEmptyId}`, { method: "DELETE" });
+        } catch {
+            /* ignore */
+        }
+    }
+    await refreshPostDraftLoadUi();
+}
+
 async function deleteBoard() {
     const boardId = document.getElementById("boardIdInput").value;
     if (!boardId) return;
@@ -2083,6 +2055,7 @@ async function openPostEditor(postId = null) {
     if (postId) {
         const detail = await secureFetch(`/api/boards/posts/${postId}?with_view_count=false`);
         editingPostId = postId;
+        isNewPostEditor = false;
         postModalTitleEl.textContent = "게시글 수정";
         showPostBoardMove(detail.post.board_id);
         postTitleInputEl.value = detail.post.title || "";
@@ -2096,26 +2069,35 @@ async function openPostEditor(postId = null) {
             body: JSON.stringify({ title: "" }),
         });
         editingPostId = draft.id;
+        isNewPostEditor = true;
         postModalTitleEl.textContent = "게시글 작성";
         hidePostBoardMove();
         postTitleInputEl.value = "";
         postPinnedInputEl.checked = false;
         initEditor("");
-        postDeleteBtnEl.classList.remove("hidden");
+        postDeleteBtnEl.classList.add("hidden");
         renderEditorAttachmentList([]);
     }
     postModalEl.classList.remove("hidden");
     resetDraggableModal(postModalEl);
     lockBodyScroll();
     resetScrollArea(postModalBodyEl);
+    await refreshPostDraftLoadUi();
 }
 
 function closePostModal() {
+    hidePostDraftPicker();
+    const discardId = editingPostId && isPostEditorEmpty() ? editingPostId : null;
     teardownEditorImageControls();
     hidePostBoardMove();
     postModalEl.classList.add("hidden");
     resetDraggableModal(postModalEl);
     unlockBodyScroll();
+    isNewPostEditor = false;
+    editingPostId = null;
+    if (discardId) {
+        secureFetch(`/api/boards/posts/${discardId}`, { method: "DELETE" }).catch(() => {});
+    }
 }
 
 async function savePost(status) {
@@ -2141,6 +2123,8 @@ async function savePost(status) {
         method: "PATCH",
         body: JSON.stringify(payload),
     });
+    isNewPostEditor = false;
+    editingPostId = null;
     closePostModal();
     if (movedBoardId && movedBoardId !== Number(editingPostOriginalBoardId)) {
         currentBoardId = movedBoardId;
@@ -2527,20 +2511,7 @@ function bindEvents() {
         openPostEditor().catch((error) => alert(error.message));
     });
     postExcelBtnEl.addEventListener("click", openExcelImportModal);
-    postScrapeBtnEl.addEventListener("click", openScrapeImportModal);
     document.getElementById("excelImportModalCloseBtn").addEventListener("click", closeExcelImportModal);
-    document.getElementById("scrapeImportModalCloseBtn").addEventListener("click", closeScrapeImportModal);
-    scrapePreviewBtnEl.addEventListener("click", () => {
-        previewBoardScrape().catch((error) => showScrapeImportResult(error.message, true));
-    });
-    scrapeImportBtnEl.addEventListener("click", () => {
-        importBoardScrape().catch((error) => showScrapeImportResult(error.message, true));
-    });
-    scrapeSourceUrlInputEl.addEventListener("input", () => {
-        setScrapeImportEnabled(false);
-        scrapePreviewBoxEl.classList.add("hidden");
-        scrapeImportResultMsgEl.classList.add("hidden");
-    });
     excelTemplateDownloadBtnEl.addEventListener("click", () => {
         downloadPostExcelTemplate().catch((error) => showExcelImportResult(error.message, true));
     });
@@ -2619,6 +2590,20 @@ function bindEvents() {
     });
     document.getElementById("postPublishBtn").addEventListener("click", () => {
         savePost("published").catch((error) => alert(error.message));
+    });
+    postLoadDraftBtnEl?.addEventListener("click", (event) => {
+        event.stopPropagation();
+        postDraftPickerEl?.classList.toggle("hidden");
+    });
+    postDraftPickerEl?.addEventListener("click", (event) => {
+        const pickBtn = event.target.closest(".post-draft-pick-btn");
+        if (!pickBtn) return;
+        loadDraftIntoEditor(Number(pickBtn.dataset.draftId)).catch((error) => alert(error.message));
+    });
+    document.addEventListener("click", (event) => {
+        if (!postDraftLoadWrapEl || postDraftPickerEl?.classList.contains("hidden")) return;
+        if (postDraftLoadWrapEl.contains(event.target)) return;
+        hidePostDraftPicker();
     });
     postDeleteBtnEl.addEventListener("click", () => {
         deleteCurrentPost().catch((error) => alert(error.message));

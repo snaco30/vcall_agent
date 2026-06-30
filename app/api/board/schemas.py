@@ -50,7 +50,7 @@ class PostCreate(BaseModel):
 
 
 class PostUpdate(BaseModel):
-    title: str = Field(min_length=1, max_length=250)
+    title: str = Field(default="", max_length=250)
     body_html: str = ""
     is_pinned: bool = False
     status: str = Field(default="published")

@@ -13,4 +13,4 @@ MAX_INLINE_BYTES = 5 * 1024 * 1024
 INLINE_IMAGE_MAX_EDGE = 1600
 POSTS_PER_PAGE_DEFAULT = 20
 NEW_POST_DAYS = 15
-BOARD_CSS_SANITIZER = CSSSanitizer(allowed_css_properties=["text-align"])
+BOARD_CSS_SANITIZER = CSSSanitizer(allowed_css_properties=["text-align", "color", "background-color"])

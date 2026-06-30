@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -11,6 +12,11 @@ from app.api.board.schemas import BoardCreate, BoardReorder, BoardTabCreate, Boa
 from app.api.board_db import POST_LIST_ORDER_SQL, execute, fetch_all, fetch_one, utc_now_iso
 
 router = APIRouter(tags=["Boards"])
+
+
+def _draft_preview(body_html: str) -> str:
+    text = re.sub(r"<[^>]+>", " ", body_html or "")
+    return " ".join(text.split())[:120]
 
 
 def _tab_summary(board: dict) -> dict:
@@ -391,6 +397,27 @@ def delete_board(board_id: int, current_user: str = Depends(get_current_user)):
 
     execute("DELETE FROM boards WHERE id = ?", (board_id,))
     return {"deleted": True, "deactivated": False}
+
+
+@router.get("/{board_id}/posts/drafts")
+def list_post_drafts(board_id: int, current_user: str = Depends(get_current_user)):
+    ensure_board(board_id)
+    rows = fetch_all(
+        """
+        SELECT id, board_id, title, body_html, author_username, is_pinned, view_count, status, created_at, updated_at
+        FROM posts
+        WHERE board_id = ? AND author_username = ? AND deleted_at IS NULL AND status = 'draft'
+        ORDER BY updated_at DESC, id DESC
+        LIMIT 30
+        """,
+        (board_id, current_user),
+    )
+    items = []
+    for row in rows:
+        post = normalize_post(row)
+        post["preview"] = _draft_preview(row.get("body_html") or "")
+        items.append(post)
+    return {"items": items}
 
 
 @router.get("/{board_id}/posts")

@@ -949,11 +949,93 @@ GIANT(자이언트)천안	giant	2017-03-02
         const desktop = document.getElementById('userInfo');
         const mobile = document.getElementById('userInfoMobile');
         const chip = `
-            <span class="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-indigo-100 text-indigo-700 text-[10px] sm:text-[10px] font-bold flex items-center justify-center shrink-0">${initial}</span>
-            <span class="truncate">${escapeHtml(username)}</span>
+            <button type="button" onclick="openPasswordModal()" class="inline-flex items-center gap-2 min-w-0 hover:bg-indigo-50 hover:text-indigo-700 rounded-md px-1 py-0.5 -mx-1 transition-colors" title="비밀번호 변경">
+                <span class="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-indigo-100 text-indigo-700 text-[10px] sm:text-[10px] font-bold flex items-center justify-center shrink-0">${initial}</span>
+                <span class="truncate">${escapeHtml(username)}</span>
+            </button>
         `;
         if (desktop) desktop.innerHTML = chip;
         if (mobile) mobile.innerHTML = chip;
+    }
+
+    function openPasswordModal() {
+        const modal = document.getElementById('passwordModal');
+        const form = document.getElementById('passwordChangeForm');
+        const errEl = document.getElementById('passwordChangeError');
+        const okEl = document.getElementById('passwordChangeSuccess');
+        if (!modal || !form) return;
+        form.reset();
+        errEl?.classList.add('hidden');
+        okEl?.classList.add('hidden');
+        modal.classList.remove('hidden');
+        resetDraggableModal(modal);
+        document.body.classList.add('overflow-hidden');
+        document.getElementById('passwordCurrentInput')?.focus();
+    }
+
+    function closePasswordModal() {
+        const modal = document.getElementById('passwordModal');
+        modal?.classList.add('hidden');
+        resetDraggableModal(modal);
+        document.body.classList.remove('overflow-hidden');
+    }
+
+    function handlePasswordChange(event) {
+        event.preventDefault();
+        const errEl = document.getElementById('passwordChangeError');
+        const okEl = document.getElementById('passwordChangeSuccess');
+        const submitBtn = document.getElementById('passwordChangeSubmitBtn');
+        const currentPassword = document.getElementById('passwordCurrentInput')?.value || '';
+        const newPassword = document.getElementById('passwordNewInput')?.value || '';
+        const confirmPassword = document.getElementById('passwordConfirmInput')?.value || '';
+        errEl?.classList.add('hidden');
+        okEl?.classList.add('hidden');
+        if (newPassword.length < 8) {
+            if (errEl) {
+                errEl.textContent = '새 비밀번호는 8자 이상이어야 합니다.';
+                errEl.classList.remove('hidden');
+            }
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            if (errEl) {
+                errEl.textContent = '새 비밀번호 확인이 일치하지 않습니다.';
+                errEl.classList.remove('hidden');
+            }
+            return;
+        }
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = '변경 중...';
+        }
+        secureFetch('/api/auth/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                current_password: currentPassword,
+                new_password: newPassword,
+            }),
+        })
+            .then(() => {
+                if (okEl) {
+                    okEl.textContent = '비밀번호가 변경되었습니다.';
+                    okEl.classList.remove('hidden');
+                }
+                document.getElementById('passwordChangeForm')?.reset();
+                window.setTimeout(() => closePasswordModal(), 1200);
+            })
+            .catch((error) => {
+                if (errEl) {
+                    errEl.textContent = error.message || '비밀번호 변경에 실패했습니다.';
+                    errEl.classList.remove('hidden');
+                }
+            })
+            .finally(() => {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '비밀번호 변경';
+                }
+            });
     }
 
     function withAuthUrl(path) {
@@ -2069,12 +2151,44 @@ GIANT(자이언트)천안	giant	2017-03-02
         if (!aspMerchantEditModalEl.classList.contains('hidden')) closeAspMerchantEdit();
         else if (!aspMerchantModalEl.classList.contains('hidden')) closeAspMerchant();
         else if (!incomingModalEl.classList.contains('hidden')) closeIncomingModal();
+        else if (!document.getElementById('passwordModal')?.classList.contains('hidden')) closePasswordModal();
         else if (!document.getElementById('versionModal')?.classList.contains('hidden')) closeVersionModal();
         else closeModal();
     });
 </script>
 <script src="/static/modal-drag.js"></script>
 <script src="/static/version.js"></script>
+
+<div id="passwordModal" class="hidden fixed inset-0 z-[64] bg-zinc-900/50 backdrop-blur-sm p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="passwordModalTitle" data-draggable-modal onclick="if (event.target === this) closePasswordModal()">
+    <div class="modal-draggable-panel bg-white rounded-xl shadow-xl w-full max-w-md ring-1 ring-zinc-200 overflow-hidden" onclick="event.stopPropagation()">
+        <div class="modal-drag-handle flex items-center justify-between px-5 py-4 border-b border-zinc-100">
+            <div>
+                <h3 id="passwordModalTitle" class="text-base font-bold text-zinc-900">비밀번호 변경</h3>
+                <p class="text-xs text-zinc-500 mt-0.5">로그인 계정의 비밀번호를 변경합니다.</p>
+            </div>
+            <button type="button" id="passwordModalCloseBtn" onclick="closePasswordModal()" class="text-zinc-400 hover:text-zinc-700 p-1 rounded-lg hover:bg-zinc-100" aria-label="닫기">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <form id="passwordChangeForm" class="p-5 space-y-4" onsubmit="handlePasswordChange(event)">
+            <div id="passwordChangeError" class="hidden text-xs text-rose-700 font-medium bg-rose-50 border border-rose-200 rounded-lg px-3 py-2.5" role="alert"></div>
+            <p id="passwordChangeSuccess" class="hidden text-xs text-emerald-700 font-medium bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2.5" role="status"></p>
+            <label class="block text-xs font-semibold text-zinc-600">현재 비밀번호
+                <input id="passwordCurrentInput" type="password" required autocomplete="current-password" class="mt-1 w-full px-3 py-2.5 rounded-lg ring-1 ring-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
+            </label>
+            <label class="block text-xs font-semibold text-zinc-600">새 비밀번호
+                <input id="passwordNewInput" type="password" required minlength="8" autocomplete="new-password" class="mt-1 w-full px-3 py-2.5 rounded-lg ring-1 ring-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30" placeholder="8자 이상">
+            </label>
+            <label class="block text-xs font-semibold text-zinc-600">새 비밀번호 확인
+                <input id="passwordConfirmInput" type="password" required minlength="8" autocomplete="new-password" class="mt-1 w-full px-3 py-2.5 rounded-lg ring-1 ring-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
+            </label>
+            <div class="flex justify-end gap-2 pt-1">
+                <button type="button" onclick="closePasswordModal()" class="px-3 py-2 text-xs font-semibold rounded-lg bg-zinc-100 text-zinc-700 hover:bg-zinc-200">취소</button>
+                <button type="submit" id="passwordChangeSubmitBtn" class="px-3 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">비밀번호 변경</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <div id="versionModal" class="hidden fixed inset-0 z-[60] bg-black/40 p-4 sm:p-6" role="dialog" aria-modal="true" data-draggable-modal>
     <div class="modal-draggable-panel bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col ring-1 ring-zinc-200">

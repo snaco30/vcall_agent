@@ -1,5 +1,6 @@
 (function () {
     const MOBILE_QUERY = "(max-width: 639px)";
+    const VIEWPORT_MARGIN = 16;
     const modalOffsets = new WeakMap();
     const modalConfigs = new WeakMap();
     let stylesInjected = false;
@@ -15,14 +16,27 @@
         const style = document.createElement("style");
         style.textContent = `
             @media (min-width: 640px) {
+                [data-draggable-modal]:not(.hidden) {
+                    display: flex !important;
+                    align-items: center;
+                    justify-content: center;
+                }
                 .modal-draggable-panel {
-                    position: fixed !important;
-                    left: 50%;
-                    top: 50%;
-                    margin-left: 0 !important;
-                    margin-right: 0 !important;
-                    max-height: 92vh;
-                    transform: translate(calc(-50% + var(--modal-drag-x, 0px)), calc(-50% + var(--modal-drag-y, 0px)));
+                    position: relative !important;
+                    left: auto !important;
+                    top: auto !important;
+                    margin: 0 !important;
+                    flex-shrink: 0;
+                    max-height: min(92vh, calc(100vh - 2rem));
+                    transform: translate(var(--modal-drag-x, 0px), var(--modal-drag-y, 0px));
+                }
+            }
+            @media (max-width: 639px) {
+                .modal-draggable-panel {
+                    position: relative !important;
+                    left: auto !important;
+                    top: auto !important;
+                    transform: none !important;
                 }
             }
             .modal-drag-handle {
@@ -50,7 +64,42 @@
         return modalOffsets.get(overlay);
     }
 
-    function applyPosition(config) {
+    function clampOffset(config, x, y) {
+        if (!isModalMovable()) {
+            return { x: 0, y: 0 };
+        }
+        const { overlay, panel } = config;
+        const offset = { x, y };
+        const prev = getOffset(overlay);
+        prev.x = x;
+        prev.y = y;
+        applyPosition(config, true);
+
+        const rect = panel.getBoundingClientRect();
+        const maxLeft = VIEWPORT_MARGIN;
+        const maxTop = VIEWPORT_MARGIN;
+        const maxRight = window.innerWidth - VIEWPORT_MARGIN;
+        const maxBottom = window.innerHeight - VIEWPORT_MARGIN;
+
+        if (rect.left < maxLeft) {
+            offset.x += maxLeft - rect.left;
+        }
+        if (rect.top < maxTop) {
+            offset.y += maxTop - rect.top;
+        }
+        if (rect.right > maxRight) {
+            offset.x -= rect.right - maxRight;
+        }
+        if (rect.bottom > maxBottom) {
+            offset.y -= rect.bottom - maxBottom;
+        }
+
+        prev.x = offset.x;
+        prev.y = offset.y;
+        return offset;
+    }
+
+    function applyPosition(config, skipClamp = false) {
         const { overlay, panel } = config;
         if (!panel) return;
         if (!isModalMovable()) {
@@ -58,7 +107,10 @@
             panel.style.removeProperty("--modal-drag-y");
             return;
         }
-        const { x, y } = getOffset(overlay);
+        let { x, y } = getOffset(overlay);
+        if (!skipClamp) {
+            ({ x, y } = clampOffset(config, x, y));
+        }
         panel.style.setProperty("--modal-drag-x", `${x}px`);
         panel.style.setProperty("--modal-drag-y", `${y}px`);
     }
@@ -78,10 +130,12 @@
 
         const onPointerMove = (event) => {
             if (!dragState) return;
-            const offset = getOffset(overlay);
-            offset.x = dragState.originX + (event.clientX - dragState.startX);
-            offset.y = dragState.originY + (event.clientY - dragState.startY);
-            applyPosition(config);
+            const rawX = dragState.originX + (event.clientX - dragState.startX);
+            const rawY = dragState.originY + (event.clientY - dragState.startY);
+            const { x, y } = clampOffset(config, rawX, rawY);
+            getOffset(overlay).x = x;
+            getOffset(overlay).y = y;
+            applyPosition(config, true);
         };
 
         const endDrag = () => {
@@ -180,7 +234,11 @@
                         if (!isModalMovable()) resetDraggableModal(config.overlay);
                         return;
                     }
-                    applyPosition(config);
+                    const offset = getOffset(config.overlay);
+                    const clamped = clampOffset(config, offset.x, offset.y);
+                    getOffset(config.overlay).x = clamped.x;
+                    getOffset(config.overlay).y = clamped.y;
+                    applyPosition(config, true);
                 });
             });
         }

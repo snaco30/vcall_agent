@@ -48,12 +48,15 @@ function openVersionModal() {
     if (listEl) {
         renderVersionChangelog(listEl, data?.changelog || []);
     }
+    resetDraggableModal(modal);
     modal?.classList.remove("hidden");
     document.body.classList.add("overflow-hidden");
 }
 
 function closeVersionModal() {
-    document.getElementById("versionModal")?.classList.add("hidden");
+    const modal = document.getElementById("versionModal");
+    modal?.classList.add("hidden");
+    resetDraggableModal(modal);
     document.body.classList.remove("overflow-hidden");
 }
 

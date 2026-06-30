@@ -125,8 +125,6 @@ const commentListEl = document.getElementById("commentList");
 const commentInputEl = document.getElementById("commentInput");
 const commentSubmitBtnEl = document.getElementById("commentSubmitBtn");
 const postModalBodyEl = document.getElementById("postModalBody");
-const postModalPanelEl = document.getElementById("postModalPanel");
-const postModalDragHandleEl = document.getElementById("postModalDragHandle");
 const detailScrollAreaEl = document.getElementById("detailScrollArea");
 const backupModalEl = document.getElementById("backupModal");
 const backupStatusBoxEl = document.getElementById("backupStatusBox");
@@ -134,81 +132,7 @@ const backupResultMsgEl = document.getElementById("backupResultMsg");
 const restoreFileInputEl = document.getElementById("restoreFileInput");
 const restoreModeSelectEl = document.getElementById("restoreModeSelect");
 
-let postModalDragOffset = { x: 0, y: 0 };
-let postModalDragState = null;
 const postBoardMoveExpanded = new Set();
-
-function isPostModalMovable() {
-    return window.matchMedia("(min-width: 640px)").matches;
-}
-
-function applyPostModalPosition() {
-    if (!postModalPanelEl) return;
-    if (!isPostModalMovable()) {
-        postModalPanelEl.style.transform = "";
-        return;
-    }
-    const { x, y } = postModalDragOffset;
-    postModalPanelEl.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
-}
-
-function resetPostModalPosition() {
-    postModalDragOffset = { x: 0, y: 0 };
-    applyPostModalPosition();
-}
-
-function initPostModalDrag() {
-    if (!postModalDragHandleEl || !postModalPanelEl) return;
-
-    const onPointerMove = (event) => {
-        if (!postModalDragState) return;
-        postModalDragOffset = {
-            x: postModalDragState.originX + (event.clientX - postModalDragState.startX),
-            y: postModalDragState.originY + (event.clientY - postModalDragState.startY),
-        };
-        applyPostModalPosition();
-    };
-
-    const endDrag = () => {
-        postModalDragState = null;
-        document.body.classList.remove("post-modal-dragging");
-        window.removeEventListener("pointermove", onPointerMove);
-        window.removeEventListener("pointerup", endDrag);
-        window.removeEventListener("pointercancel", endDrag);
-    };
-
-    postModalDragHandleEl.addEventListener("pointerdown", (event) => {
-        if (!isPostModalMovable()) return;
-        if (event.target.closest("#postModalCloseBtn")) return;
-        if (event.button !== 0) return;
-        event.preventDefault();
-        postModalDragState = {
-            startX: event.clientX,
-            startY: event.clientY,
-            originX: postModalDragOffset.x,
-            originY: postModalDragOffset.y,
-        };
-        document.body.classList.add("post-modal-dragging");
-        window.addEventListener("pointermove", onPointerMove);
-        window.addEventListener("pointerup", endDrag);
-        window.addEventListener("pointercancel", endDrag);
-    });
-
-    postModalDragHandleEl.addEventListener("dblclick", (event) => {
-        if (!isPostModalMovable()) return;
-        if (event.target.closest("#postModalCloseBtn")) return;
-        resetPostModalPosition();
-    });
-
-    window.addEventListener("resize", () => {
-        if (postModalEl.classList.contains("hidden")) {
-            if (!isPostModalMovable()) resetPostModalPosition();
-            return;
-        }
-        applyPostModalPosition();
-    });
-}
-
 function escapeHtml(value) {
     return (value ?? "")
         .toString()
@@ -1098,11 +1022,13 @@ function openPostBoardMoveModal() {
     initPostBoardMoveExpanded();
     renderPostBoardMoveTree();
     postBoardMoveModalEl.classList.remove("hidden");
+    resetDraggableModal(postBoardMoveModalEl);
     postBoardMoveTreeEl?.querySelector(".board-move-node.is-selected")?.scrollIntoView({ block: "nearest" });
 }
 
 function closePostBoardMoveModal() {
     postBoardMoveModalEl?.classList.add("hidden");
+    resetDraggableModal(postBoardMoveModalEl);
     postBoardMoveTempId = null;
 }
 
@@ -1646,11 +1572,13 @@ function openExcelImportModal() {
     resetExcelImportModal();
     excelImportBoardLabelEl.textContent = `대상 게시판: ${board.name}`;
     excelImportModalEl.classList.remove("hidden");
+    resetDraggableModal(excelImportModalEl);
     lockBodyScroll();
 }
 
 function closeExcelImportModal() {
     excelImportModalEl.classList.add("hidden");
+    resetDraggableModal(excelImportModalEl);
     resetExcelImportModal();
     unlockBodyScroll();
 }
@@ -1687,11 +1615,13 @@ function openScrapeImportModal() {
         scrapeSourceUrlInputEl.value = "http://jaypos.com/zb41pl8/bbs/zboard.php?id=KICCPOS";
     }
     scrapeImportModalEl.classList.remove("hidden");
+    resetDraggableModal(scrapeImportModalEl);
     lockBodyScroll();
 }
 
 function closeScrapeImportModal() {
     scrapeImportModalEl.classList.add("hidden");
+    resetDraggableModal(scrapeImportModalEl);
     resetScrapeImportModal();
     unlockBodyScroll();
 }
@@ -1948,6 +1878,7 @@ async function openBoardModalAsync(board = null) {
     }
 
     boardModalEl.classList.remove("hidden");
+    resetDraggableModal(boardModalEl);
     lockBodyScroll();
 }
 
@@ -2064,6 +1995,7 @@ async function deleteBoardTab(tabId) {
 
 function closeBoardModal() {
     boardModalEl.classList.add("hidden");
+    resetDraggableModal(boardModalEl);
     hideBoardTabForm();
     unlockBodyScroll();
 }
@@ -2173,7 +2105,7 @@ async function openPostEditor(postId = null) {
         renderEditorAttachmentList([]);
     }
     postModalEl.classList.remove("hidden");
-    resetPostModalPosition();
+    resetDraggableModal(postModalEl);
     lockBodyScroll();
     resetScrollArea(postModalBodyEl);
 }
@@ -2182,7 +2114,7 @@ function closePostModal() {
     teardownEditorImageControls();
     hidePostBoardMove();
     postModalEl.classList.add("hidden");
-    resetPostModalPosition();
+    resetDraggableModal(postModalEl);
     unlockBodyScroll();
 }
 
@@ -2367,12 +2299,14 @@ async function openPostDetail(postId) {
     renderDetailAttachments(detail.files || []);
     renderComments(detail.comments || []);
     detailModalEl.classList.remove("hidden");
+    resetDraggableModal(detailModalEl);
     lockBodyScroll();
     resetScrollArea(detailScrollAreaEl);
 }
 
 function closeDetailModal() {
     detailModalEl.classList.add("hidden");
+    resetDraggableModal(detailModalEl);
     unlockBodyScroll();
 }
 
@@ -2479,6 +2413,7 @@ async function loadBackupStatus() {
 function openBackupModal() {
     backupResultMsgEl.classList.add("hidden");
     backupModalEl.classList.remove("hidden");
+    resetDraggableModal(backupModalEl);
     loadBackupStatus().catch((error) => {
         backupStatusBoxEl.textContent = error.message;
     });
@@ -2486,6 +2421,7 @@ function openBackupModal() {
 
 function closeBackupModal() {
     backupModalEl.classList.add("hidden");
+    resetDraggableModal(backupModalEl);
 }
 
 async function downloadBackupZip() {
@@ -2636,7 +2572,6 @@ function bindEvents() {
             });
     });
     document.getElementById("postModalCloseBtn").addEventListener("click", closePostModal);
-    initPostModalDrag();
     postBoardMoveBtnEl?.addEventListener("click", openPostBoardMoveModal);
     document.getElementById("postBoardMoveModalCloseBtn")?.addEventListener("click", closePostBoardMoveModal);
     document.getElementById("postBoardMoveCancelBtn")?.addEventListener("click", closePostBoardMoveModal);
@@ -2826,6 +2761,7 @@ function bootstrap() {
     }
     bindEvents();
     initBoardIconSelect();
+    initAllDraggableModals();
     loadAppVersionBadge();
     bindVersionModal();
     loadBoards().catch((error) => alert(error.message));

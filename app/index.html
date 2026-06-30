@@ -293,13 +293,13 @@
 </div>
 
 <!-- ASP Merchant Modal -->
-<div id="aspMerchantModal" class="fixed inset-0 z-[62] hidden bg-zinc-900/50 backdrop-blur-sm sm:p-4 sm:p-6" role="dialog" aria-modal="true" aria-label="ASP 가맹점 목록" onclick="closeAspMerchant()">
-    <div class="asp-sheet bg-white sm:rounded-2xl shadow-2xl shadow-zinc-900/10 w-full max-w-2xl sm:max-w-3xl mx-auto ring-0 sm:ring-1 ring-zinc-200/60 overflow-hidden flex flex-col" onclick="event.stopPropagation()">
+<div id="aspMerchantModal" class="fixed inset-0 z-[62] hidden bg-zinc-900/50 backdrop-blur-sm sm:p-4 sm:p-6" role="dialog" aria-modal="true" aria-label="ASP 가맹점 목록" onclick="closeAspMerchant()" data-draggable-modal data-modal-panel=".asp-sheet">
+    <div class="asp-sheet modal-draggable-panel bg-white sm:rounded-2xl shadow-2xl shadow-zinc-900/10 w-full max-w-2xl sm:max-w-3xl mx-auto ring-0 sm:ring-1 ring-zinc-200/60 overflow-hidden flex flex-col" onclick="event.stopPropagation()">
         <div class="shrink-0 bg-white border-b border-zinc-200">
             <div class="sm:hidden flex justify-center pt-2.5 pb-0.5">
                 <span class="w-10 h-1 rounded-full bg-zinc-300" aria-hidden="true"></span>
             </div>
-            <div class="px-4 sm:px-6 pt-2 sm:pt-4 pb-3 flex items-start justify-between gap-3">
+            <div class="modal-drag-handle px-4 sm:px-6 pt-2 sm:pt-4 pb-3 flex items-start justify-between gap-3">
                 <div class="min-w-0">
                     <h3 class="text-lg font-bold text-zinc-900 tracking-tight">ASP 가맹점</h3>
                     <p class="text-xs text-zinc-500 mt-0.5">거래처 상호 · ASP ID · 신청일자</p>
@@ -349,12 +349,12 @@
 </div>
 
 <!-- ASP Merchant Edit Modal -->
-<div id="aspMerchantEditModal" class="fixed inset-0 z-[63] hidden bg-zinc-900/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-6" role="dialog" aria-modal="true" aria-label="ASP 가맹점 수정" onclick="closeAspMerchantEdit()">
-    <div class="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl shadow-zinc-900/10 w-full max-w-lg mx-auto ring-0 sm:ring-1 ring-zinc-200/60 overflow-hidden max-h-[90dvh] flex flex-col" onclick="event.stopPropagation()">
+<div id="aspMerchantEditModal" class="fixed inset-0 z-[63] hidden bg-zinc-900/50 backdrop-blur-sm p-0 sm:p-6" role="dialog" aria-modal="true" aria-label="ASP 가맹점 수정" onclick="closeAspMerchantEdit()" data-draggable-modal>
+    <div class="modal-draggable-panel bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl shadow-zinc-900/10 w-full max-w-lg mx-auto ring-0 sm:ring-1 ring-zinc-200/60 overflow-hidden max-h-[90dvh] flex flex-col" onclick="event.stopPropagation()">
         <div class="sm:hidden flex justify-center pt-3 pb-1">
             <span class="w-10 h-1 rounded-full bg-zinc-300"></span>
         </div>
-        <div class="px-5 sm:px-6 py-4 border-b border-zinc-200 flex justify-between items-center shrink-0">
+        <div class="modal-drag-handle px-5 sm:px-6 py-4 border-b border-zinc-200 flex justify-between items-center shrink-0">
             <h3 class="text-base font-bold text-zinc-900">가맹점 정보 수정</h3>
             <button type="button" onclick="closeAspMerchantEdit()" class="text-zinc-400 hover:text-zinc-700 p-2 rounded-full hover:bg-zinc-100 transition-all" aria-label="닫기">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -387,13 +387,13 @@
 </div>
 
 <!-- Incoming Merchant Info Modal -->
-<div id="incomingMerchantModal" class="fixed inset-0 z-[55] hidden bg-zinc-900/45 backdrop-blur-sm sm:p-4 sm:p-6 flex justify-center items-stretch sm:items-center" onclick="closeIncomingMerchantModal()">
-    <div class="merchant-sheet bg-white sm:rounded-xl shadow-2xl shadow-zinc-900/10 w-full flex flex-col overflow-hidden max-w-lg ring-0 sm:ring-1 ring-zinc-200/60" onclick="event.stopPropagation()">
+<div id="incomingMerchantModal" class="fixed inset-0 z-[55] hidden bg-zinc-900/45 backdrop-blur-sm sm:p-4 sm:p-6" onclick="closeIncomingMerchantModal()" data-draggable-modal data-modal-panel=".merchant-sheet">
+    <div class="merchant-sheet modal-draggable-panel bg-white sm:rounded-xl shadow-2xl shadow-zinc-900/10 w-full flex flex-col overflow-hidden max-w-lg ring-0 sm:ring-1 ring-zinc-200/60" onclick="event.stopPropagation()">
         <div class="shrink-0 bg-white border-b border-zinc-200">
             <div class="sm:hidden flex justify-center pt-2.5 pb-0.5">
                 <span class="w-10 h-1 rounded-full bg-zinc-300" aria-hidden="true"></span>
             </div>
-            <div class="px-4 sm:px-6 pt-2 sm:pt-4 pb-3 flex items-start justify-between gap-3">
+            <div class="modal-drag-handle px-4 sm:px-6 pt-2 sm:pt-4 pb-3 flex items-start justify-between gap-3">
                 <div class="min-w-0">
                     <h3 class="text-base sm:text-lg font-bold text-zinc-900" id="incomingMerchantModalTitle">가맹점 정보</h3>
                     <p class="text-[11px] sm:text-xs text-zinc-500 mt-0.5">탭하여 클립보드에 복사</p>
@@ -410,9 +410,9 @@
 </div>
 
 <!-- History Modal -->
-<div id="historyModal" class="fixed inset-0 z-[56] hidden bg-zinc-900/40 backdrop-blur-sm flex justify-center items-center p-4 sm:p-6" onclick="closeModal()">
-    <div class="bg-white rounded-xl shadow-2xl shadow-zinc-900/10 w-full h-full flex flex-col overflow-hidden max-w-5xl ring-1 ring-zinc-200/60" onclick="event.stopPropagation()">
-        <div class="bg-white px-5 sm:px-6 py-4 flex justify-between items-center border-b border-zinc-200">
+<div id="historyModal" class="fixed inset-0 z-[56] hidden bg-zinc-900/40 backdrop-blur-sm p-4 sm:p-6" onclick="closeModal()" data-draggable-modal>
+    <div class="modal-draggable-panel bg-white rounded-xl shadow-2xl shadow-zinc-900/10 w-full h-full sm:h-auto flex flex-col overflow-hidden max-w-5xl ring-1 ring-zinc-200/60" onclick="event.stopPropagation()">
+        <div class="modal-drag-handle bg-white px-5 sm:px-6 py-4 flex justify-between items-center border-b border-zinc-200">
             <div>
                 <h3 class="text-base font-bold text-zinc-900" id="historyModalTitle">가맹점 최근 통화내역</h3>
                 <p class="text-xs text-zinc-500 mt-0.5">실시간 수신 매핑 및 핵심 히스토리 레코드</p>
@@ -439,13 +439,13 @@
 </div>
 
 <!-- Incoming Calls Modal -->
-<div id="incomingCallsModal" class="fixed inset-0 z-50 hidden bg-zinc-900/40 backdrop-blur-sm sm:p-4 sm:p-6 flex justify-center items-stretch sm:items-center" onclick="closeIncomingModal()">
-    <div class="incoming-sheet bg-white sm:rounded-xl shadow-2xl shadow-zinc-900/10 w-full flex flex-col overflow-hidden max-w-3xl ring-0 sm:ring-1 ring-zinc-200/60" onclick="event.stopPropagation()">
+<div id="incomingCallsModal" class="fixed inset-0 z-50 hidden bg-zinc-900/40 backdrop-blur-sm sm:p-4 sm:p-6" onclick="closeIncomingModal()" data-draggable-modal data-modal-panel=".incoming-sheet">
+    <div class="incoming-sheet modal-draggable-panel bg-white sm:rounded-xl shadow-2xl shadow-zinc-900/10 w-full flex flex-col overflow-hidden max-w-3xl ring-0 sm:ring-1 ring-zinc-200/60" onclick="event.stopPropagation()">
         <div class="shrink-0 bg-white border-b border-zinc-200">
             <div class="sm:hidden flex justify-center pt-2.5 pb-0.5">
                 <span class="w-10 h-1 rounded-full bg-zinc-300" aria-hidden="true"></span>
             </div>
-            <div class="px-4 sm:px-6 pt-2 sm:pt-3 pb-2 sm:pb-3 flex items-start justify-between gap-3">
+            <div class="modal-drag-handle px-4 sm:px-6 pt-2 sm:pt-3 pb-2 sm:pb-3 flex items-start justify-between gap-3">
                 <div class="min-w-0">
                     <h3 class="text-base sm:text-lg font-bold text-zinc-900" id="incomingCallsModalTitle">수신 통화</h3>
                     <p class="text-[11px] sm:text-xs text-zinc-500 mt-0.5">날짜별 수신(인입) 통화 목록</p>
@@ -781,10 +781,12 @@ GIANT(자이언트)천안	giant	2017-03-02
         aspMerchantEditDateEl.value = row.joinDate || '';
         aspMerchantEditNoteEl.value = row.note || '';
         aspMerchantEditModalEl.classList.remove('hidden');
+        resetDraggableModal(aspMerchantEditModalEl);
     }
 
     function closeAspMerchantEdit() {
         aspMerchantEditModalEl.classList.add('hidden');
+        resetDraggableModal(aspMerchantEditModalEl);
     }
 
     function saveAspMerchantEdit() {
@@ -869,12 +871,15 @@ GIANT(자이언트)천안	giant	2017-03-02
         if (aspMerchantSearchInputEl) aspMerchantSearchInputEl.value = '';
         renderAspMerchantRows(aspMerchantItems);
         aspMerchantModalEl.classList.remove('hidden');
+        resetDraggableModal(aspMerchantModalEl);
         document.body.classList.add('overflow-hidden');
     }
 
     function closeAspMerchant() {
         aspMerchantModalEl.classList.add('hidden');
         aspMerchantEditModalEl.classList.add('hidden');
+        resetDraggableModal(aspMerchantModalEl);
+        resetDraggableModal(aspMerchantEditModalEl);
         document.body.classList.remove('overflow-hidden');
     }
 
@@ -1710,6 +1715,7 @@ GIANT(자이언트)천안	giant	2017-03-02
         updateSkipEmptyHistoryButton();
         cardList.innerHTML = loadingStateHtml('통화 히스토리를 조회 중입니다...');
         modalEl.classList.remove('hidden');
+        resetDraggableModal(modalEl);
 
         if (!hasHistoryText(saupNo) && !hasHistoryText(telNo)) {
             cardList.innerHTML = emptyStateHtml('통화 이력을 조회할 수 없습니다', '사업자번호 또는 전화번호 정보가 없습니다.');
@@ -1731,7 +1737,10 @@ GIANT(자이언트)천안	giant	2017-03-02
             });
     }
 
-    function closeModal() { modalEl.classList.add('hidden'); }
+    function closeModal() {
+        modalEl.classList.add('hidden');
+        resetDraggableModal(modalEl);
+    }
 
     function buildCopyableFieldRow(label, value) {
         const raw = (value ?? '').toString().trim();
@@ -1803,6 +1812,7 @@ GIANT(자이언트)천안	giant	2017-03-02
         if (titleEl) titleEl.innerHTML = `<span class="text-indigo-600">${escapeHtml(displayName)}</span>`;
         bodyEl.innerHTML = loadingStateHtml('가맹점 정보를 조회 중입니다...');
         incomingMerchantModalEl.classList.remove('hidden');
+        resetDraggableModal(incomingMerchantModalEl);
 
         if (isUnregisteredIncomingName(merName)) {
             bodyEl.innerHTML = renderIncomingMerchantFields(null, { unregistered: true, telFallback: telNo });
@@ -1830,7 +1840,10 @@ GIANT(자이언트)천안	giant	2017-03-02
     }
 
     function closeIncomingMerchantModal() {
-        if (incomingMerchantModalEl) incomingMerchantModalEl.classList.add('hidden');
+        if (incomingMerchantModalEl) {
+            incomingMerchantModalEl.classList.add('hidden');
+            resetDraggableModal(incomingMerchantModalEl);
+        }
     }
 
     function todayKst() {
@@ -2021,11 +2034,13 @@ GIANT(자이언트)천안	giant	2017-03-02
     function openIncomingCalls() {
         activeIncomingDate = todayKst();
         incomingModalEl.classList.remove('hidden');
+        resetDraggableModal(incomingModalEl);
         loadIncomingCalls(activeIncomingDate);
     }
 
     function closeIncomingModal() {
         incomingModalEl.classList.add('hidden');
+        resetDraggableModal(incomingModalEl);
     }
 
     function shiftIncomingDate(delta) {
@@ -2058,19 +2073,12 @@ GIANT(자이언트)천안	giant	2017-03-02
         else closeModal();
     });
 </script>
+<script src="/static/modal-drag.js"></script>
 <script src="/static/version.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        loadAppVersionBadge('appVersionBtn');
-        loadAppVersionBadge('loginVersionBtn');
-        bindVersionModal();
-        document.getElementById('loginVersionBtn')?.addEventListener('click', openVersionModal);
-    });
-</script>
 
-<div id="versionModal" class="hidden fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col ring-1 ring-zinc-200">
-        <div class="flex items-center justify-between px-5 py-4 border-b border-zinc-100">
+<div id="versionModal" class="hidden fixed inset-0 z-[60] bg-black/40 p-4 sm:p-6" role="dialog" aria-modal="true" data-draggable-modal>
+    <div class="modal-draggable-panel bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col ring-1 ring-zinc-200">
+        <div class="modal-drag-handle flex items-center justify-between px-5 py-4 border-b border-zinc-100">
             <div>
                 <h3 id="versionModalTitle" class="text-base font-bold text-zinc-900">버전 정보</h3>
                 <p id="appVersionSummary" class="text-xs text-zinc-500 mt-0.5"></p>
@@ -2082,5 +2090,14 @@ GIANT(자이언트)천안	giant	2017-03-02
         <div id="versionChangelogList" class="px-5 py-4 overflow-y-auto space-y-5 custom-scrollbar flex-1"></div>
     </div>
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        initAllDraggableModals();
+        loadAppVersionBadge('appVersionBtn');
+        loadAppVersionBadge('loginVersionBtn');
+        bindVersionModal();
+        document.getElementById('loginVersionBtn')?.addEventListener('click', openVersionModal);
+    });
+</script>
 </body>
 </html>

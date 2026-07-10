@@ -1,10 +1,20 @@
 """애플리케이션 버전 및 업데이트 내역."""
 
-APP_VERSION = "V1.0.005"
-APP_VERSION_CODE = "1.0.005"
-RELEASED_AT = "2026-06-29"
+APP_VERSION = "V1.0.006"
+APP_VERSION_CODE = "1.0.006"
+RELEASED_AT = "2026-07-10"
 
 CHANGELOG: list[dict] = [
+    {
+        "version": "V1.0.006",
+        "date": "2026-07-10",
+        "summary": "모바일 게시판 선택·첨부파일 드롭존 개선",
+        "items": [
+            "모바일 게시판 선택 바텀시트 미동작 수정(nav 높이 동기화, z-index, 스크롤 락)",
+            "모바일 피커 바 터치 영역·이벤트 위임 보강, board.js 캐시 무효화",
+            "게시글 첨부파일 드래그앤드롭 드롭존 UI 및 파일 타입별 아이콘 목록",
+        ],
+    },
     {
         "version": "V1.0.005",
         "date": "2026-06-29",

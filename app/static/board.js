@@ -113,8 +113,15 @@ const postBoardMoveTreeEl = document.getElementById("postBoardMoveTree");
 const postBoardMoveModalSelectionLabelEl = document.getElementById("postBoardMoveModalSelectionLabel");
 const postPinnedInputEl = document.getElementById("postPinnedInput");
 const attachmentInputEl = document.getElementById("attachmentInput");
+const attachmentDropzoneEl = document.getElementById("attachmentDropzone");
+const attachmentDropzoneBodyEl = document.getElementById("attachmentDropzoneBody");
+const attachmentBrowseBtnEl = document.getElementById("attachmentBrowseBtn");
+const attachmentDropzoneHintEl = document.getElementById("attachmentDropzoneHint");
 const attachmentListEl = document.getElementById("attachmentList");
 const attachmentUploadProgressEl = document.getElementById("attachmentUploadProgress");
+const ALLOWED_ATTACHMENT_EXTENSIONS = [".zip", ".txt", ".png", ".pdf"];
+const MAX_ATTACHMENT_COUNT = 5;
+let attachmentUploadBusy = false;
 const postDeleteBtnEl = document.getElementById("postDeleteBtn");
 const editorRootEl = document.getElementById("editorRoot");
 
@@ -439,6 +446,31 @@ function uploadFormDataWithProgress(url, formData, onProgress) {
 }
 
 const MOBILE_BOARD_LAYOUT_MQ = window.matchMedia("(max-width: 1023px)");
+const COARSE_POINTER_MQ = window.matchMedia("(pointer: coarse)");
+let boardNavResizeObserver = null;
+let pickerScrollLockActive = false;
+let pickerBodyScrollY = 0;
+
+function isCoarsePointer() {
+    return COARSE_POINTER_MQ.matches;
+}
+
+function syncBoardNavHeight() {
+    const navEl = document.querySelector("nav");
+    if (!navEl) return;
+    const height = Math.ceil(navEl.getBoundingClientRect().height);
+    document.documentElement.style.setProperty("--board-nav-height", `${height}px`);
+}
+
+function initBoardNavHeightObserver() {
+    const navEl = document.querySelector("nav");
+    if (!navEl) return;
+    syncBoardNavHeight();
+    if (!window.ResizeObserver) return;
+    if (boardNavResizeObserver) boardNavResizeObserver.disconnect();
+    boardNavResizeObserver = new ResizeObserver(() => syncBoardNavHeight());
+    boardNavResizeObserver.observe(navEl);
+}
 
 function scrollToPostPanelOnMobile() {
     if (!MOBILE_BOARD_LAYOUT_MQ.matches) return;
@@ -454,11 +486,33 @@ function formatDateTime(value) {
     return value.replace("T", " ").slice(0, 16);
 }
 
-function lockBodyScroll() {
+function lockBodyScroll({ forPicker = false } = {}) {
+    if (forPicker && MOBILE_BOARD_LAYOUT_MQ.matches) {
+        pickerScrollLockActive = true;
+        pickerBodyScrollY = window.scrollY;
+        document.documentElement.classList.add("overflow-hidden");
+        document.body.style.position = "fixed";
+        document.body.style.top = `-${pickerBodyScrollY}px`;
+        document.body.style.left = "0";
+        document.body.style.right = "0";
+        document.body.style.width = "100%";
+        return;
+    }
     document.body.classList.add("overflow-hidden");
 }
 
 function unlockBodyScroll() {
+    if (pickerScrollLockActive) {
+        pickerScrollLockActive = false;
+        document.documentElement.classList.remove("overflow-hidden");
+        document.body.style.position = "";
+        document.body.style.top = "";
+        document.body.style.left = "";
+        document.body.style.right = "";
+        document.body.style.width = "";
+        window.scrollTo(0, pickerBodyScrollY);
+        return;
+    }
     if (
         !postModalEl.classList.contains("hidden") ||
         !detailModalEl.classList.contains("hidden") ||
@@ -1223,22 +1277,31 @@ function openBoardPickerSheet() {
     const sheetEl = document.getElementById("boardPickerSheet");
     const listEl = document.getElementById("boardPickerList");
     const searchEl = document.getElementById("boardPickerSearch");
-    if (!sheetEl || !listEl) return;
+    if (!sheetEl || !listEl) {
+        console.error("boardPickerSheet elements missing");
+        return;
+    }
+    if (boardPickerSheetOpen) return;
 
     renderBoardList(listEl, { compact: true });
     syncBoardListState(listEl);
     if (searchEl) searchEl.value = "";
     filterBoardPickerList("");
 
-    sheetEl.classList.remove("hidden");
-    sheetEl.classList.add("is-open");
-    lockBodyScroll();
     boardPickerSheetOpen = true;
+    sheetEl.classList.remove("hidden");
     mobileBoardPickerBtnEl?.setAttribute("aria-expanded", "true");
 
-    window.setTimeout(() => {
-        searchEl?.focus({ preventScroll: true });
-    }, 50);
+    window.requestAnimationFrame(() => {
+        sheetEl.classList.add("is-open");
+        lockBodyScroll({ forPicker: true });
+    });
+
+    if (!isCoarsePointer()) {
+        window.setTimeout(() => {
+            searchEl?.focus({ preventScroll: true });
+        }, 50);
+    }
 }
 
 function closeBoardPickerSheet() {
@@ -2421,28 +2484,125 @@ async function deleteCurrentPost() {
     await loadPosts(1);
 }
 
+function formatAttachmentSize(bytes) {
+    const size = Number(bytes) || 0;
+    if (size < 1024) return `${size}B`;
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(size < 10 * 1024 ? 1 : 0)}KB`;
+    if (size < 1024 * 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(size < 10 * 1024 * 1024 ? 1 : 0)}MB`;
+    return `${(size / (1024 * 1024 * 1024)).toFixed(1)}GB`;
+}
+
+function getAttachmentExtension(name) {
+    const value = (name || "").toLowerCase();
+    const dot = value.lastIndexOf(".");
+    return dot >= 0 ? value.slice(dot) : "";
+}
+
+function getAttachmentIconClass(name) {
+    const ext = getAttachmentExtension(name);
+    if (ext === ".pdf") return "is-pdf";
+    if (ext === ".png") return "is-image";
+    if (ext === ".zip") return "is-archive";
+    return "";
+}
+
+function getAttachmentIconSvg(name) {
+    const ext = getAttachmentExtension(name);
+    if (ext === ".pdf") {
+        return '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>';
+    }
+    if (ext === ".png") {
+        return '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>';
+    }
+    if (ext === ".zip") {
+        return '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>';
+    }
+    return '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>';
+}
+
+function getCurrentAttachmentCount() {
+    return attachmentListEl?.querySelectorAll(".attachment-file-item").length || 0;
+}
+
+function syncAttachmentDropzoneState() {
+    if (!attachmentDropzoneEl) return;
+    const count = getCurrentAttachmentCount();
+    const disabled = attachmentUploadBusy || count >= MAX_ATTACHMENT_COUNT;
+    attachmentDropzoneEl.classList.toggle("is-disabled", disabled);
+    if (attachmentDropzoneHintEl) {
+        if (count >= MAX_ATTACHMENT_COUNT) {
+            attachmentDropzoneHintEl.textContent = `첨부 가능한 최대 ${MAX_ATTACHMENT_COUNT}개에 도달했습니다.`;
+        } else {
+            attachmentDropzoneHintEl.textContent = `ZIP · TXT · PNG · PDF · ${count}/${MAX_ATTACHMENT_COUNT}개 · 파일당 1GB · PDF는 본문에 표시`;
+        }
+    }
+}
+
+function validateAttachmentFiles(files) {
+    const queue = Array.from(files || []);
+    if (!queue.length) return { valid: [], errors: [] };
+
+    const currentCount = getCurrentAttachmentCount();
+    const remaining = MAX_ATTACHMENT_COUNT - currentCount;
+    const errors = [];
+    const valid = [];
+
+    if (remaining <= 0) {
+        return { valid: [], errors: [`첨부파일은 게시글당 최대 ${MAX_ATTACHMENT_COUNT}개까지 업로드할 수 있습니다.`] };
+    }
+
+    for (const file of queue) {
+        if (valid.length >= remaining) {
+            errors.push(`한 번에 ${remaining}개까지만 추가할 수 있습니다.`);
+            break;
+        }
+        const ext = getAttachmentExtension(file.name);
+        if (!ALLOWED_ATTACHMENT_EXTENSIONS.includes(ext)) {
+            errors.push(`${file.name}: ZIP, TXT, PNG, PDF만 업로드할 수 있습니다.`);
+            continue;
+        }
+        valid.push(file);
+    }
+
+    return { valid, errors };
+}
+
+async function handleAttachmentSelection(files) {
+    const { valid, errors } = validateAttachmentFiles(files);
+    if (errors.length) {
+        alert(errors.join("\n"));
+    }
+    if (!valid.length) return;
+    await uploadAttachments(valid);
+}
+
 function renderEditorAttachmentList(files) {
     const attachmentFiles = (files || []).filter((file) => file.kind === "attachment");
     if (!attachmentFiles.length) {
-        attachmentListEl.innerHTML = `<p class="text-xs text-zinc-500">첨부파일이 없습니다.</p>`;
+        attachmentListEl.innerHTML = "";
+        syncAttachmentDropzoneState();
         return;
     }
     attachmentListEl.innerHTML = attachmentFiles
-        .map(
-            (file) => {
-                const pdfNote = isPdfAttachment(file)
-                    ? `<span class="shrink-0 text-[10px] font-semibold text-indigo-600">본문 표시</span>`
-                    : "";
-                return `
-            <div class="flex items-center justify-between gap-2 text-xs bg-zinc-50 rounded-lg ring-1 ring-zinc-200 px-3 py-2">
-                <span class="truncate min-w-0">${escapeHtml(file.original_name)} (${Math.ceil((file.size_bytes || 0) / 1024)}KB)</span>
-                ${pdfNote}
-                <button class="file-delete-btn shrink-0 px-2 py-1 rounded bg-rose-50 text-rose-700" data-file-id="${file.id}">삭제</button>
+        .map((file) => {
+            const iconClass = getAttachmentIconClass(file.original_name);
+            const pdfBadge = isPdfAttachment(file)
+                ? `<span class="attachment-file-badge">본문 표시</span>`
+                : "";
+            return `
+            <div class="attachment-file-item">
+                <div class="attachment-file-icon ${iconClass}">${getAttachmentIconSvg(file.original_name)}</div>
+                <div class="attachment-file-meta">
+                    <span class="attachment-file-name" title="${escapeHtml(file.original_name)}">${escapeHtml(file.original_name)}</span>
+                    <span class="attachment-file-size">${formatAttachmentSize(file.size_bytes || 0)}</span>
+                </div>
+                ${pdfBadge}
+                <button type="button" class="attachment-file-remove file-delete-btn" data-file-id="${file.id}" aria-label="첨부파일 삭제" title="삭제">×</button>
             </div>
         `;
-            }
-        )
+        })
         .join("");
+    syncAttachmentDropzoneState();
 }
 
 function setAttachmentUploadProgress(items) {
@@ -2481,9 +2641,74 @@ function updateAttachmentUploadProgress(index, percent) {
 }
 
 function setAttachmentInputDisabled(disabled) {
-    attachmentInputEl.disabled = disabled;
-    attachmentInputEl.classList.toggle("opacity-50", disabled);
-    attachmentInputEl.classList.toggle("pointer-events-none", disabled);
+    attachmentUploadBusy = disabled;
+    if (attachmentInputEl) {
+        attachmentInputEl.disabled = disabled;
+    }
+    if (attachmentBrowseBtnEl) {
+        attachmentBrowseBtnEl.disabled = disabled;
+    }
+    syncAttachmentDropzoneState();
+}
+
+function bindAttachmentDropzone() {
+    if (!attachmentDropzoneEl || !attachmentInputEl) return;
+
+    attachmentBrowseBtnEl?.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (attachmentUploadBusy || getCurrentAttachmentCount() >= MAX_ATTACHMENT_COUNT) return;
+        attachmentInputEl.click();
+    });
+
+    attachmentDropzoneBodyEl?.addEventListener("click", () => {
+        if (attachmentUploadBusy || getCurrentAttachmentCount() >= MAX_ATTACHMENT_COUNT) return;
+        attachmentInputEl.click();
+    });
+
+    attachmentDropzoneBodyEl?.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        if (attachmentUploadBusy || getCurrentAttachmentCount() >= MAX_ATTACHMENT_COUNT) return;
+        attachmentInputEl.click();
+    });
+
+    attachmentInputEl.addEventListener("change", (event) => {
+        handleAttachmentSelection(event.target.files)
+            .catch((error) => alert(error.message))
+            .finally(() => {
+                attachmentInputEl.value = "";
+            });
+    });
+
+    const clearDragover = () => {
+        attachmentDropzoneEl.classList.remove("is-dragover");
+    };
+
+    attachmentDropzoneEl.addEventListener("dragenter", (event) => {
+        event.preventDefault();
+        if (attachmentUploadBusy || getCurrentAttachmentCount() >= MAX_ATTACHMENT_COUNT) return;
+        attachmentDropzoneEl.classList.add("is-dragover");
+    });
+
+    attachmentDropzoneEl.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        if (attachmentUploadBusy || getCurrentAttachmentCount() >= MAX_ATTACHMENT_COUNT) return;
+        event.dataTransfer.dropEffect = "copy";
+        attachmentDropzoneEl.classList.add("is-dragover");
+    });
+
+    attachmentDropzoneEl.addEventListener("dragleave", (event) => {
+        if (!attachmentDropzoneEl.contains(event.relatedTarget)) {
+            clearDragover();
+        }
+    });
+
+    attachmentDropzoneEl.addEventListener("drop", (event) => {
+        event.preventDefault();
+        clearDragover();
+        if (attachmentUploadBusy || getCurrentAttachmentCount() >= MAX_ATTACHMENT_COUNT) return;
+        handleAttachmentSelection(event.dataTransfer.files).catch((error) => alert(error.message));
+    });
 }
 
 async function refreshEditingAttachments() {
@@ -3199,13 +3424,7 @@ function bindEvents() {
         deleteCurrentPost().catch((error) => alert(error.message));
     });
 
-    attachmentInputEl.addEventListener("change", (event) => {
-        uploadAttachments(event.target.files)
-            .catch((error) => alert(error.message))
-            .finally(() => {
-                attachmentInputEl.value = "";
-            });
-    });
+    bindAttachmentDropzone();
 
     document.getElementById("detailCloseBtn").addEventListener("click", closeDetailModal);
     document.getElementById("detailEditBtn").addEventListener("click", () => {
@@ -3251,7 +3470,9 @@ function bindEvents() {
 
     boardPickerListEl?.addEventListener("keydown", handleBoardListKeydown);
 
-    mobileBoardPickerBtnEl?.addEventListener("click", (event) => {
+    const mobileBoardPickerBarEl = document.getElementById("mobileBoardPickerBar");
+    mobileBoardPickerBarEl?.addEventListener("click", (event) => {
+        if (!MOBILE_BOARD_LAYOUT_MQ.matches) return;
         event.preventDefault();
         openBoardPickerSheet();
     });
@@ -3337,6 +3558,7 @@ function bootstrap() {
         return;
     }
     bindEvents();
+    initBoardNavHeightObserver();
     window.openBoardPickerSheet = openBoardPickerSheet;
     initBoardIconSelect();
     initAllDraggableModals();

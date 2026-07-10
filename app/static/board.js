@@ -462,7 +462,8 @@ function unlockBodyScroll() {
     if (
         !postModalEl.classList.contains("hidden") ||
         !detailModalEl.classList.contains("hidden") ||
-        !excelImportModalEl.classList.contains("hidden")
+        !excelImportModalEl.classList.contains("hidden") ||
+        boardPickerSheetOpen
     ) {
         return;
     }
@@ -1087,6 +1088,7 @@ function initPostBoardMoveExpanded() {
 }
 
 function openPostBoardMoveModal() {
+    if (!isNewPostEditor) return;
     if (!postBoardMoveModalEl) return;
     postBoardMoveTempId = editingPostBoardId;
     initPostBoardMoveExpanded();
@@ -1218,28 +1220,37 @@ function syncMobileBoardPickerLabel() {
 }
 
 function openBoardPickerSheet() {
-    if (!boardPickerSheetEl) return;
-    renderBoardList(boardPickerListEl, { compact: true });
-    syncBoardListState(boardPickerListEl);
-    if (boardPickerSearchEl) boardPickerSearchEl.value = "";
+    const sheetEl = document.getElementById("boardPickerSheet");
+    const listEl = document.getElementById("boardPickerList");
+    const searchEl = document.getElementById("boardPickerSearch");
+    if (!sheetEl || !listEl) return;
+
+    renderBoardList(listEl, { compact: true });
+    syncBoardListState(listEl);
+    if (searchEl) searchEl.value = "";
     filterBoardPickerList("");
-    boardPickerSheetEl.classList.remove("hidden");
-    window.requestAnimationFrame(() => {
-        boardPickerSheetEl.classList.add("is-open");
-    });
+
+    sheetEl.classList.remove("hidden");
+    sheetEl.classList.add("is-open");
     lockBodyScroll();
     boardPickerSheetOpen = true;
-    boardPickerSearchEl?.focus();
+    mobileBoardPickerBtnEl?.setAttribute("aria-expanded", "true");
+
+    window.setTimeout(() => {
+        searchEl?.focus({ preventScroll: true });
+    }, 50);
 }
 
 function closeBoardPickerSheet() {
-    if (!boardPickerSheetEl) return;
-    boardPickerSheetEl.classList.remove("is-open");
+    const sheetEl = document.getElementById("boardPickerSheet");
+    if (!sheetEl) return;
+    sheetEl.classList.remove("is-open");
     boardPickerSheetOpen = false;
+    mobileBoardPickerBtnEl?.setAttribute("aria-expanded", "false");
     unlockBodyScroll();
     window.setTimeout(() => {
         if (!boardPickerSheetOpen) {
-            boardPickerSheetEl.classList.add("hidden");
+            sheetEl.classList.add("hidden");
         }
     }, 280);
 }
@@ -2272,7 +2283,7 @@ async function loadDraftIntoEditor(draftId) {
     editingPostId = draftId;
     isNewPostEditor = false;
     postModalTitleEl.textContent = "게시글 작성";
-    showPostBoardMove(detail.post.board_id);
+    hidePostBoardMove();
     postTitleInputEl.value = detail.post.title || "";
     postPinnedInputEl.checked = !!detail.post.is_pinned;
     initEditor(injectMediaToken(mergePdfEmbedsIntoBody(detail.post.body_html || "", detail.files)));
@@ -2313,7 +2324,7 @@ async function openPostEditor(postId = null) {
         editingPostId = postId;
         isNewPostEditor = false;
         postModalTitleEl.textContent = "게시글 수정";
-        showPostBoardMove(detail.post.board_id);
+        hidePostBoardMove();
         postTitleInputEl.value = detail.post.title || "";
         postPinnedInputEl.checked = !!detail.post.is_pinned;
         initEditor(injectMediaToken(mergePdfEmbedsIntoBody(detail.post.body_html || "", detail.files)));
@@ -2327,7 +2338,7 @@ async function openPostEditor(postId = null) {
         editingPostId = draft.id;
         isNewPostEditor = true;
         postModalTitleEl.textContent = "게시글 작성";
-        hidePostBoardMove();
+        showPostBoardMove(board.id);
         postTitleInputEl.value = "";
         postPinnedInputEl.checked = false;
         initEditor("");
@@ -2370,7 +2381,11 @@ async function savePost(status) {
         mergePdfEmbedsIntoBody(editor.getHTML(), editDetail.files || [])
     );
     let movedBoardId = null;
-    if (!postBoardMoveWrapEl?.classList.contains("hidden") && editingPostBoardId != null) {
+    if (
+        isNewPostEditor &&
+        !postBoardMoveWrapEl?.classList.contains("hidden") &&
+        editingPostBoardId != null
+    ) {
         movedBoardId = Number(editingPostBoardId);
         if (movedBoardId !== Number(editingPostOriginalBoardId)) {
             payload.board_id = movedBoardId;
@@ -3236,7 +3251,15 @@ function bindEvents() {
 
     boardPickerListEl?.addEventListener("keydown", handleBoardListKeydown);
 
-    mobileBoardPickerBtnEl?.addEventListener("click", openBoardPickerSheet);
+    mobileBoardPickerBtnEl?.addEventListener("click", (event) => {
+        event.preventDefault();
+        openBoardPickerSheet();
+    });
+    currentBoardTitleEl?.addEventListener("click", () => {
+        if (MOBILE_BOARD_LAYOUT_MQ.matches) {
+            openBoardPickerSheet();
+        }
+    });
     document.getElementById("boardPickerBackdrop")?.addEventListener("click", closeBoardPickerSheet);
     document.getElementById("boardPickerCloseBtn")?.addEventListener("click", closeBoardPickerSheet);
     boardPickerSearchEl?.addEventListener("input", (event) => {
@@ -3314,6 +3337,7 @@ function bootstrap() {
         return;
     }
     bindEvents();
+    window.openBoardPickerSheet = openBoardPickerSheet;
     initBoardIconSelect();
     initAllDraggableModals();
     loadAppVersionBadge();

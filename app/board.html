@@ -333,7 +333,10 @@
 
         @media (max-width: 1023px) {
             #mobileBoardPickerBar {
-                margin: -0.25rem 0 0.75rem;
+                margin: 0;
+                padding: 0.5rem 0.75rem;
+                background: #f4f4f5;
+                border-bottom: 1px solid #e4e4e7;
             }
             #mobileBoardPickerBtn {
                 width: 100%;
@@ -348,6 +351,9 @@
                 box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
                 border: 1px solid #e4e4e7;
                 text-align: left;
+                touch-action: manipulation;
+                -webkit-tap-highlight-color: transparent;
+                cursor: pointer;
             }
             #mobileBoardPickerLabel {
                 flex: 1;
@@ -378,15 +384,23 @@
             #boardPickerList .board-edit-btn {
                 opacity: 1;
             }
+            #currentBoardTitle {
+                cursor: pointer;
+            }
         }
 
         #boardPickerSheet {
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
+            pointer-events: auto;
         }
         #boardPickerSheet.hidden {
-            display: none;
+            display: none !important;
+            pointer-events: none;
+        }
+        #boardPickerSheet.is-open {
+            display: flex !important;
         }
         .board-picker-backdrop {
             position: absolute;
@@ -468,6 +482,16 @@
         </div>
     </nav>
 
+    <div id="mobileBoardPickerBar" class="lg:hidden sticky top-[3.25rem] z-40 max-w-7xl mx-auto w-full px-3 sm:px-6">
+        <button id="mobileBoardPickerBtn" type="button" aria-haspopup="dialog" aria-controls="boardPickerSheet" aria-expanded="false">
+            <span id="mobileBoardPickerLabel">게시판을 선택하세요</span>
+            <span id="mobileBoardPickerAction" aria-hidden="true">
+                변경
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </span>
+        </button>
+    </div>
+
     <main class="max-w-7xl mx-auto px-3 sm:px-6 py-3 sm:py-5">
         <div class="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-3 sm:gap-4">
             <aside class="board-sidebar hidden lg:flex w-full lg:w-[280px] shrink-0 bg-white rounded-xl ring-1 ring-slate-200 shadow-sm overflow-hidden flex-col lg:sticky lg:top-[3.25rem] lg:max-h-[calc(100vh-4.25rem)]">
@@ -479,15 +503,6 @@
             </aside>
 
             <section id="boardPostPanel" class="min-w-0 scroll-mt-[4.5rem]">
-                <div id="mobileBoardPickerBar" class="lg:hidden sticky top-[3.25rem] z-30 -mx-0.5">
-                    <button id="mobileBoardPickerBtn" type="button" aria-haspopup="dialog" aria-controls="boardPickerSheet">
-                        <span id="mobileBoardPickerLabel">게시판을 선택하세요</span>
-                        <span id="mobileBoardPickerAction" aria-hidden="true">
-                            변경
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                        </span>
-                    </button>
-                </div>
                 <div class="w-full max-w-full sm:max-w-3xl sm:mx-auto space-y-3 sm:space-y-4">
                 <div class="bg-white rounded-xl sm:rounded-2xl ring-1 ring-zinc-200 shadow-sm p-3 sm:p-5">
                     <div class="flex flex-col gap-3">
@@ -516,7 +531,7 @@
     </main>
 </div>
 
-<div id="boardPickerSheet" class="hidden lg:hidden fixed inset-0 z-[55]" role="dialog" aria-modal="true" aria-labelledby="boardPickerSheetTitle">
+<div id="boardPickerSheet" class="hidden fixed inset-0 z-[55]" role="dialog" aria-modal="true" aria-labelledby="boardPickerSheetTitle">
     <button type="button" id="boardPickerBackdrop" class="board-picker-backdrop" aria-label="닫기"></button>
     <div class="board-picker-panel">
         <div class="board-picker-header">

@@ -52,6 +52,107 @@
             border: 0;
             background: #fff;
         }
+        .board-pdf-viewer {
+            background: #fff;
+        }
+        .board-pdf-viewer-mounted {
+            display: flex;
+            flex-direction: column;
+            min-height: min(60vh, 640px);
+        }
+        .board-pdf-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            background: #fff;
+            border-bottom: 1px solid #e4e4e7;
+        }
+        .board-pdf-toolbar-group {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.375rem;
+        }
+        .board-pdf-toolbar button {
+            padding: 0.25rem 0.625rem;
+            font-size: 0.6875rem;
+            font-weight: 600;
+            color: #3f3f46;
+            background: #f4f4f5;
+            border: 1px solid #e4e4e7;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .board-pdf-toolbar button:hover:not(:disabled) {
+            background: #e4e4e7;
+        }
+        .board-pdf-toolbar button.is-active {
+            background: #e0e7ff;
+            color: #4338ca;
+            border-color: #c7d2fe;
+        }
+        .board-pdf-toolbar button:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+        .board-pdf-page-info {
+            min-width: 4.5rem;
+            text-align: center;
+            font-size: 0.6875rem;
+            font-weight: 600;
+            color: #52525b;
+            font-variant-numeric: tabular-nums;
+        }
+        .board-pdf-canvas-wrap {
+            position: relative;
+            flex: 1;
+            overflow: auto;
+            background: #fafafa;
+            min-height: min(50vh, 560px);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 0.75rem;
+        }
+        .board-pdf-canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            background: #fff;
+        }
+        .board-pdf-loading {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #71717a;
+            background: rgba(250, 250, 250, 0.92);
+        }
+        .board-pdf-loading.hidden { display: none; }
+        .board-pdf-error {
+            padding: 1.5rem;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #71717a;
+            background: #fff;
+        }
+        .board-pdf-error.hidden { display: none; }
+        .board-pdf-error a {
+            display: inline-block;
+            margin-top: 0.5rem;
+            color: #4f46e5;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .board-pdf-error a:hover { text-decoration: underline; }
         .toastui-editor-contents .board-pdf-embed,
         #detailViewer .board-pdf-embed {
             min-height: min(60vh, 640px);
@@ -63,6 +164,12 @@
             #detailViewer .board-pdf-embed {
                 min-height: 50vh;
                 height: 50vh;
+            }
+            .board-pdf-viewer-mounted {
+                min-height: 50vh;
+            }
+            .board-pdf-canvas-wrap {
+                min-height: 45vh;
             }
         }
         .board-editor-img-overlay {
@@ -224,9 +331,109 @@
             outline-offset: 1px;
         }
 
+        @media (max-width: 1023px) {
+            #mobileBoardPickerBar {
+                margin: -0.25rem 0 0.75rem;
+            }
+            #mobileBoardPickerBtn {
+                width: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 0.75rem;
+                min-height: 2.75rem;
+                padding: 0.625rem 0.875rem;
+                border-radius: 0.75rem;
+                background: #fff;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+                border: 1px solid #e4e4e7;
+                text-align: left;
+            }
+            #mobileBoardPickerLabel {
+                flex: 1;
+                min-width: 0;
+                font-size: 0.875rem;
+                font-weight: 700;
+                color: #18181b;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            #mobileBoardPickerAction {
+                flex-shrink: 0;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.25rem;
+                font-size: 0.6875rem;
+                font-weight: 700;
+                color: #4f46e5;
+            }
+            #boardPickerList .board-group {
+                margin-bottom: 0.5rem;
+            }
+            #boardPickerList .board-card,
+            #boardPickerList .board-tab-child-card {
+                min-height: 2.75rem;
+            }
+            #boardPickerList .board-edit-btn {
+                opacity: 1;
+            }
+        }
+
+        #boardPickerSheet {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+        #boardPickerSheet.hidden {
+            display: none;
+        }
+        .board-picker-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(24, 24, 27, 0.55);
+            opacity: 0;
+            transition: opacity 0.22s ease;
+        }
+        #boardPickerSheet.is-open .board-picker-backdrop {
+            opacity: 1;
+        }
+        .board-picker-panel {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            max-height: min(90vh, 640px);
+            background: #fff;
+            border-radius: 1rem 1rem 0 0;
+            box-shadow: 0 -8px 30px rgba(15, 23, 42, 0.12);
+            transform: translateY(100%);
+            transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        #boardPickerSheet.is-open .board-picker-panel {
+            transform: translateY(0);
+        }
+        .board-picker-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            border-bottom: 1px solid #e4e4e7;
+            flex-shrink: 0;
+        }
+        .board-picker-search-wrap {
+            padding: 0.75rem 1rem 0.5rem;
+            flex-shrink: 0;
+        }
+        #boardPickerList {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 0.5rem 0.5rem calc(0.75rem + env(safe-area-inset-bottom));
+        }
+
         @media (max-width: 639px) {
             html, body { overflow-x: hidden; }
-            #boardList { max-height: 38vh; }
             .board-nav-btn { min-height: 2rem; }
             .board-toolbar-btn { min-height: 2.25rem; }
         }
@@ -252,6 +459,7 @@
                 </div>
                 <div class="flex flex-wrap items-center gap-1 sm:gap-2 w-full sm:w-auto sm:justify-end shrink-0">
                     <button id="boardBackupBtn" class="board-nav-btn flex-1 sm:flex-none px-2 py-1.5 text-[10px] sm:px-3 sm:py-2 sm:text-xs font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700"><span class="sm:hidden">백업</span><span class="hidden sm:inline">백업/복구</span></button>
+                    <button id="boardLogoutBtn" type="button" class="board-nav-btn flex-1 sm:flex-none px-2 py-1.5 text-[10px] sm:px-3 sm:py-2 sm:text-xs font-semibold rounded-lg bg-zinc-100 text-zinc-700 hover:bg-zinc-200 ring-1 ring-zinc-200 sm:ring-0">로그아웃</button>
                     <button id="boardCreateBtn" class="board-nav-btn flex-1 sm:flex-none px-2 py-1.5 text-[10px] sm:px-3 sm:py-2 sm:text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"><span class="sm:hidden">생성</span><span class="hidden sm:inline">게시판 생성</span></button>
                     <button id="goHomeBtn" class="board-nav-btn flex-1 sm:flex-none px-2 py-1.5 text-[10px] sm:px-3 sm:py-2 sm:text-xs font-semibold rounded-lg bg-zinc-100 text-zinc-700 hover:bg-zinc-200">메인</button>
                     <button type="button" id="appVersionBtn" class="board-nav-btn shrink-0 text-[10px] sm:text-[11px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-lg ring-1 ring-indigo-100 transition-all" title="업데이트 내역">V1.0.003</button>
@@ -262,15 +470,24 @@
 
     <main class="max-w-7xl mx-auto px-3 sm:px-6 py-3 sm:py-5">
         <div class="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-3 sm:gap-4">
-            <aside class="board-sidebar w-full lg:w-[280px] shrink-0 bg-white rounded-xl ring-1 ring-slate-200 shadow-sm overflow-hidden flex flex-col lg:sticky lg:top-[3.25rem] lg:max-h-[calc(100vh-4.25rem)]">
+            <aside class="board-sidebar hidden lg:flex w-full lg:w-[280px] shrink-0 bg-white rounded-xl ring-1 ring-slate-200 shadow-sm overflow-hidden flex-col lg:sticky lg:top-[3.25rem] lg:max-h-[calc(100vh-4.25rem)]">
                 <div class="board-sidebar-header px-4 py-3 border-b border-slate-200 bg-slate-50 shrink-0">
                     <h2 class="text-sm font-bold text-slate-900">게시판</h2>
-                    <p class="text-xs text-slate-500 mt-0.5">길게 눌러 드래그해 순서 변경</p>
+                    <p class="hidden lg:block text-xs text-slate-500 mt-0.5">길게 눌러 드래그해 순서 변경</p>
                 </div>
                 <div id="boardList" class="board-list-scroll flex-1 min-h-0 overflow-y-auto py-2 px-2"></div>
             </aside>
 
-            <section class="min-w-0">
+            <section id="boardPostPanel" class="min-w-0 scroll-mt-[4.5rem]">
+                <div id="mobileBoardPickerBar" class="lg:hidden sticky top-[3.25rem] z-30 -mx-0.5">
+                    <button id="mobileBoardPickerBtn" type="button" aria-haspopup="dialog" aria-controls="boardPickerSheet">
+                        <span id="mobileBoardPickerLabel">게시판을 선택하세요</span>
+                        <span id="mobileBoardPickerAction" aria-hidden="true">
+                            변경
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </span>
+                    </button>
+                </div>
                 <div class="w-full max-w-full sm:max-w-3xl sm:mx-auto space-y-3 sm:space-y-4">
                 <div class="bg-white rounded-xl sm:rounded-2xl ring-1 ring-zinc-200 shadow-sm p-3 sm:p-5">
                     <div class="flex flex-col gap-3">
@@ -297,6 +514,20 @@
             </section>
         </div>
     </main>
+</div>
+
+<div id="boardPickerSheet" class="hidden lg:hidden fixed inset-0 z-[55]" role="dialog" aria-modal="true" aria-labelledby="boardPickerSheetTitle">
+    <button type="button" id="boardPickerBackdrop" class="board-picker-backdrop" aria-label="닫기"></button>
+    <div class="board-picker-panel">
+        <div class="board-picker-header">
+            <h3 id="boardPickerSheetTitle" class="text-sm font-bold text-zinc-900">게시판 선택</h3>
+            <button type="button" id="boardPickerCloseBtn" class="text-zinc-400 hover:text-zinc-700 px-2 py-1 rounded-lg hover:bg-zinc-100 text-xs font-semibold">닫기</button>
+        </div>
+        <div class="board-picker-search-wrap">
+            <input id="boardPickerSearch" type="search" placeholder="게시판 검색" class="w-full px-3 py-2 text-sm rounded-lg bg-zinc-50 ring-1 ring-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
+        </div>
+        <div id="boardPickerList" class="custom-scrollbar"></div>
+    </div>
 </div>
 
 <div id="boardModal" class="hidden fixed inset-0 z-50 bg-zinc-900/60 p-4" role="dialog" aria-modal="true" data-draggable-modal>
@@ -427,19 +658,20 @@
                 <label class="block text-xs font-semibold text-zinc-600">제목
                     <input id="postTitleInput" type="text" class="mt-1 w-full px-3 py-2 rounded-lg ring-1 ring-zinc-200">
                 </label>
+                <div id="postAttachmentSection">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2">
+                        <p class="text-[10px] sm:text-xs font-semibold text-zinc-600 leading-snug">첨부파일 (최대 5개, 파일당 1GB, .zip/.txt/.png/.pdf · PDF는 본문에 표시)</p>
+                        <input id="attachmentInput" type="file" accept=".zip,.txt,.png,.pdf" multiple class="text-[10px] sm:text-xs w-full sm:w-auto">
+                    </div>
+                    <div id="attachmentUploadProgress" class="hidden space-y-2 mb-2"></div>
+                    <div id="attachmentList" class="space-y-2"></div>
+                </div>
                 <label class="inline-flex items-center gap-2 text-sm">
                     <input id="postPinnedInput" type="checkbox">
                     <span>중요 공지 (상단 고정)</span>
                 </label>
             </div>
             <div id="editorRoot" class="ring-1 ring-zinc-200 rounded-xl overflow-hidden"></div>
-            <div>
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2">
-                    <p class="text-[10px] sm:text-xs font-semibold text-zinc-600 leading-snug">첨부파일 (최대 5개, 파일당 1GB, .zip/.txt/.png/.pdf · PDF는 본문에 표시)</p>
-                    <input id="attachmentInput" type="file" accept=".zip,.txt,.png,.pdf" multiple class="text-[10px] sm:text-xs w-full sm:w-auto">
-                </div>
-                <div id="attachmentList" class="space-y-2"></div>
-            </div>
         </div>
     </div>
 </div>
@@ -476,11 +708,15 @@
         </div>
         <div id="detailScrollArea" class="flex-1 min-h-0 p-4 sm:p-5 overflow-y-auto custom-scrollbar space-y-4">
             <p id="detailMeta" class="text-xs text-zinc-500"></p>
-            <div id="detailViewer" class="prose prose-zinc max-w-none"></div>
-            <div>
+            <div id="detailAttachmentSection">
                 <h4 class="text-sm font-semibold text-zinc-900 mb-2">첨부파일</h4>
                 <div id="detailAttachments" class="space-y-2"></div>
             </div>
+            <div id="detailPinnedWrap" class="hidden inline-flex items-center gap-2 text-sm text-amber-800 bg-amber-50 ring-1 ring-amber-200 rounded-lg px-3 py-2">
+                <span aria-hidden="true">📌</span>
+                <span class="font-semibold">중요 공지 (상단 고정)</span>
+            </div>
+            <div id="detailViewer" class="prose prose-zinc max-w-none"></div>
             <div>
                 <h4 class="text-sm font-semibold text-zinc-900 mb-2">댓글</h4>
                 <div id="commentList" class="space-y-2 mb-2"></div>
@@ -571,6 +807,12 @@
     </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+    if (window.pdfjsLib) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    }
+</script>
 <script src="https://uicdn.toast.com/tui-color-picker/latest/tui-color-picker.min.js"></script>
 <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
 <script src="https://uicdn.toast.com/editor-plugin-color-syntax/latest/toastui-editor-plugin-color-syntax.min.js"></script>

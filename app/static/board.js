@@ -29,6 +29,12 @@ let editorImagePasteTarget = null;
 const PAGE_SIZE = 20;
 
 const boardListEl = document.getElementById("boardList");
+const boardPickerSheetEl = document.getElementById("boardPickerSheet");
+const boardPickerSearchEl = document.getElementById("boardPickerSearch");
+const boardPickerListEl = document.getElementById("boardPickerList");
+const mobileBoardPickerBtnEl = document.getElementById("mobileBoardPickerBtn");
+const mobileBoardPickerLabelEl = document.getElementById("mobileBoardPickerLabel");
+let boardPickerSheetOpen = false;
 const currentBoardTitleEl = document.getElementById("currentBoardTitle");
 const currentBoardMetaEl = document.getElementById("currentBoardMeta");
 const postListEl = document.getElementById("postList");
@@ -108,12 +114,14 @@ const postBoardMoveModalSelectionLabelEl = document.getElementById("postBoardMov
 const postPinnedInputEl = document.getElementById("postPinnedInput");
 const attachmentInputEl = document.getElementById("attachmentInput");
 const attachmentListEl = document.getElementById("attachmentList");
+const attachmentUploadProgressEl = document.getElementById("attachmentUploadProgress");
 const postDeleteBtnEl = document.getElementById("postDeleteBtn");
 const editorRootEl = document.getElementById("editorRoot");
 
 const detailModalEl = document.getElementById("postDetailModal");
 const detailTitleEl = document.getElementById("detailTitle");
 const detailMetaEl = document.getElementById("detailMeta");
+const detailPinnedWrapEl = document.getElementById("detailPinnedWrap");
 const detailViewerEl = document.getElementById("detailViewer");
 const detailAttachmentsEl = document.getElementById("detailAttachments");
 const commentListEl = document.getElementById("commentList");
@@ -364,6 +372,15 @@ function validateBoardPayload(payload, { includeTabLabel = false } = {}) {
     return errors;
 }
 
+function handleLogout() {
+    const savedUsername = localStorage.getItem("vcall_saved_username");
+    localStorage.clear();
+    if (savedUsername) {
+        localStorage.setItem("vcall_saved_username", savedUsername);
+    }
+    location.href = "/";
+}
+
 function secureFetch(url, options = {}) {
     return fetch(url, {
         ...options,
@@ -376,13 +393,59 @@ function secureFetch(url, options = {}) {
         const data = await res.json().catch(() => ({}));
         if (res.status === 401) {
             alert("인증 세션이 만료되었습니다. 다시 로그인해 주세요.");
-            location.href = "/";
+            handleLogout();
             throw new Error("인증 만료");
         }
         if (!res.ok) {
             throw createApiError(data, res.status);
         }
         return data;
+    });
+}
+
+function uploadFormDataWithProgress(url, formData, onProgress) {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", url);
+        xhr.setRequestHeader("Authorization", `Bearer ${authToken}`);
+        xhr.upload.addEventListener("progress", (event) => {
+            if (event.lengthComputable && onProgress) {
+                onProgress(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+            }
+        });
+        xhr.addEventListener("load", () => {
+            let data = {};
+            try {
+                data = JSON.parse(xhr.responseText || "{}");
+            } catch {
+                data = {};
+            }
+            if (xhr.status === 401) {
+                alert("인증 세션이 만료되었습니다. 다시 로그인해 주세요.");
+                handleLogout();
+                reject(new Error("인증 만료"));
+                return;
+            }
+            if (xhr.status < 200 || xhr.status >= 300) {
+                reject(createApiError(data, xhr.status));
+                return;
+            }
+            resolve(data);
+        });
+        xhr.addEventListener("error", () => reject(new Error("업로드에 실패했습니다.")));
+        xhr.addEventListener("abort", () => reject(new Error("업로드가 취소되었습니다.")));
+        xhr.send(formData);
+    });
+}
+
+const MOBILE_BOARD_LAYOUT_MQ = window.matchMedia("(max-width: 1023px)");
+
+function scrollToPostPanelOnMobile() {
+    if (!MOBILE_BOARD_LAYOUT_MQ.matches) return;
+    const panel = document.getElementById("boardPostPanel");
+    if (!panel) return;
+    window.requestAnimationFrame(() => {
+        panel.scrollIntoView({ behavior: "smooth", block: "start" });
     });
 }
 
@@ -893,7 +956,10 @@ function initEditor(initialHtml = "") {
         editorOptions.plugins = [colorSyntax];
     }
     editor = new toastui.Editor(editorOptions);
-    window.setTimeout(setupEditorImageControls, 0);
+    window.setTimeout(() => {
+        setupEditorImageControls();
+        mountPdfViewers(getEditorWwContentEl());
+    }, 0);
 }
 
 function indexBoardTabs(boardList) {
@@ -1120,9 +1186,10 @@ function setBoardNavActive(el, active, kind = "main") {
     }
 }
 
-function syncBoardSidebarState() {
+function syncBoardListState(containerEl) {
+    if (!containerEl) return;
     const expandedParentId = getSidebarExpandedParentId();
-    boardListEl.querySelectorAll(".board-group").forEach((groupEl) => {
+    containerEl.querySelectorAll(".board-group").forEach((groupEl) => {
         const board = boards.find((row) => row.id === Number(groupEl.dataset.boardGroupId));
         if (!board) return;
 
@@ -1136,6 +1203,111 @@ function syncBoardSidebarState() {
             setBoardNavActive(childEl, Number(childEl.dataset.boardTabId) === currentBoardId, "child");
         });
     });
+}
+
+function syncBoardSidebarState() {
+    syncBoardListState(boardListEl);
+    syncBoardListState(boardPickerListEl);
+}
+
+function syncMobileBoardPickerLabel() {
+    if (!mobileBoardPickerLabelEl) return;
+    mobileBoardPickerLabelEl.textContent = currentBoardId
+        ? getPostBoardLabel(currentBoardId)
+        : "게시판을 선택하세요";
+}
+
+function openBoardPickerSheet() {
+    if (!boardPickerSheetEl) return;
+    renderBoardList(boardPickerListEl, { compact: true });
+    syncBoardListState(boardPickerListEl);
+    if (boardPickerSearchEl) boardPickerSearchEl.value = "";
+    filterBoardPickerList("");
+    boardPickerSheetEl.classList.remove("hidden");
+    window.requestAnimationFrame(() => {
+        boardPickerSheetEl.classList.add("is-open");
+    });
+    lockBodyScroll();
+    boardPickerSheetOpen = true;
+    boardPickerSearchEl?.focus();
+}
+
+function closeBoardPickerSheet() {
+    if (!boardPickerSheetEl) return;
+    boardPickerSheetEl.classList.remove("is-open");
+    boardPickerSheetOpen = false;
+    unlockBodyScroll();
+    window.setTimeout(() => {
+        if (!boardPickerSheetOpen) {
+            boardPickerSheetEl.classList.add("hidden");
+        }
+    }, 280);
+}
+
+function closeBoardPickerSheetIfOpen() {
+    if (boardPickerSheetOpen) {
+        closeBoardPickerSheet();
+    }
+}
+
+function filterBoardPickerList(query) {
+    if (!boardPickerListEl) return;
+    const q = (query || "").trim().toLowerCase();
+    boardPickerListEl.querySelectorAll(".board-group").forEach((groupEl) => {
+        const board = boards.find((row) => row.id === Number(groupEl.dataset.boardGroupId));
+        if (!board) return;
+        if (!q) {
+            groupEl.classList.remove("hidden");
+            return;
+        }
+        const names = [board.name, ...(board.tabs || []).map((tab) => tab.tab_label || tab.name)];
+        const matched = names.some((name) => (name || "").toLowerCase().includes(q));
+        groupEl.classList.toggle("hidden", !matched);
+        if (matched && board.tabs?.length > 1) {
+            groupEl.classList.add("has-expanded-children");
+            groupEl.querySelector(".board-group-children")?.classList.add("is-expanded");
+        }
+    });
+}
+
+function handleBoardListClick(event, { fromPicker = false } = {}) {
+    if (boardDragSuppressClick && !fromPicker) {
+        return;
+    }
+    const target = event.target;
+    const editBtn = target.closest(".board-edit-btn");
+    if (editBtn) {
+        event.stopPropagation();
+        const board = boards.find((row) => row.id === Number(editBtn.dataset.boardEditId));
+        if (board) {
+            if (fromPicker) closeBoardPickerSheet();
+            openBoardModal(board);
+        }
+        return;
+    }
+    const tabChild = target.closest(".board-tab-child-card");
+    if (tabChild) {
+        selectBoardTab(Number(tabChild.dataset.boardTabId));
+        return;
+    }
+    const card = target.closest(".board-card");
+    if (card) {
+        selectBoard(Number(card.dataset.boardId));
+    }
+}
+
+function handleBoardListKeydown(event) {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const tabChild = event.target.closest(".board-tab-child-card");
+    if (tabChild) {
+        event.preventDefault();
+        selectBoardTab(Number(tabChild.dataset.boardTabId));
+        return;
+    }
+    const card = event.target.closest(".board-card");
+    if (!card || event.target.closest(".board-edit-btn")) return;
+    event.preventDefault();
+    selectBoard(Number(card.dataset.boardId));
 }
 
 function renderBoardTabs() {
@@ -1178,18 +1350,30 @@ function selectBoardTab(boardId) {
     postSearchInputEl.value = "";
     renderBoardTabs();
     syncBoardSidebarState();
-    loadPosts(1).catch((error) => alert(error.message));
+    syncMobileBoardPickerLabel();
+    closeBoardPickerSheetIfOpen();
+    loadPosts(1)
+        .then(() => scrollToPostPanelOnMobile())
+        .catch((error) => alert(error.message));
 }
 
-function renderBoardList() {
+function renderBoardList(targetEl = boardListEl, { compact = false } = {}) {
+    if (!targetEl) return;
     if (!boards.length) {
-        boardListEl.innerHTML = `<p class="text-xs text-zinc-500 px-2 py-3">등록된 게시판이 없습니다.</p>`;
+        targetEl.innerHTML = `<p class="text-xs text-zinc-500 px-2 py-3">등록된 게시판이 없습니다.</p>`;
         return;
     }
-    boardListEl.innerHTML = boards.map((board) => renderBoardGroup(board)).join("");
+    targetEl.innerHTML = boards.map((board) => renderBoardGroup(board, { compact })).join("");
 }
 
-function renderBoardGroup(board) {
+function renderAllBoardLists() {
+    renderBoardList(boardListEl, { compact: false });
+    renderBoardList(boardPickerListEl, { compact: true });
+    syncBoardSidebarState();
+    syncMobileBoardPickerLabel();
+}
+
+function renderBoardGroup(board, { compact = false } = {}) {
     const expandedParentId = getSidebarExpandedParentId();
     const hasChildren = board.tabs?.length > 1;
     const expanded = hasChildren && board.id === expandedParentId;
@@ -1202,8 +1386,9 @@ function renderBoardGroup(board) {
     const childrenBlock = hasChildren
         ? `<div class="board-group-children${expanded ? " is-expanded" : ""}"><div class="board-group-children-inner pointer-events-auto">${childHtml}</div></div>`
         : "";
+    const groupMargin = compact ? "mb-2" : "mb-5";
     return `
-        <div class="board-group mb-5 last:mb-0${expanded ? " has-expanded-children" : ""}" data-board-group-id="${board.id}">
+        <div class="board-group ${groupMargin} last:mb-0${expanded ? " has-expanded-children" : ""}" data-board-group-id="${board.id}">
             ${renderParentBoardCard(board, { hasChildren, expanded })}
             ${childrenBlock}
         </div>
@@ -1419,7 +1604,7 @@ function onBoardListPointerCancel(event) {
     const wasDragging = boardDragState.dragging;
     clearBoardDragState();
     if (wasDragging) {
-        renderBoardList();
+        renderAllBoardLists();
     }
 }
 
@@ -1444,7 +1629,11 @@ function selectBoard(boardId) {
     postSearchInputEl.value = "";
     syncBoardSidebarState();
     renderBoardTabs();
-    loadPosts(1).catch((error) => alert(error.message));
+    syncMobileBoardPickerLabel();
+    closeBoardPickerSheetIfOpen();
+    loadPosts(1)
+        .then(() => scrollToPostPanelOnMobile())
+        .catch((error) => alert(error.message));
 }
 
 async function loadBoards() {
@@ -1454,7 +1643,7 @@ async function loadBoards() {
         const firstActive = boards.find((board) => board.is_active) || boards[0];
         currentBoardId = firstActive.tabs?.length ? firstActive.tabs[0].id : firstActive.id;
     }
-    renderBoardList();
+    renderAllBoardLists();
     renderBoardTabs();
     if (currentBoardId) {
         await loadPosts();
@@ -1990,7 +2179,7 @@ async function saveBoard(event) {
         const createdBoard = boards.find((board) => board.id === Number(savedBoardId));
         currentBoardId = createdBoard?.tabs?.length ? createdBoard.tabs[0].id : Number(savedBoardId);
         closeBoardModal();
-        renderBoardList();
+        renderAllBoardLists();
         renderBoardTabs();
         await loadPosts(1).catch((error) => alert(error.message));
         const addTabs = window.confirm(
@@ -2154,6 +2343,7 @@ async function openPostEditor(postId = null) {
 
 function closePostModal() {
     hidePostDraftPicker();
+    destroyPdfViewers(editorRootEl);
     const discardId = editingPostId && isPostEditorEmpty() ? editingPostId : null;
     teardownEditorImageControls();
     hidePostBoardMove();
@@ -2240,6 +2430,47 @@ function renderEditorAttachmentList(files) {
         .join("");
 }
 
+function setAttachmentUploadProgress(items) {
+    if (!attachmentUploadProgressEl) return;
+    if (!items.length) {
+        attachmentUploadProgressEl.classList.add("hidden");
+        attachmentUploadProgressEl.innerHTML = "";
+        return;
+    }
+    attachmentUploadProgressEl.classList.remove("hidden");
+    attachmentUploadProgressEl.innerHTML = items
+        .map(
+            (item) => `
+        <div class="rounded-lg ring-1 ring-indigo-100 bg-indigo-50/40 px-3 py-2" data-upload-index="${item.index}">
+            <div class="flex items-center justify-between gap-2 text-xs mb-1.5">
+                <span class="truncate min-w-0 font-medium text-zinc-700">${escapeHtml(item.name)}</span>
+                <span class="attachment-upload-percent shrink-0 tabular-nums text-indigo-600 font-semibold">${item.percent}%</span>
+            </div>
+            <div class="h-1.5 bg-zinc-200 rounded-full overflow-hidden">
+                <div class="attachment-upload-bar h-full bg-indigo-600 rounded-full transition-[width] duration-150 ease-out" style="width: ${item.percent}%"></div>
+            </div>
+        </div>
+    `
+        )
+        .join("");
+}
+
+function updateAttachmentUploadProgress(index, percent) {
+    if (!attachmentUploadProgressEl) return;
+    const row = attachmentUploadProgressEl.querySelector(`[data-upload-index="${index}"]`);
+    if (!row) return;
+    const percentEl = row.querySelector(".attachment-upload-percent");
+    const barEl = row.querySelector(".attachment-upload-bar");
+    if (percentEl) percentEl.textContent = `${percent}%`;
+    if (barEl) barEl.style.width = `${percent}%`;
+}
+
+function setAttachmentInputDisabled(disabled) {
+    attachmentInputEl.disabled = disabled;
+    attachmentInputEl.classList.toggle("opacity-50", disabled);
+    attachmentInputEl.classList.toggle("pointer-events-none", disabled);
+}
+
 async function refreshEditingAttachments() {
     if (!editingPostId) return;
     const detail = await secureFetch(`/api/boards/posts/${editingPostId}?with_view_count=false`);
@@ -2249,18 +2480,39 @@ async function refreshEditingAttachments() {
 async function uploadAttachments(files) {
     if (!editingPostId) return;
     const queue = Array.from(files || []);
-    for (const file of queue) {
-        const form = new FormData();
-        form.append("file", file);
-        const uploaded = await secureFetch(`/api/boards/posts/${editingPostId}/attachments`, {
-            method: "POST",
-            body: form,
-        });
-        if (isPdfAttachment(uploaded) || isPdfAttachment(file)) {
-            insertPdfEmbedIntoEditor(uploaded.id, uploaded.original_name || file.name);
+    if (!queue.length) return;
+
+    const progressState = queue.map((file, index) => ({
+        index,
+        name: file.name,
+        percent: 0,
+    }));
+    setAttachmentUploadProgress(progressState);
+    setAttachmentInputDisabled(true);
+
+    try {
+        for (let i = 0; i < queue.length; i++) {
+            const file = queue[i];
+            const form = new FormData();
+            form.append("file", file);
+            const uploaded = await uploadFormDataWithProgress(
+                `/api/boards/posts/${editingPostId}/attachments`,
+                form,
+                (percent) => {
+                    progressState[i].percent = percent;
+                    updateAttachmentUploadProgress(i, percent);
+                }
+            );
+            updateAttachmentUploadProgress(i, 100);
+            if (isPdfAttachment(uploaded) || isPdfAttachment(file)) {
+                insertPdfEmbedIntoEditor(uploaded.id, uploaded.original_name || file.name);
+            }
         }
+    } finally {
+        setAttachmentUploadProgress([]);
+        setAttachmentInputDisabled(false);
+        await refreshEditingAttachments();
     }
-    await refreshEditingAttachments();
 }
 
 async function deleteAttachment(fileId) {
@@ -2279,10 +2531,260 @@ function isPdfAttachment(file) {
     return name.endsWith(".pdf") || mime === "application/pdf";
 }
 
+const pdfViewerStore = new WeakMap();
+
+function getPdfJsLib() {
+    return window.pdfjsLib || null;
+}
+
+function buildPdfMediaUrl(fileId) {
+    return `/api/boards/media/${fileId}?token=${encodeURIComponent(authToken)}`;
+}
+
+function extractFileIdFromBlock(block) {
+    const fromAttr = block.dataset.fileId;
+    if (fromAttr) return Number(fromAttr);
+    const iframe = block.querySelector(".board-pdf-embed");
+    if (iframe) {
+        const iframeSrc = iframe.getAttribute("src") || "";
+        const iframeMatch = iframeSrc.match(/\/api\/boards\/media\/(\d+)/);
+        if (iframeMatch) return Number(iframeMatch[1]);
+    }
+    const link = block.querySelector(".board-pdf-caption a[href*='/api/boards/media/']");
+    if (link) {
+        const href = link.getAttribute("href") || "";
+        const linkMatch = href.match(/\/api\/boards\/media\/(\d+)/);
+        if (linkMatch) return Number(linkMatch[1]);
+    }
+    return null;
+}
+
 function buildPdfEmbedHtml(fileId, fileName) {
     const safeName = escapeHtml(fileName || "PDF");
     const src = `/api/boards/media/${fileId}`;
-    return `<div class="board-pdf-block" data-file-id="${fileId}" contenteditable="false"><p class="board-pdf-caption"><strong>${safeName}</strong> <a href="${src}" target="_blank" rel="noopener noreferrer">새 탭에서 열기</a></p><iframe class="board-pdf-embed" src="${src}" title="${safeName}" loading="lazy"></iframe></div>`;
+    return `<div class="board-pdf-block" data-file-id="${fileId}" contenteditable="false"><p class="board-pdf-caption"><strong>${safeName}</strong> <a href="${src}" target="_blank" rel="noopener noreferrer">새 탭에서 열기</a></p><div class="board-pdf-viewer"></div></div>`;
+}
+
+function buildPdfViewerInnerHtml(fileId) {
+    const src = buildPdfMediaUrl(fileId);
+    return `
+        <div class="board-pdf-toolbar">
+            <div class="board-pdf-toolbar-group">
+                <button type="button" class="board-pdf-prev" title="이전 페이지">이전</button>
+                <span class="board-pdf-page-info">- / -</span>
+                <button type="button" class="board-pdf-next" title="다음 페이지">다음</button>
+            </div>
+            <div class="board-pdf-toolbar-group">
+                <button type="button" class="board-pdf-zoom-out" title="축소">−</button>
+                <button type="button" class="board-pdf-fit-width" title="너비 맞춤">맞춤</button>
+                <button type="button" class="board-pdf-zoom-in" title="확대">+</button>
+            </div>
+        </div>
+        <div class="board-pdf-canvas-wrap">
+            <div class="board-pdf-loading">PDF 불러오는 중…</div>
+            <canvas class="board-pdf-canvas"></canvas>
+        </div>
+        <div class="board-pdf-error hidden">
+            <p>PDF를 표시할 수 없습니다.</p>
+            <a href="${src}" target="_blank" rel="noopener noreferrer">새 탭에서 열기</a>
+        </div>
+    `;
+}
+
+function updatePdfToolbarState(state) {
+    const totalPages = state.pdfDoc?.numPages || 0;
+    const pageInfoEl = state.mountEl.querySelector(".board-pdf-page-info");
+    const prevBtn = state.mountEl.querySelector(".board-pdf-prev");
+    const nextBtn = state.mountEl.querySelector(".board-pdf-next");
+    const fitBtn = state.mountEl.querySelector(".board-pdf-fit-width");
+    if (pageInfoEl) {
+        pageInfoEl.textContent = totalPages ? `${state.pageNum} / ${totalPages}` : "- / -";
+    }
+    if (prevBtn) prevBtn.disabled = !totalPages || state.pageNum <= 1;
+    if (nextBtn) nextBtn.disabled = !totalPages || state.pageNum >= totalPages;
+    if (fitBtn) {
+        fitBtn.classList.toggle("is-active", state.fitWidth);
+    }
+}
+
+function showPdfViewerError(state, message) {
+    const loadingEl = state.mountEl.querySelector(".board-pdf-loading");
+    const canvasWrapEl = state.mountEl.querySelector(".board-pdf-canvas-wrap");
+    const errorEl = state.mountEl.querySelector(".board-pdf-error");
+    if (loadingEl) loadingEl.classList.add("hidden");
+    if (canvasWrapEl) canvasWrapEl.classList.add("hidden");
+    if (errorEl) {
+        errorEl.classList.remove("hidden");
+        const messageEl = errorEl.querySelector("p");
+        if (messageEl) messageEl.textContent = message || "PDF를 표시할 수 없습니다.";
+    }
+}
+
+async function renderPdfPage(state) {
+    if (!state.pdfDoc) return;
+    if (state.rendering) {
+        state.pendingPage = state.pageNum;
+        return;
+    }
+    state.rendering = true;
+    const loadingEl = state.mountEl.querySelector(".board-pdf-loading");
+    const canvas = state.mountEl.querySelector(".board-pdf-canvas");
+    const wrap = state.mountEl.querySelector(".board-pdf-canvas-wrap");
+    try {
+        const page = await state.pdfDoc.getPage(state.pageNum);
+        const viewportAtScale1 = page.getViewport({ scale: 1 });
+        let scale = state.scale;
+        if (state.fitWidth && wrap) {
+            const wrapWidth = Math.max((wrap.clientWidth || viewportAtScale1.width) - 24, 120);
+            scale = wrapWidth / viewportAtScale1.width;
+        }
+        const viewport = page.getViewport({ scale });
+        const outputScale = window.devicePixelRatio || 1;
+        canvas.width = Math.floor(viewport.width * outputScale);
+        canvas.height = Math.floor(viewport.height * outputScale);
+        canvas.style.width = `${viewport.width}px`;
+        canvas.style.height = `${viewport.height}px`;
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(outputScale, 0, 0, outputScale, 0, 0);
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        if (loadingEl) loadingEl.classList.add("hidden");
+        updatePdfToolbarState(state);
+    } catch (error) {
+        showPdfViewerError(state, error.message || "PDF 페이지를 표시할 수 없습니다.");
+    } finally {
+        state.rendering = false;
+        if (state.pendingPage !== null) {
+            const nextPage = state.pendingPage;
+            state.pendingPage = null;
+            if (nextPage !== state.pageNum) {
+                state.pageNum = nextPage;
+            }
+            renderPdfPage(state);
+        }
+    }
+}
+
+function bindPdfViewerControls(state) {
+    const prevBtn = state.mountEl.querySelector(".board-pdf-prev");
+    const nextBtn = state.mountEl.querySelector(".board-pdf-next");
+    const zoomInBtn = state.mountEl.querySelector(".board-pdf-zoom-in");
+    const zoomOutBtn = state.mountEl.querySelector(".board-pdf-zoom-out");
+    const fitBtn = state.mountEl.querySelector(".board-pdf-fit-width");
+
+    prevBtn?.addEventListener("click", () => {
+        if (!state.pdfDoc || state.pageNum <= 1) return;
+        state.pageNum -= 1;
+        renderPdfPage(state);
+    });
+    nextBtn?.addEventListener("click", () => {
+        if (!state.pdfDoc || state.pageNum >= state.pdfDoc.numPages) return;
+        state.pageNum += 1;
+        renderPdfPage(state);
+    });
+    zoomInBtn?.addEventListener("click", () => {
+        state.fitWidth = false;
+        state.scale = Math.min((state.scale || 1) * 1.2, 4);
+        renderPdfPage(state);
+    });
+    zoomOutBtn?.addEventListener("click", () => {
+        state.fitWidth = false;
+        state.scale = Math.max((state.scale || 1) / 1.2, 0.4);
+        renderPdfPage(state);
+    });
+    fitBtn?.addEventListener("click", () => {
+        state.fitWidth = !state.fitWidth;
+        if (state.fitWidth) state.scale = 1;
+        renderPdfPage(state);
+    });
+}
+
+async function createPdfViewer(block, mountEl, fileId) {
+    const pdfjsLib = getPdfJsLib();
+    if (!pdfjsLib) {
+        mountEl.innerHTML = `<div class="board-pdf-error"><p>PDF 뷰어를 불러올 수 없습니다.</p><a href="${buildPdfMediaUrl(fileId)}" target="_blank" rel="noopener noreferrer">새 탭에서 열기</a></div>`;
+        return;
+    }
+
+    mountEl.innerHTML = buildPdfViewerInnerHtml(fileId);
+    mountEl.classList.add("board-pdf-viewer-mounted");
+
+    const state = {
+        block,
+        mountEl,
+        fileId,
+        pdfDoc: null,
+        pageNum: 1,
+        scale: 1,
+        fitWidth: true,
+        rendering: false,
+        pendingPage: null,
+        destroy() {
+            if (this.pdfDoc) {
+                try {
+                    this.pdfDoc.destroy();
+                } catch {
+                    /* ignore */
+                }
+                this.pdfDoc = null;
+            }
+            mountEl.innerHTML = "";
+            mountEl.classList.remove("board-pdf-viewer-mounted");
+        },
+    };
+
+    pdfViewerStore.set(block, state);
+    bindPdfViewerControls(state);
+
+    const loadingEl = state.mountEl.querySelector(".board-pdf-loading");
+    try {
+        const loadingTask = pdfjsLib.getDocument({
+            url: buildPdfMediaUrl(fileId),
+            withCredentials: false,
+        });
+        loadingTask.onProgress = (progress) => {
+            if (!loadingEl || !progress.total) return;
+            const percent = Math.min(100, Math.round((progress.loaded / progress.total) * 100));
+            loadingEl.textContent = `PDF 불러오는 중… ${percent}%`;
+        };
+        state.pdfDoc = await loadingTask.promise;
+        state.pageNum = 1;
+        updatePdfToolbarState(state);
+        await renderPdfPage(state);
+    } catch (error) {
+        showPdfViewerError(state, error.message || "PDF를 불러올 수 없습니다.");
+    }
+}
+
+function destroyPdfViewers(rootEl) {
+    if (!rootEl) return;
+    rootEl.querySelectorAll(".board-pdf-block").forEach((block) => {
+        const state = pdfViewerStore.get(block);
+        if (state) {
+            state.destroy();
+            pdfViewerStore.delete(block);
+        }
+    });
+}
+
+async function mountPdfViewers(rootEl) {
+    if (!rootEl || !getPdfJsLib()) return;
+    const blocks = rootEl.querySelectorAll(".board-pdf-block");
+    for (const block of blocks) {
+        if (pdfViewerStore.has(block)) continue;
+        const fileId = extractFileIdFromBlock(block);
+        if (!fileId) continue;
+
+        block.querySelector(".board-pdf-embed")?.remove();
+
+        let mountEl = block.querySelector(".board-pdf-viewer");
+        if (!mountEl) {
+            mountEl = document.createElement("div");
+            mountEl.className = "board-pdf-viewer";
+            block.appendChild(mountEl);
+        }
+
+        await createPdfViewer(block, mountEl, fileId);
+    }
 }
 
 function mergePdfEmbedsIntoBody(html, files) {
@@ -2320,6 +2822,7 @@ function insertPdfEmbedIntoEditor(fileId, fileName) {
     window.setTimeout(() => {
         if (editor) {
             editor.setHTML(injectMediaToken(stripMediaToken(editor.getHTML() || "")));
+            mountPdfViewers(getEditorWwContentEl());
         }
     }, 0);
 }
@@ -2338,6 +2841,9 @@ async function openPostDetail(postId) {
     const post = detail.post;
     detailTitleEl.textContent = post.title || "(제목 없음)";
     detailMetaEl.textContent = `작성자 ${post.author_username} · ${formatDateTime(post.created_at)} · 조회 ${post.view_count}`;
+    renderDetailAttachments(detail.files || []);
+    detailPinnedWrapEl.classList.toggle("hidden", !post.is_pinned);
+    destroyPdfViewers(detailViewerEl);
     if (viewerInstance && typeof viewerInstance.destroy === "function") {
         viewerInstance.destroy();
     }
@@ -2347,7 +2853,7 @@ async function openPostDetail(postId) {
         viewer: true,
         initialValue: injectMediaToken(mergePdfEmbedsIntoBody(post.body_html || "", detail.files || [])),
     });
-    renderDetailAttachments(detail.files || []);
+    window.setTimeout(() => mountPdfViewers(detailViewerEl), 0);
     renderComments(detail.comments || []);
     detailModalEl.classList.remove("hidden");
     resetDraggableModal(detailModalEl);
@@ -2356,6 +2862,7 @@ async function openPostDetail(postId) {
 }
 
 function closeDetailModal() {
+    destroyPdfViewers(detailViewerEl);
     detailModalEl.classList.add("hidden");
     resetDraggableModal(detailModalEl);
     unlockBodyScroll();
@@ -2527,6 +3034,7 @@ function bindEvents() {
     document.getElementById("goHomeBtn").addEventListener("click", () => {
         location.href = "/";
     });
+    document.getElementById("boardLogoutBtn").addEventListener("click", handleLogout);
     document.getElementById("boardBackupBtn").addEventListener("click", openBackupModal);
     document.getElementById("backupModalCloseBtn").addEventListener("click", closeBackupModal);
     document.getElementById("backupDownloadBtn").addEventListener("click", () => {
@@ -2717,41 +3225,24 @@ function bindEvents() {
     });
 
     boardListEl.addEventListener("click", (event) => {
-        if (boardDragSuppressClick) {
-            return;
-        }
-        const target = event.target;
-        const editBtn = target.closest(".board-edit-btn");
-        if (editBtn) {
-            event.stopPropagation();
-            const board = boards.find((row) => row.id === Number(editBtn.dataset.boardEditId));
-            if (board) openBoardModal(board);
-            return;
-        }
-        const tabChild = target.closest(".board-tab-child-card");
-        if (tabChild) {
-            selectBoardTab(Number(tabChild.dataset.boardTabId));
-            return;
-        }
-        const card = target.closest(".board-card");
-        if (card) {
-            selectBoard(Number(card.dataset.boardId));
-        }
+        handleBoardListClick(event);
     });
 
-    boardListEl.addEventListener("keydown", (event) => {
-        if (event.key !== "Enter" && event.key !== " ") return;
-        const tabChild = event.target.closest(".board-tab-child-card");
-        if (tabChild) {
-            event.preventDefault();
-            selectBoardTab(Number(tabChild.dataset.boardTabId));
-            return;
-        }
-        const card = event.target.closest(".board-card");
-        if (!card || event.target.closest(".board-edit-btn")) return;
-        event.preventDefault();
-        selectBoard(Number(card.dataset.boardId));
+    boardListEl.addEventListener("keydown", handleBoardListKeydown);
+
+    boardPickerListEl?.addEventListener("click", (event) => {
+        handleBoardListClick(event, { fromPicker: true });
     });
+
+    boardPickerListEl?.addEventListener("keydown", handleBoardListKeydown);
+
+    mobileBoardPickerBtnEl?.addEventListener("click", openBoardPickerSheet);
+    document.getElementById("boardPickerBackdrop")?.addEventListener("click", closeBoardPickerSheet);
+    document.getElementById("boardPickerCloseBtn")?.addEventListener("click", closeBoardPickerSheet);
+    boardPickerSearchEl?.addEventListener("input", (event) => {
+        filterBoardPickerList(event.target.value);
+    });
+
     bindBoardListDrag();
 
     boardTabBarEl.addEventListener("click", (event) => {

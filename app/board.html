@@ -561,6 +561,9 @@
             #boardPickerList .board-tab-child-card {
                 min-height: 2.75rem;
             }
+            #boardPickerList .board-card {
+                touch-action: pan-y;
+            }
             #boardPickerList .board-edit-btn {
                 opacity: 1;
             }
@@ -623,6 +626,7 @@
             flex: 1;
             min-height: 0;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
             padding: 0.5rem 0.5rem calc(0.75rem + env(safe-area-inset-bottom));
         }
 

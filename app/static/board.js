@@ -35,6 +35,8 @@ const boardPickerListEl = document.getElementById("boardPickerList");
 const mobileBoardPickerBtnEl = document.getElementById("mobileBoardPickerBtn");
 const mobileBoardPickerLabelEl = document.getElementById("mobileBoardPickerLabel");
 let boardPickerSheetOpen = false;
+let pickerExpandedParentId = null;
+let pickerFilterQuery = "";
 const currentBoardTitleEl = document.getElementById("currentBoardTitle");
 const currentBoardMetaEl = document.getElementById("currentBoardMeta");
 const postListEl = document.getElementById("postList");
@@ -1242,15 +1244,31 @@ function setBoardNavActive(el, active, kind = "main") {
     }
 }
 
+function boardMatchesPickerFilter(board) {
+    if (!pickerFilterQuery) return false;
+    const names = [board.name, ...(board.tabs || []).map((tab) => tab.tab_label || tab.name)];
+    return names.some((name) => (name || "").toLowerCase().includes(pickerFilterQuery));
+}
+
 function syncBoardListState(containerEl) {
     if (!containerEl) return;
-    const expandedParentId = getSidebarExpandedParentId();
+    const isPicker = containerEl === boardPickerListEl;
+    const sidebarExpandedParentId = getSidebarExpandedParentId();
     containerEl.querySelectorAll(".board-group").forEach((groupEl) => {
         const board = boards.find((row) => row.id === Number(groupEl.dataset.boardGroupId));
         if (!board) return;
 
         const hasChildren = board.tabs?.length > 1;
-        const expanded = hasChildren && board.id === expandedParentId;
+        let expanded = false;
+        if (hasChildren) {
+            if (isPicker) {
+                expanded = pickerFilterQuery
+                    ? boardMatchesPickerFilter(board)
+                    : board.id === pickerExpandedParentId;
+            } else {
+                expanded = board.id === sidebarExpandedParentId;
+            }
+        }
         groupEl.classList.toggle("has-expanded-children", expanded);
         groupEl.querySelector(".board-group-children")?.classList.toggle("is-expanded", expanded);
         setBoardNavActive(groupEl.querySelector(".board-card"), sidebarActiveBoardId(board) === board.id, "main");
@@ -1282,6 +1300,9 @@ function openBoardPickerSheet() {
         return;
     }
     if (boardPickerSheetOpen) return;
+
+    pickerExpandedParentId = getSidebarExpandedParentId();
+    pickerFilterQuery = "";
 
     renderBoardList(listEl, { compact: true });
     syncBoardListState(listEl);
@@ -1327,6 +1348,7 @@ function closeBoardPickerSheetIfOpen() {
 function filterBoardPickerList(query) {
     if (!boardPickerListEl) return;
     const q = (query || "").trim().toLowerCase();
+    pickerFilterQuery = q;
     boardPickerListEl.querySelectorAll(".board-group").forEach((groupEl) => {
         const board = boards.find((row) => row.id === Number(groupEl.dataset.boardGroupId));
         if (!board) return;
@@ -1337,11 +1359,8 @@ function filterBoardPickerList(query) {
         const names = [board.name, ...(board.tabs || []).map((tab) => tab.tab_label || tab.name)];
         const matched = names.some((name) => (name || "").toLowerCase().includes(q));
         groupEl.classList.toggle("hidden", !matched);
-        if (matched && board.tabs?.length > 1) {
-            groupEl.classList.add("has-expanded-children");
-            groupEl.querySelector(".board-group-children")?.classList.add("is-expanded");
-        }
     });
+    syncBoardListState(boardPickerListEl);
 }
 
 function handleBoardListClick(event, { fromPicker = false } = {}) {
@@ -1366,7 +1385,14 @@ function handleBoardListClick(event, { fromPicker = false } = {}) {
     }
     const card = target.closest(".board-card");
     if (card) {
-        selectBoard(Number(card.dataset.boardId));
+        const boardId = Number(card.dataset.boardId);
+        const board = boards.find((row) => row.id === boardId);
+        if (fromPicker && board?.tabs?.length > 1) {
+            pickerExpandedParentId = pickerExpandedParentId === boardId ? null : boardId;
+            syncBoardListState(boardPickerListEl);
+            return;
+        }
+        selectBoard(boardId);
     }
 }
 

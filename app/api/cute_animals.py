@@ -20,10 +20,13 @@ from app.api.auth import get_current_user, get_current_user_for_media
 router = APIRouter(prefix="/api/cute-animal", tags=["CuteAnimal"])
 
 CACHE_TTL_SECONDS = 3600
-BATCH_SIZE = 20
+BATCH_SIZE = 8
 _USER_AGENT = "vcall-agent/1.0"
-_DOG_CEO_API = "https://dog.ceo/api/breeds/image/random"
-_DOGAPI_SEARCH = "https://api.thedogapi.com/v1/images/search?limit={limit}&size=full&order=RANDOM"
+_BING_API = (
+    "https://www.bing.com/HPImageArchive.aspx"
+    "?format=js&idx=0&n={n}&mkt=ko-KR"
+)
+_BING_BASE = "https://www.bing.com"
 _CACHE_DIR = Path(os.environ.get("CUTE_ANIMAL_CACHE_DIR", "/data/cute_animal_cache"))
 _DISPLAY_MAX_PX = 720
 _FULL_MAX_PX = 1280
@@ -48,79 +51,41 @@ def _fetch_json(url: str, timeout: int = 10) -> object | None:
         return None
 
 
-def _fetch_dogapi_batch(limit: int = 10) -> list[dict]:
-    data = _fetch_json(_DOGAPI_SEARCH.format(limit=limit))
-    if not isinstance(data, list):
+def _collect_source_urls(target: int = BATCH_SIZE) -> list[dict]:
+    data = _fetch_json(_BING_API.format(n=target))
+    if not isinstance(data, dict):
+        return []
+
+    images = data.get("images")
+    if not isinstance(images, list):
         return []
 
     items: list[dict] = []
-    for row in data:
-        if not isinstance(row, dict):
-            continue
-        url = row.get("url")
-        if not isinstance(url, str) or not url.startswith("http"):
-            continue
-        width = row.get("width") or 0
-        height = row.get("height") or 0
-        items.append({
-            "source_url": url,
-            "width": int(width) if isinstance(width, (int, float)) else 0,
-            "height": int(height) if isinstance(height, (int, float)) else 0,
-            "animal": "dog",
-            "source": "thedogapi",
-        })
-    return items
-
-
-def _fetch_one_dog_ceo_url() -> str | None:
-    data = _fetch_json(_DOG_CEO_API)
-    if isinstance(data, dict) and data.get("status") == "success":
-        url = data.get("message")
-        if isinstance(url, str) and url.startswith("http"):
-            return url
-    return None
-
-
-def _collect_source_urls(target: int = BATCH_SIZE) -> list[dict]:
-    items: list[dict] = []
     seen: set[str] = set()
-
-    def add(entry: dict) -> None:
-        url = entry.get("source_url")
-        if not isinstance(url, str) or url in seen or len(items) >= target:
-            return
-        seen.add(url)
-        items.append(entry)
-
-    for batch_limit in (10, 10):
+    for row in images:
         if len(items) >= target:
             break
-        for row in _fetch_dogapi_batch(batch_limit):
-            add(row)
-
-    workers = min(8, target)
-    attempts = max(target - len(items), 0) + 8
-    if attempts > 0 and len(items) < target:
-        with ThreadPoolExecutor(max_workers=workers) as pool:
-            futures = [pool.submit(_fetch_one_dog_ceo_url) for _ in range(attempts)]
-            for future in as_completed(futures):
-                if len(items) >= target:
-                    break
-                try:
-                    url = future.result()
-                except Exception:
-                    continue
-                if url:
-                    add({
-                        "source_url": url,
-                        "width": 0,
-                        "height": 0,
-                        "animal": "dog",
-                        "source": "dog.ceo",
-                    })
-
-    items.sort(key=lambda row: int(row.get("width") or 0), reverse=True)
-    return items[:target]
+        if not isinstance(row, dict):
+            continue
+        path = row.get("url")
+        if not isinstance(path, str) or not path.startswith("/"):
+            continue
+        url = f"{_BING_BASE}{path}"
+        if url in seen:
+            continue
+        seen.add(url)
+        copyright_text = row.get("copyright") if isinstance(row.get("copyright"), str) else ""
+        title = row.get("title") if isinstance(row.get("title"), str) else ""
+        items.append({
+            "source_url": url,
+            "width": 0,
+            "height": 0,
+            "animal": "bing",
+            "source": "bing",
+            "title": title,
+            "copyright": copyright_text,
+        })
+    return items
 
 
 def _download_bytes(url: str) -> bytes | None:
@@ -164,8 +129,10 @@ def _process_source(idx: int, entry: dict, batch_dir: Path) -> dict | None:
         "image_url": f"/api/cute-animal/file/{batch_dir.name}/{idx}/view",
         "full_url": f"/api/cute-animal/file/{batch_dir.name}/{idx}/full",
         "source_url": entry["source_url"],
-        "animal": entry.get("animal", "dog"),
-        "source": entry.get("source", ""),
+        "animal": entry.get("animal", "bing"),
+        "source": entry.get("source", "bing"),
+        "title": entry.get("title", ""),
+        "copyright": entry.get("copyright", ""),
         "bytes_view": len(view_bytes),
         "bytes_full": len(full_bytes),
         "orig_bytes": len(raw),
@@ -249,7 +216,7 @@ def _build_payload(ok: bool, message: str = "") -> dict:
         "batch_id": _cache.get("batch_id") if ok else None,
         "items": items if ok else [],
         "count": len(items) if ok else 0,
-        "animal": "dog" if ok else None,
+        "animal": "bing" if ok else None,
         "message": message or ("이미지 없음" if not ok else ""),
         "cached_until": expires_at,
         "refresh_seconds": CACHE_TTL_SECONDS,

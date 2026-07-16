@@ -198,7 +198,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 7002 --reload
 
 - `.env`는 저장소에 커밋하지 마세요 (`.gitignore`에 포함됨).
 - 운영 환경에서는 `ADMIN_PASSWORD`, `SECRET_KEY`를 반드시 변경하세요.
-- JWT 만료: 8시간 (`ACCESS_TOKEN_EXPIRE_HOURS`).
+- JWT 만료: 24시간 (`ACCESS_TOKEN_EXPIRE_HOURS`).
 - MDB 파일 권한은 `640`, `data/` 디렉터리는 `750`으로 제한합니다.
 
 ## 라이선스

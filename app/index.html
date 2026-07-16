@@ -255,7 +255,7 @@
         <div id="cuteAnimalPanel" class="mt-4 fade-in-up max-w-md sm:max-w-lg mx-auto w-full">
             <div class="bg-white rounded-xl ring-1 ring-zinc-200/60 shadow-sm overflow-hidden">
                 <div id="cuteAnimalStage" class="group relative h-52 sm:h-60 md:h-64 bg-gradient-to-br from-amber-50/80 to-zinc-100 overflow-hidden select-none">
-                    <img id="cuteAnimalImage" class="hidden absolute inset-0 z-0 w-full h-full object-contain p-1" alt="귀여운 강아지">
+                    <img id="cuteAnimalImage" class="hidden absolute inset-0 z-0 w-full h-full object-contain p-1" alt="Bing 배경 이미지">
                     <div id="cuteAnimalPlaceholder" class="absolute inset-0 z-0 flex items-center justify-center text-sm text-zinc-400">불러오는 중...</div>
                     <button type="button" id="cuteAnimalPrevBtn" onclick="prevCuteAnimal()" class="hidden absolute inset-y-0 left-0 z-20 w-[30%] items-center justify-start pl-2 bg-gradient-to-r from-black/35 via-black/10 to-transparent text-white opacity-90 hover:opacity-100 transition-opacity" aria-label="이전 사진">
                         <span class="w-9 h-9 rounded-full bg-black/45 backdrop-blur-sm flex items-center justify-center shadow-md">
@@ -268,13 +268,13 @@
                         </span>
                     </button>
                     <div id="cuteAnimalMeta" class="hidden absolute bottom-2.5 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-full bg-black/50 backdrop-blur-sm text-[10px] text-white/95 whitespace-nowrap pointer-events-none">
-                        <span id="cuteAnimalCounter">1 / 20</span>
+                        <span id="cuteAnimalCounter">1 / 8</span>
                         <span class="mx-1.5 text-white/50">·</span>
                         <span id="cuteAnimalLabel">8초마다 자동 전환</span>
                     </div>
                 </div>
                 <div id="cuteAnimalUrlRow" class="hidden px-3 py-2 border-t border-zinc-100 bg-zinc-50/90">
-                    <p class="text-[10px] font-medium text-zinc-400 mb-1">원본 이미지 경로</p>
+                    <p class="text-[10px] font-medium text-zinc-400 mb-1">이미지 출처</p>
                     <a id="cuteAnimalUrlLink" href="#" target="_blank" rel="noopener noreferrer" class="block text-[11px] leading-relaxed text-indigo-600 hover:text-indigo-800 hover:underline break-all"></a>
                 </div>
             </div>
@@ -283,12 +283,12 @@
 </div>
 
 <!-- Cute animal lightbox -->
-<div id="cuteAnimalLightbox" class="fixed inset-0 z-[60] hidden bg-black/90 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="강아지 사진 확대">
+<div id="cuteAnimalLightbox" class="fixed inset-0 z-[60] hidden bg-black/90 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Bing 이미지 확대">
     <button type="button" onclick="closeCuteAnimalLightbox()" class="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors" aria-label="닫기">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
     </button>
     <div class="absolute inset-0 flex items-center justify-center p-4 sm:p-8" onclick="closeCuteAnimalLightbox()">
-        <img id="cuteAnimalLightboxImg" src="" alt="강아지 사진 확대" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl" onclick="event.stopPropagation()">
+        <img id="cuteAnimalLightboxImg" src="" alt="Bing 이미지 확대" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl" onclick="event.stopPropagation()">
     </div>
 </div>
 
@@ -1140,7 +1140,7 @@ GIANT(자이언트)천안	giant	2017-03-02
         }
     }
 
-    function updateCuteAnimalUrl(url) {
+    function updateCuteAnimalUrl(url, caption = '') {
         const row = document.getElementById('cuteAnimalUrlRow');
         const link = document.getElementById('cuteAnimalUrlLink');
         if (!row || !link) return;
@@ -1151,7 +1151,7 @@ GIANT(자이언트)천안	giant	2017-03-02
             return;
         }
         link.href = url;
-        link.textContent = url;
+        link.textContent = caption || url;
         row.classList.remove('hidden');
     }
 
@@ -1208,7 +1208,7 @@ GIANT(자이언트)천안	giant	2017-03-02
             img.classList.remove('hidden');
             setCuteAnimalControlsVisible(true);
             updateCuteAnimalCounter();
-            updateCuteAnimalUrl(sourceUrl);
+            updateCuteAnimalUrl(sourceUrl, item.copyright || item.title || '');
             prefetchCuteAnimalAt(cuteAnimalIndex + 1);
             if (animate) playCuteAnimalAnimation(direction);
         };

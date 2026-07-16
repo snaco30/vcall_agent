@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     ADMIN_USERNAME: str = "admin"
     ADMIN_PASSWORD: str = "admin1234!"
     SECRET_KEY: str = "vcall_default_secret_fallback_key"
-    ACCESS_TOKEN_EXPIRE_DAYS: int = 7
+    ACCESS_TOKEN_EXPIRE_HOURS: int = 24
 
 
 settings = Settings()
@@ -138,7 +138,7 @@ def login(data: LoginRequest):
             detail="아이디 또는 비밀번호가 일치하지 않습니다.",
         )
 
-    expire = datetime.datetime.utcnow() + datetime.timedelta(days=settings.ACCESS_TOKEN_EXPIRE_DAYS)
+    expire = datetime.datetime.utcnow() + datetime.timedelta(hours=settings.ACCESS_TOKEN_EXPIRE_HOURS)
     to_encode = {"sub": data.username, "exp": expire}
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
 

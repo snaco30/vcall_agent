@@ -28,6 +28,17 @@
             to { opacity: 1; transform: translateY(0); }
         }
         .fade-in-up { animation: fadeInUp 0.45s ease-out both; }
+        @keyframes loginSpinnerSpin {
+            to { transform: rotate(360deg); }
+        }
+        .login-spinner {
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: 9999px;
+            border: 3px solid rgba(99, 102, 241, 0.2);
+            border-top-color: #4f46e5;
+            animation: loginSpinnerSpin 0.75s linear infinite;
+        }
         @keyframes cuteAnimalSlideInNext {
             from { opacity: 0; transform: translateX(72px); }
             to { opacity: 1; transform: translateX(0); }
@@ -114,7 +125,7 @@
 
 <!-- Login -->
 <div id="loginSection" class="fixed inset-0 z-50 bg-gradient-to-br from-indigo-50 via-white to-zinc-100 flex justify-center items-center p-4">
-    <div class="bg-white rounded-xl shadow-xl shadow-zinc-200/50 w-full max-w-md p-8 ring-1 ring-zinc-200/60">
+    <div class="relative bg-white rounded-xl shadow-xl shadow-zinc-200/50 w-full max-w-md p-8 ring-1 ring-zinc-200/60">
         <div class="text-center mb-8">
             <div class="inline-flex items-center justify-center w-12 h-12 bg-indigo-600 rounded-xl text-white font-bold text-lg shadow-lg shadow-indigo-600/20 mb-4">V</div>
             <div class="inline-block bg-indigo-50 text-indigo-700 font-semibold px-3 py-1 rounded-full text-xs tracking-wide mb-3 ring-1 ring-indigo-100">V-CALL SECURITY</div>
@@ -150,6 +161,10 @@
         <p class="text-center mt-6">
             <button type="button" id="loginVersionBtn" class="text-[11px] font-medium text-zinc-400 hover:text-indigo-600 transition-colors">V1.0.003 · 업데이트 내역</button>
         </p>
+        <div id="loginLoadingOverlay" class="hidden absolute inset-0 z-10 rounded-xl bg-white/80 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3" aria-live="polite" aria-busy="true">
+            <div class="login-spinner" role="progressbar" aria-label="로그인 중"></div>
+            <p class="text-sm font-medium text-indigo-700">로그인 중...</p>
+        </div>
     </div>
 </div>
 
@@ -1635,16 +1650,28 @@ GIANT(자이언트)천안	giant	2017-03-02
         }
     };
 
+    function setLoginLoading(isLoading) {
+        const overlay = document.getElementById('loginLoadingOverlay');
+        const loginBtn = document.getElementById('loginBtn');
+        const usernameEl = document.getElementById('username');
+        const passwordEl = document.getElementById('password');
+        if (overlay) overlay.classList.toggle('hidden', !isLoading);
+        if (loginBtn) {
+            loginBtn.disabled = isLoading;
+            loginBtn.innerText = isLoading ? '로그인 중...' : '인증 및 시스템 접속';
+        }
+        if (usernameEl) usernameEl.disabled = isLoading;
+        if (passwordEl) passwordEl.disabled = isLoading;
+    }
+
     function handleLogin(event) {
         event.preventDefault();
         const u = document.getElementById('username').value.trim();
         const p = document.getElementById('password').value.trim();
         const errEl = document.getElementById('loginError');
-        const loginBtn = document.getElementById('loginBtn');
 
         errEl.classList.add('hidden');
-        loginBtn.disabled = true;
-        loginBtn.innerText = '인증 중...';
+        setLoginLoading(true);
 
         fetch('/api/auth/login', {
             method: 'POST',
@@ -1666,10 +1693,9 @@ GIANT(자이언트)천안	giant	2017-03-02
             location.reload();
         })
         .catch(err => {
+            setLoginLoading(false);
             errEl.innerText = err.message;
             errEl.classList.remove('hidden');
-            loginBtn.disabled = false;
-            loginBtn.innerText = '인증 및 시스템 접속';
         });
     }
 

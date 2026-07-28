@@ -1690,7 +1690,7 @@ GIANT(자이언트)천안	giant	2017-03-02
             } else {
                 localStorage.removeItem('vcall_saved_username');
             }
-            location.reload();
+            location.href = '/board';
         })
         .catch(err => {
             setLoginLoading(false);

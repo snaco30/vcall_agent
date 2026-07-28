@@ -123,7 +123,7 @@ const attachmentDropzoneOverlayEl = document.getElementById("attachmentDropzoneO
 const attachmentDropzoneOverlayMetaEl = document.getElementById("attachmentDropzoneOverlayMeta");
 const attachmentDropzoneOverlayBarEl = document.getElementById("attachmentDropzoneOverlayBar");
 const attachmentListEl = document.getElementById("attachmentList");
-const ALLOWED_ATTACHMENT_EXTENSIONS = [".zip", ".txt", ".png", ".pdf"];
+const ALLOWED_ATTACHMENT_EXTENSIONS = [".zip", ".txt", ".png", ".pdf", ".jpg", ".jpeg"];
 const MAX_ATTACHMENT_COUNT = 5;
 const ATTACHMENT_UPLOAD_DONE_MS = 400;
 let attachmentUploadBusy = false;
@@ -131,6 +131,9 @@ let attachmentUploadState = [];
 let cachedEditorAttachmentFiles = [];
 const postDeleteBtnEl = document.getElementById("postDeleteBtn");
 const editorRootEl = document.getElementById("editorRoot");
+const editorImagePickBtnEl = document.getElementById("editorImagePickBtn");
+const editorImageInputEl = document.getElementById("editorImageInput");
+const editorImageUploadStatusEl = document.getElementById("editorImageUploadStatus");
 
 const detailModalEl = document.getElementById("postDetailModal");
 const detailTitleEl = document.getElementById("detailTitle");
@@ -468,6 +471,8 @@ function uploadFormDataWithProgress(url, formData, onProgress) {
 }
 
 const MOBILE_BOARD_LAYOUT_MQ = window.matchMedia("(max-width: 1023px)");
+const MOBILE_POST_EDITOR_MQ = window.matchMedia("(max-width: 639px)");
+let editorImageUploadBusy = false;
 const COARSE_POINTER_MQ = window.matchMedia("(pointer: coarse)");
 let boardNavResizeObserver = null;
 let pickerScrollLockActive = false;
@@ -580,6 +585,25 @@ function getEditorMaxImageWidth() {
     return Math.max(120, (ww?.clientWidth || 640) - 24);
 }
 
+function getEditorMaxImageHeight() {
+    if (!MOBILE_POST_EDITOR_MQ.matches) return null;
+    return Math.max(160, Math.min(400, Math.round(window.innerHeight * 0.48)));
+}
+
+function getFittedImageWidth(img, maxWidth, maxHeight = null) {
+    const naturalWidth = img?.naturalWidth || maxWidth;
+    const naturalHeight = img?.naturalHeight || maxWidth;
+    if (!naturalWidth || !naturalHeight) {
+        return Math.min(naturalWidth || maxWidth, maxWidth);
+    }
+    let width = Math.min(naturalWidth, maxWidth);
+    let height = (width / naturalWidth) * naturalHeight;
+    if (maxHeight && height > maxHeight) {
+        width = (maxHeight / naturalHeight) * naturalWidth;
+    }
+    return Math.max(50, Math.round(width));
+}
+
 function getEditorImageDisplayWidth(img) {
     if (!img) return 0;
     const attrWidth = Number.parseInt(img.getAttribute("width") || "", 10);
@@ -592,15 +616,54 @@ function getEditorImageDisplayWidth(img) {
 function normalizeInsertedEditorImage(img) {
     if (!img) return;
     const maxWidth = getEditorMaxImageWidth();
+    const maxHeight = getEditorMaxImageHeight();
     const natural = img.naturalWidth || maxWidth;
+    const fittedWidth = getFittedImageWidth(img, maxWidth, maxHeight);
     const current = getEditorImageDisplayWidth(img);
     if (!current || current > maxWidth) {
-        applyImageDimensions(img, Math.min(natural, maxWidth));
+        applyImageDimensions(img, Math.min(natural, fittedWidth));
         return;
     }
-    if (!img.getAttribute("width") && !img.style.width) {
-        applyImageDimensions(img, Math.min(natural, maxWidth));
+    if (maxHeight && img.naturalHeight > 0 && img.naturalWidth > 0) {
+        const displayHeight = (getEditorImageDisplayWidth(img) / img.naturalWidth) * img.naturalHeight;
+        if (displayHeight > maxHeight) {
+            applyImageDimensions(img, fittedWidth);
+            return;
+        }
     }
+    if (!img.getAttribute("width") && !img.style.width) {
+        applyImageDimensions(img, Math.min(natural, fittedWidth));
+    }
+}
+
+function fitMobileEditorImages() {
+    if (!MOBILE_POST_EDITOR_MQ.matches) return;
+    getEditorWwContentEl()?.querySelectorAll("img").forEach((img) => {
+        if (img.complete && img.naturalWidth > 0) {
+            normalizeInsertedEditorImage(img);
+            return;
+        }
+        img.addEventListener("load", () => normalizeInsertedEditorImage(img), { once: true });
+    });
+}
+
+function fitMobileViewerImages(rootEl) {
+    if (!MOBILE_POST_EDITOR_MQ.matches || !rootEl) return;
+    rootEl.querySelectorAll("img").forEach((img) => {
+        img.style.maxWidth = "100%";
+        img.style.width = "auto";
+        img.style.height = "auto";
+        img.style.objectFit = "contain";
+        if (img.complete) return;
+        img.addEventListener(
+            "load",
+            () => {
+                img.style.width = "auto";
+                img.style.height = "auto";
+            },
+            { once: true },
+        );
+    });
 }
 
 function finalizeInsertedEditorImage(img) {
@@ -1004,9 +1067,57 @@ async function handleEditorClipboardPaste(event) {
     if (!files.length) return;
     event.preventDefault();
     event.stopPropagation();
-    for (const file of files) {
-        await insertEditorImageBlob(file);
+    await handleEditorImageSelection(files);
+}
+
+function getEditorHeightPx() {
+    if (MOBILE_POST_EDITOR_MQ.matches) {
+        return Math.max(280, Math.min(480, Math.round(window.innerHeight * 0.42)));
     }
+    return 460;
+}
+
+function setEditorImageUploadBusy(busy) {
+    editorImageUploadBusy = busy;
+    if (editorImagePickBtnEl) {
+        editorImagePickBtnEl.disabled = busy;
+    }
+    editorImageUploadStatusEl?.classList.toggle("hidden", !busy);
+}
+
+async function handleEditorImageSelection(files) {
+    if (!editor || !editingPostId) {
+        alert("글을 먼저 작성할 게시판을 선택해 주세요.");
+        return;
+    }
+    const imageFiles = Array.from(files || []).filter((file) => file.type?.startsWith("image/"));
+    if (!imageFiles.length) {
+        alert("이미지 파일만 선택할 수 있습니다.");
+        return;
+    }
+    setEditorImageUploadBusy(true);
+    try {
+        for (const file of imageFiles) {
+            await insertEditorImageBlob(file);
+        }
+    } catch (error) {
+        alert(error.message || "이미지 업로드에 실패했습니다.");
+    } finally {
+        setEditorImageUploadBusy(false);
+        if (editorImageInputEl) {
+            editorImageInputEl.value = "";
+        }
+    }
+}
+
+function bindEditorImagePicker() {
+    editorImagePickBtnEl?.addEventListener("click", () => {
+        if (!editingPostId || editorImageUploadBusy) return;
+        editorImageInputEl?.click();
+    });
+    editorImageInputEl?.addEventListener("change", (event) => {
+        handleEditorImageSelection(event.target.files).catch((error) => alert(error.message));
+    });
 }
 
 function initEditor(initialHtml = "") {
@@ -1014,7 +1125,7 @@ function initEditor(initialHtml = "") {
     const colorSyntax = toastui?.Editor?.plugin?.colorSyntax;
     const editorOptions = {
         el: editorRootEl,
-        height: "460px",
+        height: `${getEditorHeightPx()}px`,
         initialEditType: "wysiwyg",
         previewStyle: "vertical",
         initialValue: initialHtml,
@@ -1036,6 +1147,7 @@ function initEditor(initialHtml = "") {
     window.setTimeout(() => {
         setupEditorImageControls();
         mountPdfViewers(getEditorWwContentEl());
+        fitMobileEditorImages();
     }, 0);
 }
 
@@ -2548,7 +2660,7 @@ function getAttachmentExtension(name) {
 function getAttachmentIconClass(name) {
     const ext = getAttachmentExtension(name);
     if (ext === ".pdf") return "is-pdf";
-    if (ext === ".png") return "is-image";
+    if (ext === ".png" || ext === ".jpg" || ext === ".jpeg") return "is-image";
     if (ext === ".zip") return "is-archive";
     return "";
 }
@@ -2692,7 +2804,7 @@ function syncAttachmentDropzoneState() {
         if (atLimit) {
             attachmentDropzoneHintEl.textContent = `첨부 가능한 최대 ${MAX_ATTACHMENT_COUNT}개에 도달했습니다.`;
         } else {
-            attachmentDropzoneHintEl.textContent = `끌어다 놓거나 파일 선택 · ZIP·TXT·PNG·PDF · ${count}/${MAX_ATTACHMENT_COUNT} · 최대 1GB`;
+            attachmentDropzoneHintEl.textContent = `끌어다 놓거나 파일 선택 · ZIP·TXT·PNG·JPG·PDF · ${count}/${MAX_ATTACHMENT_COUNT} · 최대 1GB`;
         }
     }
 }
@@ -2717,7 +2829,7 @@ function validateAttachmentFiles(files) {
         }
         const ext = getAttachmentExtension(file.name);
         if (!ALLOWED_ATTACHMENT_EXTENSIONS.includes(ext)) {
-            errors.push(`${file.name}: ZIP, TXT, PNG, PDF만 업로드할 수 있습니다.`);
+            errors.push(`${file.name}: ZIP, TXT, PNG, JPG, PDF만 업로드할 수 있습니다.`);
             continue;
         }
         valid.push(file);
@@ -3246,7 +3358,10 @@ async function openPostDetail(postId) {
         viewer: true,
         initialValue: injectMediaToken(mergePdfEmbedsIntoBody(post.body_html || "", detail.files || [])),
     });
-    window.setTimeout(() => mountPdfViewers(detailViewerEl), 0);
+    window.setTimeout(() => {
+        mountPdfViewers(detailViewerEl);
+        fitMobileViewerImages(detailViewerEl);
+    }, 0);
     renderComments(detail.comments || []);
     detailModalEl.classList.remove("hidden");
     resetDraggableModal(detailModalEl);
@@ -3578,6 +3693,7 @@ function bindEvents() {
     });
 
     bindAttachmentDropzone();
+    bindEditorImagePicker();
 
     document.getElementById("detailCloseBtn").addEventListener("click", closeDetailModal);
     document.getElementById("detailEditBtn").addEventListener("click", () => {

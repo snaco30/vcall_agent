@@ -1,11 +1,13 @@
 from bleach.css_sanitizer import CSSSanitizer
 
-ALLOWED_ATTACHMENT_EXTENSIONS = {".zip", ".txt", ".png", ".pdf"}
+ALLOWED_ATTACHMENT_EXTENSIONS = {".zip", ".txt", ".png", ".pdf", ".jpg", ".jpeg"}
 ALLOWED_ATTACHMENT_MIME = {
     ".zip": {"application/zip", "application/x-zip-compressed", "application/octet-stream"},
     ".txt": {"text/plain", "application/octet-stream"},
     ".png": {"image/png", "application/octet-stream"},
     ".pdf": {"application/pdf", "application/octet-stream"},
+    ".jpg": {"image/jpeg", "application/octet-stream"},
+    ".jpeg": {"image/jpeg", "application/octet-stream"},
 }
 MAX_ATTACHMENT_COUNT = 5
 MAX_ATTACHMENT_BYTES = 1024 * 1024 * 1024  # 1GB

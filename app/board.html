@@ -12,8 +12,8 @@
     <style>
         .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 9999px; }
-        .toastui-editor-contents img { max-width: 100%; height: auto; cursor: pointer; }
-        #detailViewer img { max-width: 100%; height: auto; }
+        .toastui-editor-contents img { max-width: 100%; height: auto; cursor: pointer; object-fit: contain; }
+        #detailViewer img { max-width: 100%; height: auto; object-fit: contain; }
         #detailViewer p[style*="text-align: center"],
         #detailViewer div[style*="text-align: center"] { text-align: center; }
         #detailViewer p[style*="text-align: right"],
@@ -750,6 +750,137 @@
             html, body { overflow-x: hidden; }
             .board-nav-btn { min-height: 2rem; }
             .board-toolbar-btn { min-height: 2.25rem; }
+
+            #postTitleInput {
+                font-size: 1rem;
+                padding: 0.75rem 0.875rem;
+                min-height: 2.75rem;
+                background: #fafafa;
+                border-radius: 0.75rem;
+            }
+            #postModalTopBar {
+                padding-bottom: 0.75rem;
+            }
+            .post-editor-section {
+                margin-top: 0.25rem;
+            }
+            .post-editor-root {
+                min-height: min(48vh, 420px);
+                border-radius: 0.75rem;
+                box-shadow: inset 0 0 0 1px #e4e4e7;
+            }
+            .post-editor-root .toastui-editor-defaultUI {
+                border: none;
+            }
+            .post-editor-root .toastui-editor-main {
+                background: #fafafa;
+            }
+            .post-editor-root .toastui-editor-contents {
+                font-size: 1rem;
+                line-height: 1.65;
+                padding: 1rem !important;
+                min-height: 12rem;
+                background: #fafafa;
+            }
+            .post-editor-root .toastui-editor-ww-container {
+                background: #fafafa;
+            }
+            .post-editor-toolbar {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 0.5rem;
+                padding: 0.25rem 0 0.5rem;
+            }
+            .post-editor-image-btn {
+                flex: 1;
+                min-height: 2.75rem;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.5rem;
+                padding: 0.625rem 1rem;
+                font-size: 0.875rem;
+                font-weight: 700;
+                color: #4338ca;
+                background: #eef2ff;
+                border: 1px solid #c7d2fe;
+                border-radius: 0.75rem;
+                cursor: pointer;
+                touch-action: manipulation;
+                -webkit-tap-highlight-color: transparent;
+                transition: background 0.15s, border-color 0.15s;
+            }
+            .post-editor-image-btn:hover:not(:disabled) {
+                background: #e0e7ff;
+                border-color: #a5b4fc;
+            }
+            .post-editor-image-btn:disabled {
+                opacity: 0.55;
+                cursor: not-allowed;
+            }
+            .post-editor-image-hint {
+                flex: 1 1 100%;
+                font-size: 0.6875rem;
+                color: #71717a;
+                line-height: 1.35;
+            }
+            .post-attachment-section {
+                margin-top: 0.75rem;
+                padding-top: 0.75rem;
+                border-top: 1px solid #f4f4f5;
+            }
+            :root {
+                --board-body-img-max-height: min(48dvh, 400px);
+            }
+            #detailViewer img,
+            #detailViewer .toastui-editor-contents img,
+            .post-editor-root .toastui-editor-contents img {
+                max-width: 100% !important;
+                width: auto !important;
+                height: auto !important;
+                max-height: var(--board-body-img-max-height);
+                object-fit: contain;
+                display: block;
+                margin-left: auto;
+                margin-right: auto;
+            }
+        }
+
+        @media (min-width: 640px) {
+            .post-editor-toolbar {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 0.5rem;
+                padding-bottom: 0.375rem;
+            }
+            .post-editor-image-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.375rem;
+                padding: 0.4375rem 0.75rem;
+                font-size: 0.75rem;
+                font-weight: 700;
+                color: #4338ca;
+                background: #eef2ff;
+                border: 1px solid #c7d2fe;
+                border-radius: 0.5rem;
+                cursor: pointer;
+                transition: background 0.15s, border-color 0.15s;
+            }
+            .post-editor-image-btn:hover:not(:disabled) {
+                background: #e0e7ff;
+                border-color: #a5b4fc;
+            }
+            .post-editor-image-btn:disabled {
+                opacity: 0.55;
+                cursor: not-allowed;
+            }
+            .post-editor-image-hint {
+                font-size: 0.6875rem;
+                color: #a1a1aa;
+            }
         }
     </style>
 </head>
@@ -971,11 +1102,30 @@
                     </div>
                 </div>
                 <label class="block text-xs font-semibold text-zinc-600">제목
-                    <input id="postTitleInput" type="text" class="mt-1 w-full px-3 py-2 rounded-lg ring-1 ring-zinc-200">
+                    <input id="postTitleInput" type="text" class="mt-1 w-full px-3 py-2 rounded-lg ring-1 ring-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
                 </label>
-                <div id="postAttachmentSection">
+                <label class="inline-flex items-center gap-2 text-sm">
+                    <input id="postPinnedInput" type="checkbox">
+                    <span>중요 공지 (상단 고정)</span>
+                </label>
+            </div>
+            <div id="postEditorSection" class="post-editor-section space-y-2">
+                <div id="postEditorToolbar" class="post-editor-toolbar">
+                    <button type="button" id="editorImagePickBtn" class="post-editor-image-btn" aria-label="본문에 사진 추가">
+                        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <span>사진 추가</span>
+                    </button>
+                    <input id="editorImageInput" type="file" accept="image/*" multiple class="sr-only">
+                    <span id="editorImageUploadStatus" class="hidden text-xs font-semibold text-indigo-600">업로드 중…</span>
+                    <span class="post-editor-image-hint">여러 장 선택·붙여넣기 가능</span>
+                </div>
+                <div id="editorRoot" class="post-editor-root ring-1 ring-zinc-200 rounded-xl overflow-hidden"></div>
+            </div>
+            <div id="postAttachmentSection" class="post-attachment-section">
                     <div id="attachmentDropzone" class="attachment-dropzone">
-                        <input id="attachmentInput" class="attachment-dropzone-input" type="file" accept=".zip,.txt,.png,.pdf" multiple>
+                        <input id="attachmentInput" class="attachment-dropzone-input" type="file" accept=".zip,.txt,.png,.pdf,.jpg,.jpeg" multiple>
                         <div id="attachmentDropzoneOverlay" class="attachment-dropzone-overlay hidden" aria-live="polite" aria-hidden="true">
                             <p class="attachment-dropzone-overlay-title">업로드 중</p>
                             <p id="attachmentDropzoneOverlayMeta" class="attachment-dropzone-overlay-meta"></p>
@@ -988,18 +1138,12 @@
                             <svg class="attachment-dropzone-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
                             </svg>
-                            <p id="attachmentDropzoneHint" class="attachment-dropzone-hint">끌어다 놓거나 파일 선택 · ZIP·TXT·PNG·PDF · 0/5 · 최대 1GB</p>
+                            <p id="attachmentDropzoneHint" class="attachment-dropzone-hint">끌어다 놓거나 파일 선택 · ZIP·TXT·PNG·JPG·PDF · 0/5 · 최대 1GB</p>
                             <button id="attachmentBrowseBtn" type="button" class="attachment-dropzone-browse">파일 선택</button>
                         </div>
                     </div>
                     <div id="attachmentList" class="attachment-file-list" aria-live="polite"></div>
-                </div>
-                <label class="inline-flex items-center gap-2 text-sm">
-                    <input id="postPinnedInput" type="checkbox">
-                    <span>중요 공지 (상단 고정)</span>
-                </label>
             </div>
-            <div id="editorRoot" class="ring-1 ring-zinc-200 rounded-xl overflow-hidden"></div>
         </div>
     </div>
 </div>
@@ -1146,6 +1290,6 @@
 <script src="https://uicdn.toast.com/editor-plugin-color-syntax/latest/toastui-editor-plugin-color-syntax.min.js"></script>
 <script src="/static/modal-drag.js"></script>
 <script src="/static/version.js"></script>
-<script src="/static/board.js?v=1.0.007b"></script>
+<script src="/static/board.js?v=1.0.008b"></script>
 </body>
 </html>

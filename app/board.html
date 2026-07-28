@@ -317,6 +317,113 @@
             cursor: not-allowed;
             background: #f4f4f5;
         }
+        .attachment-dropzone.is-uploading {
+            border-color: #a5b4fc;
+            background: #f5f7ff;
+        }
+        .attachment-dropzone.is-uploading .attachment-dropzone-body {
+            pointer-events: none;
+        }
+        .attachment-dropzone-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0 0.75rem;
+            border-radius: inherit;
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(2px);
+        }
+        .attachment-dropzone-overlay.hidden {
+            display: none;
+        }
+        .attachment-dropzone-overlay-title {
+            flex-shrink: 0;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #4338ca;
+            line-height: 1.2;
+        }
+        .attachment-dropzone-overlay-meta {
+            flex: 1;
+            min-width: 0;
+            font-size: 0.6875rem;
+            font-weight: 600;
+            color: #52525b;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .attachment-dropzone-overlay-track {
+            flex-shrink: 0;
+            width: 5rem;
+            height: 0.25rem;
+            background: #e4e4e7;
+            border-radius: 9999px;
+            overflow: hidden;
+            position: relative;
+        }
+        .attachment-dropzone-overlay-bar {
+            height: 100%;
+            background: #4f46e5;
+            border-radius: 9999px;
+            transition: width 0.15s ease-out;
+        }
+        .attachment-dropzone-overlay-bar.is-indeterminate {
+            width: 35% !important;
+            animation: attachment-upload-indeterminate 1.1s ease-in-out infinite;
+        }
+        @keyframes attachment-upload-indeterminate {
+            0% { transform: translateX(-120%); }
+            100% { transform: translateX(320%); }
+        }
+        .attachment-upload-row {
+            border-color: #c7d2fe;
+            background: #fafaff;
+        }
+        .attachment-upload-row.is-done {
+            border-color: #bbf7d0;
+            background: #f0fdf4;
+        }
+        .attachment-upload-row.is-error {
+            border-color: #fecaca;
+            background: #fef2f2;
+        }
+        .attachment-upload-row .attachment-file-size {
+            color: #6366f1;
+        }
+        .attachment-upload-row.is-done .attachment-file-size {
+            color: #16a34a;
+        }
+        .attachment-upload-row.is-error .attachment-file-size {
+            color: #dc2626;
+        }
+        .attachment-upload-track {
+            margin-top: 0.375rem;
+            height: 0.25rem;
+            background: #e4e4e7;
+            border-radius: 9999px;
+            overflow: hidden;
+        }
+        .attachment-upload-bar {
+            height: 100%;
+            background: #4f46e5;
+            border-radius: 9999px;
+            transition: width 0.15s ease-out;
+        }
+        .attachment-upload-bar.is-indeterminate {
+            width: 35% !important;
+            animation: attachment-upload-indeterminate 1.1s ease-in-out infinite;
+        }
+        .attachment-upload-row.is-done .attachment-upload-bar {
+            background: #16a34a;
+        }
+        .attachment-upload-row.is-error .attachment-upload-bar {
+            background: #dc2626;
+        }
         .attachment-dropzone-input {
             position: absolute;
             width: 1px;
@@ -330,12 +437,11 @@
         }
         .attachment-dropzone-body {
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
             align-items: center;
-            justify-content: center;
             gap: 0.5rem;
-            padding: 1.25rem 1rem;
-            text-align: center;
+            padding: 0.5rem 0.75rem;
+            min-height: 2.5rem;
             cursor: pointer;
         }
         .attachment-dropzone.is-disabled .attachment-dropzone-body {
@@ -343,28 +449,33 @@
             pointer-events: none;
         }
         .attachment-dropzone-icon {
-            width: 2.25rem;
-            height: 2.25rem;
+            flex-shrink: 0;
+            width: 1.125rem;
+            height: 1.125rem;
             color: #818cf8;
         }
-        .attachment-dropzone-title {
-            font-size: 0.8125rem;
-            font-weight: 600;
+        .attachment-dropzone-label {
+            flex-shrink: 0;
+            font-size: 0.75rem;
+            font-weight: 700;
             color: #3f3f46;
-            line-height: 1.4;
+        }
+        .attachment-dropzone-title {
+            display: none;
         }
         .attachment-dropzone-browse {
+            flex-shrink: 0;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            margin-top: 0.125rem;
-            padding: 0.375rem 0.875rem;
-            font-size: 0.75rem;
+            margin-top: 0;
+            padding: 0.3125rem 0.75rem;
+            font-size: 0.6875rem;
             font-weight: 700;
             color: #4338ca;
             background: #fff;
             border: 1px solid #c7d2fe;
-            border-radius: 9999px;
+            border-radius: 0.5rem;
             cursor: pointer;
             transition: background 0.15s, border-color 0.15s;
         }
@@ -373,21 +484,26 @@
             border-color: #a5b4fc;
         }
         .attachment-dropzone-hint {
+            flex: 1;
+            min-width: 0;
             font-size: 0.6875rem;
-            color: #a1a1aa;
-            line-height: 1.45;
+            color: #71717a;
+            line-height: 1.3;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         .attachment-file-list {
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
-            margin-top: 0.625rem;
+            gap: 0.375rem;
+            margin-top: 0.5rem;
         }
         .attachment-file-item {
             display: flex;
             align-items: center;
-            gap: 0.625rem;
-            padding: 0.625rem 0.75rem;
+            gap: 0.5rem;
+            padding: 0.4375rem 0.625rem;
             background: #fff;
             border: 1px solid #e4e4e7;
             border-radius: 0.625rem;
@@ -858,20 +974,25 @@
                     <input id="postTitleInput" type="text" class="mt-1 w-full px-3 py-2 rounded-lg ring-1 ring-zinc-200">
                 </label>
                 <div id="postAttachmentSection">
-                    <p class="text-xs font-semibold text-zinc-700 mb-2">첨부파일</p>
                     <div id="attachmentDropzone" class="attachment-dropzone">
                         <input id="attachmentInput" class="attachment-dropzone-input" type="file" accept=".zip,.txt,.png,.pdf" multiple>
+                        <div id="attachmentDropzoneOverlay" class="attachment-dropzone-overlay hidden" aria-live="polite" aria-hidden="true">
+                            <p class="attachment-dropzone-overlay-title">업로드 중</p>
+                            <p id="attachmentDropzoneOverlayMeta" class="attachment-dropzone-overlay-meta"></p>
+                            <div class="attachment-dropzone-overlay-track">
+                                <div id="attachmentDropzoneOverlayBar" class="attachment-dropzone-overlay-bar" style="width: 0%"></div>
+                            </div>
+                        </div>
                         <div id="attachmentDropzoneBody" class="attachment-dropzone-body" role="button" tabindex="0" aria-label="첨부파일 업로드">
+                            <span class="attachment-dropzone-label">첨부</span>
                             <svg class="attachment-dropzone-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
                             </svg>
-                            <p class="attachment-dropzone-title">여기에 파일을 끌어다 놓으세요</p>
-                            <button id="attachmentBrowseBtn" type="button" class="attachment-dropzone-browse">내 PC</button>
-                            <p id="attachmentDropzoneHint" class="attachment-dropzone-hint">ZIP · TXT · PNG · PDF · 최대 5개 · 파일당 1GB · PDF는 본문에 표시</p>
+                            <p id="attachmentDropzoneHint" class="attachment-dropzone-hint">끌어다 놓거나 파일 선택 · ZIP·TXT·PNG·PDF · 0/5 · 최대 1GB</p>
+                            <button id="attachmentBrowseBtn" type="button" class="attachment-dropzone-browse">파일 선택</button>
                         </div>
                     </div>
-                    <div id="attachmentUploadProgress" class="hidden space-y-2 mt-2"></div>
-                    <div id="attachmentList" class="attachment-file-list"></div>
+                    <div id="attachmentList" class="attachment-file-list" aria-live="polite"></div>
                 </div>
                 <label class="inline-flex items-center gap-2 text-sm">
                     <input id="postPinnedInput" type="checkbox">
@@ -1025,6 +1146,6 @@
 <script src="https://uicdn.toast.com/editor-plugin-color-syntax/latest/toastui-editor-plugin-color-syntax.min.js"></script>
 <script src="/static/modal-drag.js"></script>
 <script src="/static/version.js"></script>
-<script src="/static/board.js?v=1.0.006"></script>
+<script src="/static/board.js?v=1.0.007b"></script>
 </body>
 </html>

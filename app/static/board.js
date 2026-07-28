@@ -119,11 +119,16 @@ const attachmentDropzoneEl = document.getElementById("attachmentDropzone");
 const attachmentDropzoneBodyEl = document.getElementById("attachmentDropzoneBody");
 const attachmentBrowseBtnEl = document.getElementById("attachmentBrowseBtn");
 const attachmentDropzoneHintEl = document.getElementById("attachmentDropzoneHint");
+const attachmentDropzoneOverlayEl = document.getElementById("attachmentDropzoneOverlay");
+const attachmentDropzoneOverlayMetaEl = document.getElementById("attachmentDropzoneOverlayMeta");
+const attachmentDropzoneOverlayBarEl = document.getElementById("attachmentDropzoneOverlayBar");
 const attachmentListEl = document.getElementById("attachmentList");
-const attachmentUploadProgressEl = document.getElementById("attachmentUploadProgress");
 const ALLOWED_ATTACHMENT_EXTENSIONS = [".zip", ".txt", ".png", ".pdf"];
 const MAX_ATTACHMENT_COUNT = 5;
+const ATTACHMENT_UPLOAD_DONE_MS = 400;
 let attachmentUploadBusy = false;
+let attachmentUploadState = [];
+let cachedEditorAttachmentFiles = [];
 const postDeleteBtnEl = document.getElementById("postDeleteBtn");
 const editorRootEl = document.getElementById("editorRoot");
 
@@ -415,11 +420,23 @@ function secureFetch(url, options = {}) {
 function uploadFormDataWithProgress(url, formData, onProgress) {
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
+        let reportedStart = false;
         xhr.open("POST", url);
         xhr.setRequestHeader("Authorization", `Bearer ${authToken}`);
         xhr.upload.addEventListener("progress", (event) => {
-            if (event.lengthComputable && onProgress) {
-                onProgress(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+            if (!onProgress) return;
+            if (event.lengthComputable) {
+                const percent = Math.max(1, Math.min(100, Math.round((event.loaded / event.total) * 100)));
+                onProgress({ percent, indeterminate: false });
+            } else if (!reportedStart) {
+                reportedStart = true;
+                onProgress({ percent: 1, indeterminate: true });
+            }
+        });
+        xhr.addEventListener("loadstart", () => {
+            if (onProgress && !reportedStart) {
+                reportedStart = true;
+                onProgress({ percent: 1, indeterminate: true });
             }
         });
         xhr.addEventListener("load", () => {
@@ -438,6 +455,9 @@ function uploadFormDataWithProgress(url, formData, onProgress) {
             if (xhr.status < 200 || xhr.status >= 300) {
                 reject(createApiError(data, xhr.status));
                 return;
+            }
+            if (onProgress) {
+                onProgress({ percent: 100, indeterminate: false });
             }
             resolve(data);
         });
@@ -2376,7 +2396,7 @@ async function loadDraftIntoEditor(draftId) {
     postTitleInputEl.value = detail.post.title || "";
     postPinnedInputEl.checked = !!detail.post.is_pinned;
     initEditor(injectMediaToken(mergePdfEmbedsIntoBody(detail.post.body_html || "", detail.files)));
-    renderEditorAttachmentList(detail.files);
+    renderEditorAttachmentList(detail.files, true);
     postDeleteBtnEl.classList.remove("hidden");
     hidePostDraftPicker();
     if (discardEmptyId && discardEmptyId !== draftId) {
@@ -2418,7 +2438,7 @@ async function openPostEditor(postId = null) {
         postPinnedInputEl.checked = !!detail.post.is_pinned;
         initEditor(injectMediaToken(mergePdfEmbedsIntoBody(detail.post.body_html || "", detail.files)));
         postDeleteBtnEl.classList.remove("hidden");
-        renderEditorAttachmentList(detail.files);
+        renderEditorAttachmentList(detail.files, true);
     } else {
         const draft = await secureFetch(`/api/boards/${board.id}/posts`, {
             method: "POST",
@@ -2432,7 +2452,7 @@ async function openPostEditor(postId = null) {
         postPinnedInputEl.checked = false;
         initEditor("");
         postDeleteBtnEl.classList.add("hidden");
-        renderEditorAttachmentList([]);
+        renderEditorAttachmentList([], true);
     }
     postModalEl.classList.remove("hidden");
     resetDraggableModal(postModalEl);
@@ -2452,6 +2472,7 @@ function closePostModal() {
     unlockBodyScroll();
     isNewPostEditor = false;
     editingPostId = null;
+    attachmentUploadState = [];
     if (discardId) {
         secureFetch(`/api/boards/posts/${discardId}`, { method: "DELETE" }).catch(() => {});
     }
@@ -2547,19 +2568,131 @@ function getAttachmentIconSvg(name) {
 }
 
 function getCurrentAttachmentCount() {
-    return attachmentListEl?.querySelectorAll(".attachment-file-item").length || 0;
+    return attachmentListEl?.querySelectorAll(".attachment-file-item[data-file-id]").length || 0;
+}
+
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getAttachmentUploadOverallPercent() {
+    if (!attachmentUploadState.length) return 0;
+    const total = attachmentUploadState.reduce((sum, item) => sum + (item.percent || 0), 0);
+    return Math.round(total / attachmentUploadState.length);
+}
+
+function getActiveAttachmentUploadIndex() {
+    const uploading = attachmentUploadState.find((item) => item.status === "uploading");
+    if (uploading) return uploading.index;
+    const pending = attachmentUploadState.find((item) => item.status === "pending");
+    return pending ? pending.index : attachmentUploadState.length - 1;
+}
+
+function renderAttachmentUploadOverlay() {
+    if (!attachmentDropzoneOverlayEl || !attachmentDropzoneOverlayMetaEl || !attachmentDropzoneOverlayBarEl) return;
+
+    if (!attachmentUploadBusy || !attachmentUploadState.length) {
+        attachmentDropzoneOverlayEl.classList.add("hidden");
+        attachmentDropzoneOverlayEl.setAttribute("aria-hidden", "true");
+        attachmentDropzoneOverlayMetaEl.textContent = "";
+        attachmentDropzoneOverlayBarEl.style.width = "0%";
+        attachmentDropzoneOverlayBarEl.classList.remove("is-indeterminate");
+        return;
+    }
+
+    const activeIndex = getActiveAttachmentUploadIndex();
+    const activeItem = attachmentUploadState[activeIndex] || attachmentUploadState[0];
+    const overallPercent = getAttachmentUploadOverallPercent();
+    const currentNumber = activeIndex + 1;
+    const totalCount = attachmentUploadState.length;
+    const percentLabel = activeItem?.indeterminate ? "전송 중" : `${overallPercent}%`;
+
+    attachmentDropzoneOverlayEl.classList.remove("hidden");
+    attachmentDropzoneOverlayEl.setAttribute("aria-hidden", "false");
+    attachmentDropzoneOverlayMetaEl.textContent = `${currentNumber}/${totalCount} · ${activeItem?.name || ""} · ${percentLabel}`;
+    attachmentDropzoneOverlayBarEl.classList.toggle("is-indeterminate", !!activeItem?.indeterminate);
+    attachmentDropzoneOverlayBarEl.style.width = activeItem?.indeterminate ? "35%" : `${overallPercent}%`;
+}
+
+function renderAttachmentUploadRow(item) {
+    const iconClass = getAttachmentIconClass(item.name);
+    const rowClass = [
+        "attachment-file-item",
+        "attachment-upload-row",
+        item.status === "done" ? "is-done" : "",
+        item.status === "error" ? "is-error" : "",
+    ]
+        .filter(Boolean)
+        .join(" ");
+
+    let statusText = "대기 중";
+    if (item.status === "uploading") {
+        statusText = item.indeterminate ? "전송 중…" : `${item.percent}%`;
+    } else if (item.status === "done") {
+        statusText = "완료";
+    } else if (item.status === "error") {
+        statusText = item.errorMessage || "업로드 실패";
+    }
+
+    const showBar = item.status === "uploading" || item.status === "done" || item.status === "error";
+    const barWidth = item.status === "error" ? "100%" : `${item.percent}%`;
+    const barClass = item.indeterminate ? "attachment-upload-bar is-indeterminate" : "attachment-upload-bar";
+
+    return `
+        <div class="${rowClass}" data-upload-index="${item.index}" aria-live="polite">
+            <div class="attachment-file-icon ${iconClass}">${getAttachmentIconSvg(item.name)}</div>
+            <div class="attachment-file-meta">
+                <span class="attachment-file-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</span>
+                <span class="attachment-file-size attachment-upload-status">${escapeHtml(statusText)}</span>
+                ${
+                    showBar
+                        ? `<div class="attachment-upload-track"><div class="${barClass}" style="width: ${barWidth}"></div></div>`
+                        : ""
+                }
+            </div>
+        </div>
+    `;
+}
+
+function renderPersistedAttachmentRow(file) {
+    const iconClass = getAttachmentIconClass(file.original_name);
+    const pdfBadge = isPdfAttachment(file) ? `<span class="attachment-file-badge">본문 표시</span>` : "";
+    return `
+        <div class="attachment-file-item" data-file-id="${file.id}">
+            <div class="attachment-file-icon ${iconClass}">${getAttachmentIconSvg(file.original_name)}</div>
+            <div class="attachment-file-meta">
+                <span class="attachment-file-name" title="${escapeHtml(file.original_name)}">${escapeHtml(file.original_name)}</span>
+                <span class="attachment-file-size">${formatAttachmentSize(file.size_bytes || 0)}</span>
+            </div>
+            ${pdfBadge}
+            <button type="button" class="attachment-file-remove file-delete-btn" data-file-id="${file.id}" aria-label="첨부파일 삭제" title="삭제">×</button>
+        </div>
+    `;
+}
+
+function renderAttachmentListView(serverFiles = cachedEditorAttachmentFiles) {
+    if (!attachmentListEl) return;
+    const attachmentFiles = (serverFiles || []).filter((file) => file.kind === "attachment");
+    cachedEditorAttachmentFiles = attachmentFiles;
+    const uploadRows = attachmentUploadState.map((item) => renderAttachmentUploadRow(item)).join("");
+    const persistedRows = attachmentFiles.map((file) => renderPersistedAttachmentRow(file)).join("");
+    attachmentListEl.innerHTML = uploadRows + persistedRows;
+    renderAttachmentUploadOverlay();
+    syncAttachmentDropzoneState();
 }
 
 function syncAttachmentDropzoneState() {
     if (!attachmentDropzoneEl) return;
     const count = getCurrentAttachmentCount();
-    const disabled = attachmentUploadBusy || count >= MAX_ATTACHMENT_COUNT;
-    attachmentDropzoneEl.classList.toggle("is-disabled", disabled);
+    const atLimit = count >= MAX_ATTACHMENT_COUNT;
+    const disabled = attachmentUploadBusy || atLimit;
+    attachmentDropzoneEl.classList.toggle("is-uploading", attachmentUploadBusy);
+    attachmentDropzoneEl.classList.toggle("is-disabled", disabled && !attachmentUploadBusy);
     if (attachmentDropzoneHintEl) {
-        if (count >= MAX_ATTACHMENT_COUNT) {
+        if (atLimit) {
             attachmentDropzoneHintEl.textContent = `첨부 가능한 최대 ${MAX_ATTACHMENT_COUNT}개에 도달했습니다.`;
         } else {
-            attachmentDropzoneHintEl.textContent = `ZIP · TXT · PNG · PDF · ${count}/${MAX_ATTACHMENT_COUNT}개 · 파일당 1GB · PDF는 본문에 표시`;
+            attachmentDropzoneHintEl.textContent = `끌어다 놓거나 파일 선택 · ZIP·TXT·PNG·PDF · ${count}/${MAX_ATTACHMENT_COUNT} · 최대 1GB`;
         }
     }
 }
@@ -2602,68 +2735,25 @@ async function handleAttachmentSelection(files) {
     await uploadAttachments(valid);
 }
 
-function renderEditorAttachmentList(files) {
-    const attachmentFiles = (files || []).filter((file) => file.kind === "attachment");
-    if (!attachmentFiles.length) {
-        attachmentListEl.innerHTML = "";
-        syncAttachmentDropzoneState();
-        return;
+function renderEditorAttachmentList(files, resetUploadState = false) {
+    if (resetUploadState) {
+        attachmentUploadState = [];
+    } else {
+        attachmentUploadState = attachmentUploadState.filter((item) => item.status === "error");
     }
-    attachmentListEl.innerHTML = attachmentFiles
-        .map((file) => {
-            const iconClass = getAttachmentIconClass(file.original_name);
-            const pdfBadge = isPdfAttachment(file)
-                ? `<span class="attachment-file-badge">본문 표시</span>`
-                : "";
-            return `
-            <div class="attachment-file-item">
-                <div class="attachment-file-icon ${iconClass}">${getAttachmentIconSvg(file.original_name)}</div>
-                <div class="attachment-file-meta">
-                    <span class="attachment-file-name" title="${escapeHtml(file.original_name)}">${escapeHtml(file.original_name)}</span>
-                    <span class="attachment-file-size">${formatAttachmentSize(file.size_bytes || 0)}</span>
-                </div>
-                ${pdfBadge}
-                <button type="button" class="attachment-file-remove file-delete-btn" data-file-id="${file.id}" aria-label="첨부파일 삭제" title="삭제">×</button>
-            </div>
-        `;
-        })
-        .join("");
-    syncAttachmentDropzoneState();
+    renderAttachmentListView(files);
 }
 
-function setAttachmentUploadProgress(items) {
-    if (!attachmentUploadProgressEl) return;
-    if (!items.length) {
-        attachmentUploadProgressEl.classList.add("hidden");
-        attachmentUploadProgressEl.innerHTML = "";
-        return;
-    }
-    attachmentUploadProgressEl.classList.remove("hidden");
-    attachmentUploadProgressEl.innerHTML = items
-        .map(
-            (item) => `
-        <div class="rounded-lg ring-1 ring-indigo-100 bg-indigo-50/40 px-3 py-2" data-upload-index="${item.index}">
-            <div class="flex items-center justify-between gap-2 text-xs mb-1.5">
-                <span class="truncate min-w-0 font-medium text-zinc-700">${escapeHtml(item.name)}</span>
-                <span class="attachment-upload-percent shrink-0 tabular-nums text-indigo-600 font-semibold">${item.percent}%</span>
-            </div>
-            <div class="h-1.5 bg-zinc-200 rounded-full overflow-hidden">
-                <div class="attachment-upload-bar h-full bg-indigo-600 rounded-full transition-[width] duration-150 ease-out" style="width: ${item.percent}%"></div>
-            </div>
-        </div>
-    `
-        )
-        .join("");
+function updateAttachmentUploadItem(index, patch) {
+    const item = attachmentUploadState.find((entry) => entry.index === index);
+    if (!item) return;
+    Object.assign(item, patch);
+    renderAttachmentListView();
 }
 
-function updateAttachmentUploadProgress(index, percent) {
-    if (!attachmentUploadProgressEl) return;
-    const row = attachmentUploadProgressEl.querySelector(`[data-upload-index="${index}"]`);
-    if (!row) return;
-    const percentEl = row.querySelector(".attachment-upload-percent");
-    const barEl = row.querySelector(".attachment-upload-bar");
-    if (percentEl) percentEl.textContent = `${percent}%`;
-    if (barEl) barEl.style.width = `${percent}%`;
+function clearAttachmentUploadState() {
+    attachmentUploadState = attachmentUploadState.filter((item) => item.status === "error");
+    renderAttachmentListView();
 }
 
 function setAttachmentInputDisabled(disabled) {
@@ -2748,36 +2838,73 @@ async function uploadAttachments(files) {
     const queue = Array.from(files || []);
     if (!queue.length) return;
 
-    const progressState = queue.map((file, index) => ({
-        index,
+    const baseIndex = Date.now();
+    attachmentUploadState = queue.map((file, offset) => ({
+        index: baseIndex + offset,
         name: file.name,
         percent: 0,
+        indeterminate: false,
+        status: "pending",
+        errorMessage: "",
     }));
-    setAttachmentUploadProgress(progressState);
+    renderAttachmentListView();
     setAttachmentInputDisabled(true);
 
+    let uploadError = null;
     try {
         for (let i = 0; i < queue.length; i++) {
             const file = queue[i];
-            const form = new FormData();
-            form.append("file", file);
-            const uploaded = await uploadFormDataWithProgress(
-                `/api/boards/posts/${editingPostId}/attachments`,
-                form,
-                (percent) => {
-                    progressState[i].percent = percent;
-                    updateAttachmentUploadProgress(i, percent);
+            const item = attachmentUploadState[i];
+            if (!item) continue;
+
+            updateAttachmentUploadItem(item.index, {
+                status: "uploading",
+                percent: 1,
+                indeterminate: true,
+            });
+
+            try {
+                const form = new FormData();
+                form.append("file", file);
+                const uploaded = await uploadFormDataWithProgress(
+                    `/api/boards/posts/${editingPostId}/attachments`,
+                    form,
+                    ({ percent, indeterminate }) => {
+                        updateAttachmentUploadItem(item.index, {
+                            percent,
+                            indeterminate,
+                            status: "uploading",
+                        });
+                    }
+                );
+                updateAttachmentUploadItem(item.index, {
+                    status: "done",
+                    percent: 100,
+                    indeterminate: false,
+                });
+                if (isPdfAttachment(uploaded) || isPdfAttachment(file)) {
+                    insertPdfEmbedIntoEditor(uploaded.id, uploaded.original_name || file.name);
                 }
-            );
-            updateAttachmentUploadProgress(i, 100);
-            if (isPdfAttachment(uploaded) || isPdfAttachment(file)) {
-                insertPdfEmbedIntoEditor(uploaded.id, uploaded.original_name || file.name);
+                await sleep(ATTACHMENT_UPLOAD_DONE_MS);
+            } catch (error) {
+                uploadError = error;
+                updateAttachmentUploadItem(item.index, {
+                    status: "error",
+                    percent: 100,
+                    indeterminate: false,
+                    errorMessage: error.message || "업로드 실패",
+                });
+                break;
             }
         }
     } finally {
-        setAttachmentUploadProgress([]);
+        clearAttachmentUploadState();
         setAttachmentInputDisabled(false);
         await refreshEditingAttachments();
+    }
+
+    if (uploadError) {
+        throw uploadError;
     }
 }
 

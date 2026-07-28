@@ -433,9 +433,17 @@ def list_posts(
     where = "WHERE board_id = ? AND deleted_at IS NULL AND status = 'published'"
     params: list[object] = [board_id]
     if keyword:
-        where += " AND (title LIKE ? OR body_html LIKE ?)"
         like = f"%{keyword}%"
-        params.extend([like, like])
+        where += """
+            AND (
+                title LIKE ? OR body_html LIKE ?
+                OR EXISTS (
+                    SELECT 1 FROM post_files pf
+                    WHERE pf.post_id = posts.id AND pf.kind = 'attachment' AND pf.original_name LIKE ?
+                )
+            )
+        """
+        params.extend([like, like, like])
 
     total_row = fetch_one(f"SELECT COUNT(1) AS count FROM posts {where}", tuple(params))
     total = int((total_row or {}).get("count", 0) or 0)

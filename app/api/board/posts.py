@@ -26,8 +26,16 @@ def search_posts_global(
 
     where = "WHERE p.deleted_at IS NULL AND p.status = 'published' AND b.is_active = 1"
     like = f"%{keyword}%"
-    params: list[object] = [like, like]
-    where += " AND (p.title LIKE ? OR p.body_html LIKE ?)"
+    params: list[object] = [like, like, like]
+    where += """
+        AND (
+            p.title LIKE ? OR p.body_html LIKE ?
+            OR EXISTS (
+                SELECT 1 FROM post_files pf
+                WHERE pf.post_id = p.id AND pf.kind = 'attachment' AND pf.original_name LIKE ?
+            )
+        )
+    """
 
     total_row = fetch_one(
         f"""
